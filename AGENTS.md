@@ -8,28 +8,153 @@ See `docs/StepsOfBabylon_GDD.md` for the full game design document.
 
 ## Tech Stack
 
-- **Language:** Kotlin
-- **Min SDK:** Android (TBD)
+- **Language:** Kotlin (JVM target 17)
+- **Package:** `com.whitefang.stepsofbabylon`
+- **Min SDK:** 34 (Android 14)
+- **Target/Compile SDK:** 36
+- **Version:** 0.1.0 (versionCode 1)
 - **Architecture:** MVVM + Clean Architecture
 - **UI:** Jetpack Compose (menus/screens) + SurfaceView (battle renderer)
-- **DI:** Hilt
+- **DI:** Hilt (with KSP)
 - **Database:** Room (SQLite) — offline-first, all game state stored locally
 - **Background:** WorkManager + Foreground Service (step counting)
 - **Step Tracking:** Android Sensor API (`TYPE_STEP_COUNTER`) + Google Fit SDK
-- **Build:** Gradle (Kotlin DSL)
+- **Build:** Gradle 9.3.1 (Kotlin DSL), version catalog at `gradle/libs.versions.toml`
 
 ## Architecture
 
 ```
-app/
+app/src/main/java/com/whitefang/stepsofbabylon/
 ├── data/           # Room entities, DAOs, repositories impl, sensor/Google Fit data sources
+│   └── local/      # AppDatabase, PlayerProfileEntity
 ├── domain/         # Use cases, repository interfaces, game logic, models
+│   ├── model/      # Currency, PlayerWallet, and all game domain models
+│   ├── repository/ # Repository interfaces (empty — Plan 03)
+│   └── usecase/    # Use cases (empty — Plan 01)
 ├── presentation/   # ViewModels, Compose screens, SurfaceView battle renderer
-├── di/             # Hilt modules
-└── service/        # Foreground step-counting service, WorkManager workers
+│   ├── home/       # HomeScreen
+│   └── ui/theme/   # Color, Theme
+├── di/             # Hilt modules (DatabaseModule)
+└── service/        # Foreground step-counting service, WorkManager workers (empty — Plan 04)
 ```
 
 Follow Clean Architecture layers: `presentation → domain ← data`. The domain layer has zero Android dependencies.
+
+### Existing Source Files
+
+```
+StepsOfBabylonApp.kt          # @HiltAndroidApp Application class
+di/DatabaseModule.kt           # Hilt module providing Room database
+data/local/AppDatabase.kt     # Room database definition
+data/local/PlayerProfileEntity.kt  # Player profile Room entity
+domain/model/Currency.kt      # Currency enum (STEPS, CASH, GEMS, POWER_STONES)
+domain/model/PlayerWallet.kt  # Wallet data class holding currency balances
+presentation/MainActivity.kt  # Single Activity (Compose host)
+presentation/home/HomeScreen.kt  # Home screen placeholder
+presentation/ui/theme/Color.kt   # Compose color definitions
+presentation/ui/theme/Theme.kt   # Compose theme setup
+```
+
+## Plans & Roadmap
+
+Development follows a 30-plan master plan. See `docs/plans/master-plan.md` for the full index, dependency graph, and status tracker.
+
+### Key Documents
+
+| Document | Path |
+|---|---|
+| Game Design Document | `docs/StepsOfBabylon_GDD.md` |
+| Master Plan (30 plans) | `docs/plans/master-plan.md` |
+| Plan 01: Domain Models | `docs/plans/plan-01-domain-models.md` |
+
+### Full Plan Index
+
+| # | Plan | Description | Dependencies |
+|---|---|---|---|
+| 01 | Domain Models & Currency System | Core domain models, enums, cost calculation engine. Pure Kotlin. | Scaffold |
+| 02 | Room Database & DAOs | All Room entities, DAOs, migration strategy. | Plan 01 |
+| 03 | Repository Layer | Repository interfaces (domain) + Room-backed impls (data). Flows. | Plan 02 |
+| 04 | Step Counter Service | Foreground service, TYPE_STEP_COUNTER, WorkManager sync, anti-cheat. | Plan 03 |
+| 05 | Google Fit Integration | Cross-validation, Activity Minute Parity, gap-filling. | Plan 04 |
+| 06 | Home Screen & Navigation | Compose nav graph, dashboard, bottom nav bar. | Plan 03 |
+| 07 | Workshop Screen & Upgrades | Workshop UI (Attack/Defense/Utility tabs), Step purchases. | Plan 06 |
+| 08 | Battle Renderer — Game Loop & Ziggurat | Custom SurfaceView, game loop thread, fixed timestep, ziggurat. | Plan 06 |
+| 09 | Battle System — Enemies & Waves | Enemy entities, wave spawning (26s+9s), scaling, collision. | Plan 08 |
+| 10 | Battle System — Stats & Combat | Stats resolution (Workshop × In-Round), crit, knockback, lifesteal. | Plan 09 |
+| 11 | In-Round Upgrades & Cash Economy | Cash from kills, in-round upgrade menu, interest, free upgrade chance. | Plan 10 |
+| 12 | Round Lifecycle & Post-Round | Start/end flow, speed controls, post-round summary. | Plan 11 |
+| 13 | Tier System & Progression | Tier unlock logic, cash multipliers, battle conditions (Tier 6+). | Plan 12 |
+| 14 | Step Overdrive | 4 overdrive types, Step cost, 60s buff, once-per-round. | Plan 12 |
+| 15 | Ultimate Weapons | 6 UW types, Power Stone unlock/upgrade, loadout (3 max), cooldowns. | Plan 12 |
+| 16 | Labs System | Research projects, Step cost + real-time duration, 1-4 slots, Gem rush. | Plan 07 |
+| 17 | Cards System | Card packs (Gem purchase), 3 rarities, Card Dust, loadout (3 max). | Plan 07 |
+| 18 | Narrative Biome Progression | 5 biomes, environment art swap, enemy themes, cinematics. | Plan 13 |
+| 19 | Walking Encounters & Supply Drops | Seeded random drops, push notifications, Unclaimed Supplies inbox. | Plan 04 |
+| 20 | Power Stone & Gem Economy | Weekly challenges, milestones, daily login streaks. | Plan 04 |
+| 21 | Milestones & Daily Missions | Walking milestones, 3 daily missions, midnight refresh. | Plan 20 |
+| 22 | Stats & History Screen | Walking history charts, battle stats, all-time stats. | Plan 06 |
+| 23 | Notifications & Widget | Persistent notification, home widget (2x2), smart reminders. | Plan 04 |
+| 24 | Accessibility | TalkBack, audio cues, color-blind modes, adjustable text. | Plan 18 |
+| 25 | Anti-Cheat & Validation | Rate limiting, daily ceiling, Google Fit cross-validation. | Plan 05 |
+| 26 | Monetization & Ads | Reward ads, ad removal IAP, Gem packs, Season Pass, cosmetics. | Plan 17 |
+| 27 | Polish & Visual Effects | Projectile/UW/Overdrive effects, death anims, sound integration. | Plan 18 |
+| 28 | Balancing & Tuning | Step economy, Workshop cost curves, enemy scaling, Card balance. | Plan 27 |
+| 29 | Testing & QA | Unit tests, ViewModel tests, DAO tests, sensor tests, UI tests. | Plan 28 |
+| 30 | Release Prep | ProGuard/R8, signing, Play Store assets, privacy policy, AAB. | Plan 29 |
+
+### Dependency Graph
+
+```mermaid
+graph TD
+    S[Scaffold] --> P01[01: Domain Models]
+    P01 --> P02[02: Database & DAOs]
+    P02 --> P03[03: Repository Layer]
+    P03 --> P04[04: Step Counter Service]
+    P03 --> P06[06: Home Screen & Nav]
+    P04 --> P05[05: Google Fit]
+    P04 --> P19[19: Walking Encounters]
+    P04 --> P20[20: Premium Currencies]
+    P04 --> P23[23: Notifications & Widget]
+    P05 --> P25[25: Anti-Cheat]
+    P06 --> P07[07: Workshop Screen]
+    P06 --> P08[08: Battle Renderer]
+    P06 --> P22[22: Stats & History]
+    P07 --> P16[16: Labs System]
+    P07 --> P17[17: Cards System]
+    P08 --> P09[09: Enemies & Waves]
+    P09 --> P10[10: Stats & Combat]
+    P10 --> P11[11: In-Round Upgrades]
+    P11 --> P12[12: Round Lifecycle]
+    P12 --> P13[13: Tier System]
+    P12 --> P14[14: Step Overdrive]
+    P12 --> P15[15: Ultimate Weapons]
+    P13 --> P18[18: Biome Progression]
+    P17 --> P26[26: Monetization & Ads]
+    P18 --> P24[24: Accessibility]
+    P18 --> P27[27: Polish & VFX]
+    P20 --> P21[21: Milestones & Missions]
+    P27 --> P28[28: Balancing & Tuning]
+    P28 --> P29[29: Testing & QA]
+    P29 --> P30[30: Release Prep]
+```
+
+### Critical Path
+
+01 → 02 → 03 → 06 → 08 → 09 → 10 → 11 → 12 → 13 → 18 → 27 → 28 → 29 → 30
+
+### Current Status
+
+- [x] Project scaffold (Gradle, Hilt, Room skeleton, Compose theme, Home placeholder)
+- [ ] **Plan 01: Domain Models & Currency System** ← next up
+- [ ] Plan 02–30: Not started
+
+### Parallelizable Branches (after dependencies met)
+
+- Step tracking: Plans 04/05 (after Plan 03)
+- Walking features: Plans 19/20/21/23 (after Plan 04)
+- Workshop extensions: Plans 16/17 (after Plan 07)
+- Battle extensions: Plans 14/15 (after Plan 12, can run in parallel)
+- Stats: Plan 22 (after Plan 06)
 
 ## Key Domain Concepts
 
@@ -37,15 +162,16 @@ Follow Clean Architecture layers: `presentation → domain ← data`. The domain
 - **Cash** — temporary in-round currency from killing enemies. Resets each round.
 - **Gems** — permanent premium currency from milestones and daily logins.
 - **Power Stones** — permanent currency for Ultimate Weapons, from weekly challenges.
-- **Workshop** — permanent upgrades (Attack/Defense/Utility) purchased with Steps.
-- **Labs** — time-gated research projects initiated with Steps, completed over real time.
-- **Cards** — per-round bonus items (3 equipped max), acquired via Gem-purchased packs.
-- **Ultimate Weapons (UWs)** — activatable abilities (3 equipped max), unlocked with Power Stones.
+- **Workshop** — permanent upgrades (Attack/Defense/Utility) purchased with Steps. 23 upgrade types total.
+- **Labs** — time-gated research projects initiated with Steps, completed over real time. 10 research types.
+- **Cards** — per-round bonus items (3 equipped max), acquired via Gem-purchased packs. 9 card types, 3 rarities.
+- **Ultimate Weapons (UWs)** — activatable abilities (3 equipped max), unlocked with Power Stones. 6 UW types.
 - **Tiers** — difficulty levels (1–10+) with escalating battle conditions and cash multipliers.
 - **Biomes** — narrative environments tied to tier ranges (Hanging Gardens → Burning Sands → Frozen Ziggurats → Underworld of Kur → Celestial Gate).
-- **Step Overdrive** — mid-battle mechanic to burn Steps for a 60-second combat boost (once per round).
+- **Step Overdrive** — mid-battle mechanic to burn Steps for a 60-second combat boost (once per round). 4 types.
 - **Walking Encounters** — Supply Drop rewards delivered via push notifications during walks.
 - **Activity Minute Parity** — Google Fit Active Minutes converted to Step-equivalents for indoor workouts.
+- **Enemies** — 6 types (Basic, Fast, Tank, Ranged, Boss, Scatter) with distinct speed/health/damage multipliers.
 
 ## Conventions
 
@@ -56,6 +182,8 @@ Follow Clean Architecture layers: `presentation → domain ← data`. The domain
 - Step counting must work reliably when the app is backgrounded or killed.
 - Steps can **never** be generated passively in-game — this is a hard design rule.
 - Anti-cheat: rate-limit at 200 steps/min, daily ceiling of 50,000 steps, cross-validate with Google Fit.
+- Domain models are pure Kotlin — no Android imports in `domain/`.
+- Loadouts enforce max capacity: 3 UWs, 3 Cards.
 
 ## Battle Renderer
 
@@ -64,6 +192,8 @@ The battle screen uses a custom `SurfaceView` with a game loop (not Compose). Ke
 - **Game loop** runs on a dedicated thread with fixed timestep.
 - **Entity system** manages ziggurat, enemies, projectiles, and effects.
 - **Stats resolution** combines Workshop (permanent) × In-Round (temporary) upgrades multiplicatively.
+- **Wave timing:** 26s spawn phase + 9s cooldown between waves.
+- **Speed controls:** 1x / 2x / 4x.
 
 ## Testing
 
