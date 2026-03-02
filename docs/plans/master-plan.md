@@ -93,7 +93,7 @@ graph TD
 ## Current Status
 
 - [x] Project scaffold (Gradle, Hilt, Room skeleton, Compose theme, Home placeholder)
-- [ ] Plan 01: Domain Models & Currency System
+- [x] Plan 01: Domain Models & Currency System
 - [ ] Plan 02: Room Database & DAOs
 - [ ] Plan 03: Repository Layer
 - [ ] Plan 04: Step Counter Service

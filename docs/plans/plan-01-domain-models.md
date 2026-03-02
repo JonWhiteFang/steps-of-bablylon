@@ -1,6 +1,6 @@
 # Plan 01 — Domain Models & Currency System
 
-**Status:** Not Started
+**Status:** Complete
 **Dependencies:** Project Scaffold (complete)
 **Layer:** `domain/` — Pure Kotlin, zero Android dependencies
 

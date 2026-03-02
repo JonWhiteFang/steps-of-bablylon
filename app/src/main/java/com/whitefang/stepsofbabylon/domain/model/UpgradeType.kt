@@ -1,0 +1,70 @@
+package com.whitefang.stepsofbabylon.domain.model
+
+enum class UpgradeType(val category: UpgradeCategory) {
+    // Attack (8)
+    DAMAGE(UpgradeCategory.ATTACK),
+    ATTACK_SPEED(UpgradeCategory.ATTACK),
+    CRITICAL_CHANCE(UpgradeCategory.ATTACK),
+    CRITICAL_FACTOR(UpgradeCategory.ATTACK),
+    RANGE(UpgradeCategory.ATTACK),
+    MULTISHOT(UpgradeCategory.ATTACK),
+    BOUNCE_SHOT(UpgradeCategory.ATTACK),
+    DAMAGE_PER_METER(UpgradeCategory.ATTACK),
+
+    // Defense (9)
+    HEALTH(UpgradeCategory.DEFENSE),
+    HEALTH_REGEN(UpgradeCategory.DEFENSE),
+    DEFENSE_PERCENT(UpgradeCategory.DEFENSE),
+    DEFENSE_ABSOLUTE(UpgradeCategory.DEFENSE),
+    KNOCKBACK(UpgradeCategory.DEFENSE),
+    THORN_DAMAGE(UpgradeCategory.DEFENSE),
+    ORBS(UpgradeCategory.DEFENSE),
+    LIFESTEAL(UpgradeCategory.DEFENSE),
+    DEATH_DEFY(UpgradeCategory.DEFENSE),
+
+    // Utility (6)
+    CASH_BONUS(UpgradeCategory.UTILITY),
+    CASH_PER_WAVE(UpgradeCategory.UTILITY),
+    INTEREST(UpgradeCategory.UTILITY),
+    FREE_UPGRADES(UpgradeCategory.UTILITY),
+    RECOVERY_PACKAGES(UpgradeCategory.UTILITY),
+    STEP_MULTIPLIER(UpgradeCategory.UTILITY),
+    ;
+
+    companion object {
+        private val configs: Map<UpgradeType, UpgradeConfig> = mapOf(
+            // Attack
+            DAMAGE to UpgradeConfig(50, 1.12, null, 2.0, "+2% base damage per level"),
+            ATTACK_SPEED to UpgradeConfig(75, 1.15, null, 1.5, "+1.5% attacks per second"),
+            CRITICAL_CHANCE to UpgradeConfig(100, 1.18, 160, 0.5, "+0.5% crit chance per level (cap 80%)"),
+            CRITICAL_FACTOR to UpgradeConfig(120, 1.18, null, 0.1, "+0.1x crit multiplier per level"),
+            RANGE to UpgradeConfig(80, 1.14, 150, 2.0, "+2% attack radius (cap 300%)"),
+            MULTISHOT to UpgradeConfig(500, 1.25, 100, 0.05, "+1 additional target per 20 levels (cap 5)"),
+            BOUNCE_SHOT to UpgradeConfig(1_000, 1.30, 60, 1.0 / 15.0, "+1 bounce per 15 levels (cap 4)"),
+            DAMAGE_PER_METER to UpgradeConfig(200, 1.16, null, 1.0, "+1% bonus damage based on enemy distance"),
+
+            // Defense
+            HEALTH to UpgradeConfig(50, 1.12, null, 3.0, "+3% max ziggurat health"),
+            HEALTH_REGEN to UpgradeConfig(60, 1.13, null, 2.0, "+2% health regen per second"),
+            DEFENSE_PERCENT to UpgradeConfig(100, 1.16, 250, 0.3, "+0.3% damage reduction (cap 75%)"),
+            DEFENSE_ABSOLUTE to UpgradeConfig(80, 1.14, null, 1.0, "+flat damage blocked per hit"),
+            KNOCKBACK to UpgradeConfig(90, 1.15, null, 2.0, "+2% knockback force"),
+            THORN_DAMAGE to UpgradeConfig(150, 1.18, null, 1.0, "+1% damage reflected to attackers"),
+            ORBS to UpgradeConfig(800, 1.22, 6, 1.0, "+1 orbiting projectile per level (cap 6)"),
+            LIFESTEAL to UpgradeConfig(200, 1.20, 75, 0.2, "+0.2% damage dealt returned as health (cap 15%)"),
+            DEATH_DEFY to UpgradeConfig(500, 1.28, 50, 1.0, "+1% chance to survive killing blow at 1 HP (cap 50%)"),
+
+            // Utility
+            CASH_BONUS to UpgradeConfig(40, 1.11, null, 3.0, "+3% cash earned during rounds"),
+            CASH_PER_WAVE to UpgradeConfig(60, 1.13, null, 1.0, "+flat cash bonus at end of each wave"),
+            INTEREST to UpgradeConfig(150, 1.18, 20, 0.5, "+0.5% interest on held cash between waves (cap 10%)"),
+            FREE_UPGRADES to UpgradeConfig(200, 1.20, 25, 1.0, "+1% chance for in-round upgrades to cost 0 (cap 25%)"),
+            RECOVERY_PACKAGES to UpgradeConfig(300, 1.22, null, 1.0, "Periodic health restore drops during waves"),
+            STEP_MULTIPLIER to UpgradeConfig(1_000, 1.35, 100, 1.0, "+1% bonus steps earned from walking (cap 100%)"),
+        )
+
+        fun configFor(type: UpgradeType): UpgradeConfig = configs.getValue(type)
+    }
+
+    val config: UpgradeConfig get() = configFor(this)
+}
