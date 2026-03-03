@@ -20,7 +20,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -63,4 +64,8 @@ dependencies {
 
     // WorkManager
     implementation(libs.workmanager)
+
+    // SQLCipher
+    implementation(libs.sqlcipher)
+    implementation(libs.sqlite)
 }

@@ -8,6 +8,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import javax.inject.Singleton
 
 @Module
@@ -16,10 +17,14 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
-        Room.databaseBuilder(context, AppDatabase::class.java, "steps_of_babylon.db")
+    fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
+        val passphrase = DatabaseKeyManager.getPassphrase(context)
+        val factory = SupportOpenHelperFactory(passphrase)
+        return Room.databaseBuilder(context, AppDatabase::class.java, "steps_of_babylon.db")
+            .openHelperFactory(factory)
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
+    }
 
     @Provides fun providePlayerProfileDao(db: AppDatabase): PlayerProfileDao = db.playerProfileDao()
     @Provides fun provideWorkshopDao(db: AppDatabase): WorkshopDao = db.workshopDao()

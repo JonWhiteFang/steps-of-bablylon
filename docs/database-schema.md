@@ -15,6 +15,7 @@ Primary player record. One row per player (single-player game).
 | currentStepBalance | Long | Spendable step balance |
 | gems | Long | Premium currency |
 | powerStones | Long | UW currency |
+| cardDust | Long | Card Dust currency |
 | currentTier | Int | Active difficulty tier |
 | bestWavePerTier | String (JSON) | Map<Int, Int> serialized |
 | createdAt | Long | Epoch millis |
@@ -123,12 +124,18 @@ Each entity gets its own DAO:
 
 ## Type Converters
 
-- JSON maps (bestWavePerTier, activityMinutes): Kotlin serialization or Gson
-- Enums: stored as String (enum name), converted via `@TypeConverter`
+- JSON maps (bestWavePerTier, activityMinutes): `org.json.JSONObject` (Android SDK built-in)
+- Enums: stored as String (enum name), no converter needed — entities use String columns
 - Dates: stored as Long (epoch millis)
 
 ## Notes
 
 - `RoundState` is NOT persisted — it's transient, held in ViewModel during battle
 - `Cash` is NOT persisted — it resets each round
-- Card Dust is stored on `PlayerProfile` (single Long field, add in migration)
+- `cardDust: Long` is stored on `PlayerProfile`
+
+## Security
+
+- Database is encrypted at rest using SQLCipher (`net.zetetic:sqlcipher-android`)
+- Encryption passphrase is generated randomly on first run, encrypted with an Android Keystore AES-256-GCM key, and stored in SharedPreferences
+- Uses `fallbackToDestructiveMigration()` during pre-release development

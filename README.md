@@ -39,6 +39,27 @@ An Android idle tower defense game where real-world walking drives all progressi
 ./gradlew clean
 ```
 
+### Non-TTY Environments (Kiro CLI, CI, etc.)
+
+Gradle buffers output when stdout isn't a terminal, which can cause builds to appear hung. Use the wrapper script instead:
+
+```bash
+./run-gradle.sh assembleDebug
+./run-gradle.sh test
+```
+
+`run-gradle.sh` runs Gradle in the background and captures output to a temp file, avoiding the buffering issue. It's gitignored — recreate it if needed:
+
+```bash
+#!/bin/bash
+cd "$(dirname "$0")"
+./gradlew "$@" > /tmp/gradle_out.txt 2>&1 &
+wait $!
+EXIT_CODE=$?
+cat /tmp/gradle_out.txt
+exit $EXIT_CODE
+```
+
 ## Project Structure
 
 ```

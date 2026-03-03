@@ -80,3 +80,12 @@ Hilt with KSP (not kapt). All modules in `di/`.
 | ViewModel | `*ViewModel.kt` | `WorkshopViewModel` |
 | Compose screen | `*Screen.kt` | `HomeScreen` |
 | Hilt module | `*Module.kt` | `DatabaseModule` |
+
+## Security
+
+| Layer | Measure | Details |
+|---|---|---|
+| Database | SQLCipher encryption | AES-256 full database encryption at rest via `net.zetetic:sqlcipher-android` |
+| Key management | Android Keystore | DB passphrase encrypted with AES-256-GCM Keystore key, stored in SharedPreferences |
+| Network | Network security config | Cleartext traffic blocked via `network_security_config.xml` |
+| Release build | R8 / ProGuard | Code shrinking, obfuscation, and resource shrinking enabled for release builds |

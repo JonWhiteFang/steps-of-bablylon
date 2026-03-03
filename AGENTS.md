@@ -16,10 +16,11 @@ See `docs/StepsOfBabylon_GDD.md` for the full game design document.
 - **Architecture:** MVVM + Clean Architecture
 - **UI:** Jetpack Compose (menus/screens) + SurfaceView (battle renderer)
 - **DI:** Hilt (with KSP)
-- **Database:** Room (SQLite) — offline-first, all game state stored locally
+- **Database:** Room (SQLite) with SQLCipher encryption — offline-first, all game state stored locally
 - **Background:** WorkManager + Foreground Service (step counting)
 - **Step Tracking:** Android Sensor API (`TYPE_STEP_COUNTER`) + Google Fit SDK
 - **Build:** Gradle 9.3.1 (Kotlin DSL), version catalog at `gradle/libs.versions.toml`
+- **Security:** SQLCipher (database encryption), Android Keystore (key management), R8 (obfuscation), network security config (cleartext blocked)
 
 ## Architecture
 
@@ -45,8 +46,23 @@ Follow Clean Architecture layers: `presentation → domain ← data`. The domain
 ```
 StepsOfBabylonApp.kt          # @HiltAndroidApp Application class
 di/DatabaseModule.kt           # Hilt module providing Room database
-data/local/AppDatabase.kt     # Room database definition
+data/local/AppDatabase.kt     # Room database definition (7 entities, 7 DAOs)
+data/local/Converters.kt      # TypeConverters for JSON maps
+data/local/DatabaseKeyManager.kt # SQLCipher passphrase via Android Keystore
 data/local/PlayerProfileEntity.kt  # Player profile Room entity
+data/local/PlayerProfileDao.kt     # Player profile DAO
+data/local/WorkshopUpgradeEntity.kt # Workshop upgrade entity
+data/local/WorkshopDao.kt          # Workshop DAO
+data/local/LabResearchEntity.kt    # Lab research entity
+data/local/LabDao.kt               # Lab research DAO
+data/local/CardInventoryEntity.kt  # Card inventory entity
+data/local/CardDao.kt              # Card inventory DAO
+data/local/UltimateWeaponStateEntity.kt # UW state entity
+data/local/UltimateWeaponDao.kt    # UW state DAO
+data/local/DailyStepRecordEntity.kt # Daily step record entity
+data/local/DailyStepDao.kt         # Daily step record DAO
+data/local/WalkingEncounterEntity.kt # Walking encounter entity
+data/local/WalkingEncounterDao.kt   # Walking encounter DAO
 domain/model/Currency.kt      # Currency enum (STEPS, CASH, GEMS, POWER_STONES)
 domain/model/PlayerWallet.kt  # Wallet data class holding currency balances
 domain/model/UpgradeType.kt   # 23 Workshop upgrade types with configs
@@ -170,8 +186,8 @@ graph TD
 
 - [x] Project scaffold (Gradle, Hilt, Room skeleton, Compose theme, Home placeholder)
 - [x] **Plan 01: Domain Models & Currency System** ✓
-- [ ] **Plan 02: Room Database & DAOs** ← next up
-- [ ] Plan 03–30: Not started (all plan files written)
+- [x] **Plan 02: Room Database & DAOs** ✓
+- [ ] **Plan 03: Repository Layer** ← next up
 
 ### Parallelizable Branches (after dependencies met)
 
@@ -231,3 +247,4 @@ The battle screen uses a custom `SurfaceView` with a game loop (not Compose). Ke
 - This is a solo-experience game — no multiplayer, no server backend required for v1.0.
 - All monetization is cosmetic or convenience. Steps are never purchasable with real money.
 - Accessibility is a priority: TalkBack support, color-blind modes, Activity Minute Parity for non-ambulatory users.
+- **Gradle in non-TTY environments:** Gradle buffers output when stdout isn't a terminal (e.g., Kiro CLI, CI). Use `./run-gradle.sh <task>` instead of `./gradlew <task>` to avoid hanging. The script is gitignored — see `README.md` for how to recreate it.
