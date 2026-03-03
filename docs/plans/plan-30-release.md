@@ -1,0 +1,150 @@
+# Plan 30 — Release Prep
+
+**Status:** Not Started
+**Dependencies:** Plan 29 (Testing & QA)
+**Layer:** Build configuration + assets
+
+---
+
+## Objective
+
+Prepare the app for Google Play Store release: ProGuard/R8 optimization, app signing configuration, Play Store listing assets (screenshots, descriptions, graphics), privacy policy, final build verification, and AAB generation.
+
+---
+
+## Task Breakdown
+
+### Task 1: ProGuard / R8 Configuration
+
+Update `app/build.gradle.kts`:
+- Enable `minifyEnabled = true` and `shrinkResources = true` for release build type
+- Configure `proguard-rules.pro`:
+  - Keep Room entities and DAOs
+  - Keep Hilt-generated classes
+  - Keep Kotlin serialization models
+  - Keep Google Fit API classes
+  - Keep Google Play Billing classes
+  - Keep AdMob classes
+  - Keep SensorEvent callback methods
+- Test release build to verify no runtime crashes from over-aggressive shrinking
+
+---
+
+### Task 2: App Signing
+
+Configure release signing:
+- Generate release keystore (if not already created)
+- Configure `signingConfigs` in `build.gradle.kts`
+- Store keystore credentials securely (not in version control)
+- Document keystore backup procedure
+- Consider Google Play App Signing enrollment
+
+---
+
+### Task 3: Version Finalization
+
+Update version info:
+- Set `versionName = "1.0.0"` and `versionCode = 1` (or appropriate)
+- Update `CHANGELOG.md` with v1.0.0 release notes
+- Tag release in version control
+
+---
+
+### Task 4: Play Store Listing Assets
+
+Create `docs/release/` directory with:
+- App icon: 512×512 PNG (hi-res)
+- Feature graphic: 1024×500 PNG
+- Screenshots: minimum 2, recommended 8 (phone + tablet)
+  - Home screen, Workshop, Battle (multiple biomes), Labs, Cards, Stats
+- Short description (80 chars): "Walk to power your ziggurat. Every step builds the tower."
+- Full description (4000 chars): game overview, features, accessibility
+- Category: Games → Strategy
+- Content rating questionnaire answers
+- Contact email
+
+---
+
+### Task 5: Privacy Policy
+
+Create `docs/release/privacy-policy.md`:
+- Data collected: step count (device sensor), Google Fit data (with consent), purchase history
+- Data stored: locally on device only (Room database)
+- No server-side data collection in v1.0
+- Google Fit: OAuth scope `FITNESS_ACTIVITY_READ`, data used only for step validation
+- AdMob: standard ad SDK data collection disclosure
+- Google Play Billing: standard purchase data
+- No personal data shared with third parties beyond ad/billing SDKs
+- Host privacy policy at a public URL (GitHub Pages or similar)
+
+---
+
+### Task 6: Final Build Verification
+
+Pre-release checklist:
+- [ ] Release APK installs and runs on API 34 device
+- [ ] Release APK installs and runs on API 36 device
+- [ ] Step counting works in background (release build)
+- [ ] Google Fit sign-in works
+- [ ] All IAPs testable via Google Play test tracks
+- [ ] Reward ads load and grant rewards
+- [ ] No ANRs or crashes in 30-minute play session
+- [ ] ProGuard didn't break any functionality
+- [ ] All notification channels work
+- [ ] Widget renders correctly
+- [ ] Battery usage acceptable (< 5% per day for step counting)
+
+---
+
+### Task 7: AAB Generation
+
+Generate release Android App Bundle:
+- `./gradlew bundleRelease`
+- Verify AAB with `bundletool`
+- Test universal APK from AAB on device
+- Upload to Google Play Console (internal testing track first)
+
+---
+
+### Task 8: Play Console Setup
+
+Configure Google Play Console:
+- Create app listing with all assets from Task 4
+- Set up internal testing track
+- Configure pricing: Free (with IAP)
+- Set target countries/regions
+- Complete content rating questionnaire
+- Complete data safety section
+- Link privacy policy URL
+- Set up pre-launch report (Firebase Test Lab)
+
+---
+
+## File Summary
+
+```
+app/
+├── build.gradle.kts            (update — signing, minify, version)
+├── proguard-rules.pro          (update — keep rules)
+└── release/                    (keystore — NOT committed)
+
+docs/release/
+├── privacy-policy.md           (new)
+├── play-store-description.md   (new)
+├── release-checklist.md        (new)
+└── screenshots/                (new — Play Store screenshots)
+
+CHANGELOG.md                    (update — v1.0.0 release notes)
+```
+
+## Completion Criteria
+
+- Release build compiles, installs, and runs without crashes
+- R8 shrinking doesn't break any functionality
+- App signed with release keystore
+- All Play Store listing assets created
+- Privacy policy written and hosted at public URL
+- AAB generated and verified with bundletool
+- Internal testing track set up on Play Console
+- Pre-launch report shows no critical issues
+- Final version tagged in version control

@@ -4,6 +4,12 @@ All notable changes to Steps of Babylon are documented here, organized by plan c
 
 ## [Unreleased]
 
+### Documentation — All Plan Files Written
+
+- Written detailed plan files for Plans 02–30 in `docs/plans/`
+- Each plan includes: objective, task breakdown, file summary, completion criteria
+- Updated `AGENTS.md`, `.kiro/steering/structure.md` to reflect Plan 01 completion
+
 ### Plan 01 — Domain Models & Currency System (Complete)
 
 - Added `Currency` enum (STEPS, CASH, GEMS, POWER_STONES)

@@ -30,12 +30,12 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 ├── domain/         # Use cases, repository interfaces, game logic, models
 │   ├── model/      # Currency, PlayerWallet, and all game domain models
 │   ├── repository/ # Repository interfaces (empty — Plan 03)
-│   └── usecase/    # Use cases (empty — Plan 01)
+│   └── usecase/    # CalculateUpgradeCost, CanAffordUpgrade
 ├── presentation/   # ViewModels, Compose screens, SurfaceView battle renderer
 │   ├── home/       # HomeScreen
 │   └── ui/theme/   # Color, Theme
 ├── di/             # Hilt modules (DatabaseModule)
-└── service/        # Foreground step-counting service, WorkManager workers (empty — Plan 04)
+└── service/        # Foreground step-counting service, WorkManager workers (Plan 04)
 ```
 
 Follow Clean Architecture layers: `presentation → domain ← data`. The domain layer has zero Android dependencies.
@@ -49,6 +49,24 @@ data/local/AppDatabase.kt     # Room database definition
 data/local/PlayerProfileEntity.kt  # Player profile Room entity
 domain/model/Currency.kt      # Currency enum (STEPS, CASH, GEMS, POWER_STONES)
 domain/model/PlayerWallet.kt  # Wallet data class holding currency balances
+domain/model/UpgradeType.kt   # 23 Workshop upgrade types with configs
+domain/model/UpgradeCategory.kt # Attack, Defense, Utility categories
+domain/model/UpgradeConfig.kt # Upgrade configuration data class
+domain/model/Tier.kt          # Tier data class
+domain/model/TierConfig.kt    # Full tier table (1–10)
+domain/model/BattleCondition.kt # 7 battle condition types
+domain/model/Biome.kt         # 5 biomes with forTier() mapping
+domain/model/EnemyType.kt     # 6 enemy types with multipliers
+domain/model/UltimateWeaponType.kt  # 6 UW types with unlock costs
+domain/model/UltimateWeaponLoadout.kt # UW loadout (max 3)
+domain/model/OverdriveType.kt # 4 overdrive types with costs
+domain/model/ResearchType.kt  # 10 lab research types
+domain/model/CardRarity.kt    # Common, Rare, Epic
+domain/model/CardType.kt      # 9 card types with effects
+domain/model/CardLoadout.kt   # Card loadout (max 3)
+domain/model/RoundState.kt    # Transient battle state
+domain/usecase/CalculateUpgradeCost.kt  # Cost formula: baseCost * scaling^level
+domain/usecase/CanAffordUpgrade.kt      # Affordability check
 presentation/MainActivity.kt  # Single Activity (Compose host)
 presentation/home/HomeScreen.kt  # Home screen placeholder
 presentation/ui/theme/Color.kt   # Compose color definitions
@@ -66,6 +84,12 @@ Development follows a 30-plan master plan. See `docs/plans/master-plan.md` for t
 | Game Design Document | `docs/StepsOfBabylon_GDD.md` |
 | Master Plan (30 plans) | `docs/plans/master-plan.md` |
 | Plan 01: Domain Models | `docs/plans/plan-01-domain-models.md` |
+| Plan 02: Database & DAOs | `docs/plans/plan-02-database.md` |
+| Battle Formulas | `docs/battle-formulas.md` |
+| Database Schema | `docs/database-schema.md` |
+| Step Tracking | `docs/step-tracking.md` |
+| Monetization | `docs/monetization.md` |
+| Architecture | `docs/architecture.md` |
 
 ### Full Plan Index
 
@@ -145,8 +169,9 @@ graph TD
 ### Current Status
 
 - [x] Project scaffold (Gradle, Hilt, Room skeleton, Compose theme, Home placeholder)
-- [ ] **Plan 01: Domain Models & Currency System** ← next up
-- [ ] Plan 02–30: Not started
+- [x] **Plan 01: Domain Models & Currency System** ✓
+- [ ] **Plan 02: Room Database & DAOs** ← next up
+- [ ] Plan 03–30: Not started (all plan files written)
 
 ### Parallelizable Branches (after dependencies met)
 
