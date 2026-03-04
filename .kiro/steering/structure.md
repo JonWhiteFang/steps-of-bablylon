@@ -14,7 +14,8 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 │   ├── repository/     # Repository interfaces (Flow-based)
 │   └── usecase/        # Use case classes (plain Kotlin, no @Inject)
 ├── presentation/       # Android/Compose layer
-│   ├── home/           # Home screen
+│   ├── navigation/     # Screen routes, BottomNavBar
+│   ├── home/           # Home screen, ViewModel, UiState
 │   └── ui/theme/       # Compose theme, colors (Material3)
 ├── di/                 # Hilt modules (DatabaseModule, RepositoryModule, StepModule, HealthConnectModule)
 └── service/            # Foreground step-counting service, WorkManager workers, boot receiver
@@ -78,7 +79,9 @@ All in `domain/model/`:
 | `service/StepSyncWorker.kt` | @HiltWorker, 15-min periodic catch-up + HC sync |
 | `domain/usecase/CalculateUpgradeCost.kt` | Cost formula: `baseCost × scaling^level` |
 | `domain/usecase/CanAffordUpgrade.kt` | Affordability check against wallet |
-| `presentation/MainActivity.kt` | Single Activity, Compose host, edge-to-edge, runtime + HC permissions |
+| `presentation/MainActivity.kt` | Single Activity, Scaffold + NavHost + BottomNavBar, permissions |
+| `presentation/navigation/Screen.kt` | 5 navigation routes (Home, Workshop, Battle, Labs, Stats) |
+| `presentation/home/HomeViewModel.kt` | Combines profile + step flows into HomeUiState |
 | `gradle/libs.versions.toml` | All dependency versions |
 | `app/schemas/` | Room schema exports (commit these) |
 | `docs/plans/` | Numbered implementation plans (01–30) |

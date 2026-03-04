@@ -98,7 +98,7 @@ graph TD
 - [x] Plan 03: Repository Layer
 - [x] Plan 04: Step Counter Service
 - [x] Plan 05: Health Connect Integration
-- [ ] Plan 06: Home Screen & Navigation
+- [x] Plan 06: Home Screen & Navigation
 - [ ] Plan 07: Workshop Screen & Upgrades
 - [ ] Plan 08: Battle Renderer — Game Loop & Ziggurat
 - [ ] Plan 09: Battle System — Enemies & Waves

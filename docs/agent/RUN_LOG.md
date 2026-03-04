@@ -71,3 +71,19 @@
   - Update GDD/step-tracking docs to reference Health Connect instead of Google Fit
   - Create ADR for Google Fit → Health Connect decision
 - Memory updated: STATE ✅ / RUN_LOG ✅
+
+## 2026-03-04 — Plan 06: Home Screen & Navigation
+- Goal: Build Compose navigation graph, bottom nav bar, and real Home dashboard with live data.
+- Changes made:
+  - Added `hilt-navigation-compose:1.3.0` and `compose-material-icons-core` to version catalog + build.gradle.kts
+  - Created `presentation/navigation/Screen.kt` — sealed class with 5 routes (Home, Workshop, Battle, Labs, Stats)
+  - Created `presentation/navigation/BottomNavBar.kt` — NavigationBar with 5 items, route highlighting
+  - Created `presentation/home/HomeUiState.kt` — UI state data class
+  - Created `presentation/home/HomeViewModel.kt` — @HiltViewModel combining PlayerRepository + StepRepository flows
+  - Rewrote `presentation/home/HomeScreen.kt` — real dashboard (tier/biome header, step card, currency row, best wave, battle button)
+  - Updated `presentation/MainActivity.kt` — Scaffold + NavHost + BottomNavBar, preserved permission logic
+  - HomeViewModel calls `ensureProfileExists()` in init to seed default profile
+- Commands/tests run: `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL, zero warnings
+- Open questions / blockers: None.
+- Follow-ups created: None.
+- Memory updated: STATE ✅ / RUN_LOG ✅

@@ -1,0 +1,42 @@
+package com.whitefang.stepsofbabylon.presentation.home
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.whitefang.stepsofbabylon.domain.model.Biome
+import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
+import com.whitefang.stepsofbabylon.domain.repository.StepRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import java.time.LocalDate
+import javax.inject.Inject
+
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    private val playerRepository: PlayerRepository,
+    private val stepRepository: StepRepository,
+) : ViewModel() {
+
+    init {
+        viewModelScope.launch { playerRepository.ensureProfileExists() }
+    }
+
+    val uiState: StateFlow<HomeUiState> = combine(
+        playerRepository.observeProfile(),
+        stepRepository.observeTodayRecord(LocalDate.now().toString()),
+    ) { profile, stepSummary ->
+        HomeUiState(
+            todaySteps = stepSummary?.creditedSteps ?: 0,
+            stepBalance = profile.stepBalance,
+            gems = profile.gems,
+            powerStones = profile.powerStones,
+            currentTier = profile.currentTier,
+            currentBiome = Biome.forTier(profile.currentTier),
+            bestWave = profile.bestWavePerTier[profile.currentTier] ?: 0,
+            isLoading = false,
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
+}

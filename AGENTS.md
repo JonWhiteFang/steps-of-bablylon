@@ -160,16 +160,19 @@ graph TD
 - [x] **Plan 03: Repository Layer** ✓
 - [x] **Plan 04: Step Counter Service** ✓
 - [x] **Plan 05: Health Connect Integration** ✓
-- [ ] **Plan 06: Home Screen & Navigation** ← next up
+- [x] **Plan 06: Home Screen & Navigation** ✓
+- [ ] **Plan 07: Workshop Screen & Upgrades**
+- [ ] **Plan 08: Battle Renderer** ← next up (critical path)
 
 ### Parallelizable Branches (after dependencies met)
 
 - Anti-cheat: Plan 25 (ready now — Plan 05 complete)
-- Home screen & navigation: Plan 06 (ready now — Plan 03 complete)
+- Workshop: Plan 07 (ready now — Plan 06 complete)
+- Battle Renderer: Plan 08 (ready now — Plan 06 complete) — CRITICAL PATH
+- Stats: Plan 22 (ready now — Plan 06 complete)
 - Walking features: Plans 19/20/21/23 (ready now — Plan 04 complete)
 - Workshop extensions: Plans 16/17 (after Plan 07)
 - Battle extensions: Plans 14/15 (after Plan 12, can run in parallel)
-- Stats: Plan 22 (after Plan 06)
 
 ## Key Domain Concepts
 

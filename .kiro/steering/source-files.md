@@ -111,9 +111,13 @@ domain/usecase/CanAffordUpgrade.kt              # Affordability check against wa
 ## Presentation Layer
 
 ```
-presentation/MainActivity.kt                      # Single Activity, Compose host, edge-to-edge, runtime + HC permissions
+presentation/MainActivity.kt                      # Single Activity, Scaffold + NavHost + BottomNavBar, permissions
 presentation/HealthConnectPermissionActivity.kt    # Privacy policy stub for Health Connect
-presentation/home/HomeScreen.kt                    # Home screen placeholder
+presentation/navigation/Screen.kt                 # Sealed class: 5 routes (Home, Workshop, Battle, Labs, Stats)
+presentation/navigation/BottomNavBar.kt            # Bottom navigation bar with 5 items
+presentation/home/HomeViewModel.kt                 # @HiltViewModel: combines profile + step flows → HomeUiState
+presentation/home/HomeUiState.kt                   # UI state: steps, balance, tier, biome, bestWave
+presentation/home/HomeScreen.kt                    # Dashboard: step card, currencies, tier/biome, battle button
 presentation/ui/theme/Color.kt                     # Compose color definitions
 presentation/ui/theme/Theme.kt                     # Compose theme setup (Material3)
 ```

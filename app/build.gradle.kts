@@ -44,6 +44,7 @@ dependencies {
     implementation(libs.compose.ui.graphics)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
+    implementation(libs.compose.material.icons)
     debugImplementation(libs.compose.ui.tooling)
 
     // AndroidX
@@ -65,8 +66,9 @@ dependencies {
     // WorkManager
     implementation(libs.workmanager)
 
-    // Hilt WorkManager
+    // Hilt WorkManager & Navigation
     implementation(libs.hilt.work)
+    implementation(libs.hilt.navigation.compose)
     ksp(libs.hilt.androidx.compiler)
 
     // Health Connect

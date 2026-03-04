@@ -1,6 +1,6 @@
 # Plan 06 — Home Screen & Navigation
 
-**Status:** Not Started
+**Status:** Complete
 **Dependencies:** Plan 03 (Repository Layer)
 **Layer:** `presentation/` — Compose UI
 
