@@ -67,7 +67,8 @@ Speed Controls = 1x / 2x / 4x
 Hilt with KSP (not kapt). All modules in `di/`.
 
 - `DatabaseModule` — provides Room database and DAOs
-- Future modules: `RepositoryModule`, `SensorModule`, `GoogleFitModule`
+- `RepositoryModule` — binds repository interfaces to Room-backed implementations
+- Future modules: `SensorModule`, `GoogleFitModule`
 
 ## Naming Conventions
 

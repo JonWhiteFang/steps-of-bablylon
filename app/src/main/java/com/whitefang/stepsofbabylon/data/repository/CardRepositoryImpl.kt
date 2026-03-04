@@ -1,0 +1,51 @@
+package com.whitefang.stepsofbabylon.data.repository
+
+import com.whitefang.stepsofbabylon.data.local.CardDao
+import com.whitefang.stepsofbabylon.data.local.CardInventoryEntity
+import com.whitefang.stepsofbabylon.domain.model.CardType
+import com.whitefang.stepsofbabylon.domain.model.OwnedCard
+import com.whitefang.stepsofbabylon.domain.repository.CardRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+
+class CardRepositoryImpl @Inject constructor(
+    private val dao: CardDao,
+) : CardRepository {
+
+    override fun observeAllCards(): Flow<List<OwnedCard>> =
+        dao.getAll().map { list -> list.map { it.toDomain() } }
+
+    override fun observeEquippedCards(): Flow<List<OwnedCard>> =
+        dao.getEquipped().map { list -> list.map { it.toDomain() } }
+
+    override suspend fun addCard(type: CardType): Long =
+        dao.insert(CardInventoryEntity(cardType = type.name))
+
+    override suspend fun upgradeCard(id: Int, newLevel: Int) {
+        val entity = dao.getById(id) ?: return
+        dao.update(entity.copy(level = newLevel))
+    }
+
+    override suspend fun equipCard(id: Int) {
+        val entity = dao.getById(id) ?: return
+        dao.update(entity.copy(isEquipped = true))
+    }
+
+    override suspend fun unequipCard(id: Int) {
+        val entity = dao.getById(id) ?: return
+        dao.update(entity.copy(isEquipped = false))
+    }
+
+    override suspend fun deleteCard(id: Int) {
+        val entity = dao.getById(id) ?: return
+        dao.delete(entity)
+    }
+
+    private fun CardInventoryEntity.toDomain() = OwnedCard(
+        id = id,
+        type = CardType.valueOf(cardType),
+        level = level,
+        isEquipped = isEquipped,
+    )
+}

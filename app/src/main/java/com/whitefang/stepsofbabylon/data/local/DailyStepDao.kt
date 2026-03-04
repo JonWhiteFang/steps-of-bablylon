@@ -16,4 +16,7 @@ interface DailyStepDao {
 
     @Upsert
     suspend fun upsert(entity: DailyStepRecordEntity)
+
+    @Query("SELECT * FROM daily_step_record WHERE date = :date")
+    suspend fun getByDateOnce(date: String): DailyStepRecordEntity?
 }

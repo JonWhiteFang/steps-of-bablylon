@@ -26,68 +26,23 @@ See `docs/StepsOfBabylon_GDD.md` for the full game design document.
 
 ```
 app/src/main/java/com/whitefang/stepsofbabylon/
-├── data/           # Room entities, DAOs, repositories impl, sensor/Google Fit data sources
-│   └── local/      # AppDatabase, PlayerProfileEntity
-├── domain/         # Use cases, repository interfaces, game logic, models
-│   ├── model/      # Currency, PlayerWallet, and all game domain models
-│   ├── repository/ # Repository interfaces (empty — Plan 03)
+├── data/           # Android-dependent layer
+│   ├── local/      # Room database, entities, DAOs
+│   └── repository/ # Repository implementations (Room-backed)
+├── domain/         # Pure Kotlin — no Android imports
+│   ├── model/      # Currency, PlayerWallet, PlayerProfile, and all game domain models
+│   ├── repository/ # Repository interfaces
 │   └── usecase/    # CalculateUpgradeCost, CanAffordUpgrade
 ├── presentation/   # ViewModels, Compose screens, SurfaceView battle renderer
 │   ├── home/       # HomeScreen
 │   └── ui/theme/   # Color, Theme
-├── di/             # Hilt modules (DatabaseModule)
+├── di/             # Hilt modules (DatabaseModule, RepositoryModule)
 └── service/        # Foreground step-counting service, WorkManager workers (Plan 04)
 ```
 
 Follow Clean Architecture layers: `presentation → domain ← data`. The domain layer has zero Android dependencies.
 
-### Existing Source Files
-
-```
-StepsOfBabylonApp.kt          # @HiltAndroidApp Application class
-di/DatabaseModule.kt           # Hilt module providing Room database
-data/local/AppDatabase.kt     # Room database definition (7 entities, 7 DAOs)
-data/local/Converters.kt      # TypeConverters for JSON maps
-data/local/DatabaseKeyManager.kt # SQLCipher passphrase via Android Keystore
-data/local/PlayerProfileEntity.kt  # Player profile Room entity
-data/local/PlayerProfileDao.kt     # Player profile DAO
-data/local/WorkshopUpgradeEntity.kt # Workshop upgrade entity
-data/local/WorkshopDao.kt          # Workshop DAO
-data/local/LabResearchEntity.kt    # Lab research entity
-data/local/LabDao.kt               # Lab research DAO
-data/local/CardInventoryEntity.kt  # Card inventory entity
-data/local/CardDao.kt              # Card inventory DAO
-data/local/UltimateWeaponStateEntity.kt # UW state entity
-data/local/UltimateWeaponDao.kt    # UW state DAO
-data/local/DailyStepRecordEntity.kt # Daily step record entity
-data/local/DailyStepDao.kt         # Daily step record DAO
-data/local/WalkingEncounterEntity.kt # Walking encounter entity
-data/local/WalkingEncounterDao.kt   # Walking encounter DAO
-domain/model/Currency.kt      # Currency enum (STEPS, CASH, GEMS, POWER_STONES)
-domain/model/PlayerWallet.kt  # Wallet data class holding currency balances
-domain/model/UpgradeType.kt   # 23 Workshop upgrade types with configs
-domain/model/UpgradeCategory.kt # Attack, Defense, Utility categories
-domain/model/UpgradeConfig.kt # Upgrade configuration data class
-domain/model/Tier.kt          # Tier data class
-domain/model/TierConfig.kt    # Full tier table (1–10)
-domain/model/BattleCondition.kt # 7 battle condition types
-domain/model/Biome.kt         # 5 biomes with forTier() mapping
-domain/model/EnemyType.kt     # 6 enemy types with multipliers
-domain/model/UltimateWeaponType.kt  # 6 UW types with unlock costs
-domain/model/UltimateWeaponLoadout.kt # UW loadout (max 3)
-domain/model/OverdriveType.kt # 4 overdrive types with costs
-domain/model/ResearchType.kt  # 10 lab research types
-domain/model/CardRarity.kt    # Common, Rare, Epic
-domain/model/CardType.kt      # 9 card types with effects
-domain/model/CardLoadout.kt   # Card loadout (max 3)
-domain/model/RoundState.kt    # Transient battle state
-domain/usecase/CalculateUpgradeCost.kt  # Cost formula: baseCost * scaling^level
-domain/usecase/CanAffordUpgrade.kt      # Affordability check
-presentation/MainActivity.kt  # Single Activity (Compose host)
-presentation/home/HomeScreen.kt  # Home screen placeholder
-presentation/ui/theme/Color.kt   # Compose color definitions
-presentation/ui/theme/Theme.kt   # Compose theme setup
-```
+See `.kiro/steering/source-files.md` for the full source file index.
 
 ## Plans & Roadmap
 
@@ -187,11 +142,13 @@ graph TD
 - [x] Project scaffold (Gradle, Hilt, Room skeleton, Compose theme, Home placeholder)
 - [x] **Plan 01: Domain Models & Currency System** ✓
 - [x] **Plan 02: Room Database & DAOs** ✓
-- [ ] **Plan 03: Repository Layer** ← next up
+- [x] **Plan 03: Repository Layer** ✓
+- [ ] **Plan 04: Step Counter Service** ← next up (or Plan 06)
 
 ### Parallelizable Branches (after dependencies met)
 
-- Step tracking: Plans 04/05 (after Plan 03)
+- Step tracking: Plans 04/05 (ready now — Plan 03 complete)
+- Home screen & navigation: Plan 06 (ready now — Plan 03 complete)
 - Walking features: Plans 19/20/21/23 (after Plan 04)
 - Workshop extensions: Plans 16/17 (after Plan 07)
 - Battle extensions: Plans 14/15 (after Plan 12, can run in parallel)

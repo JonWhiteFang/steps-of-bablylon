@@ -95,7 +95,7 @@ graph TD
 - [x] Project scaffold (Gradle, Hilt, Room skeleton, Compose theme, Home placeholder)
 - [x] Plan 01: Domain Models & Currency System
 - [x] Plan 02: Room Database & DAOs
-- [ ] Plan 03: Repository Layer
+- [x] Plan 03: Repository Layer
 - [ ] Plan 04: Step Counter Service
 - [ ] Plan 05: Google Fit Integration
 - [ ] Plan 06: Home Screen & Navigation

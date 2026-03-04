@@ -34,4 +34,16 @@ interface PlayerProfileDao {
 
     @Query("UPDATE player_profile SET lastActiveAt = :lastActiveAt WHERE id = 1")
     suspend fun updateLastActiveAt(lastActiveAt: Long)
+
+    @Query("UPDATE player_profile SET currentStepBalance = currentStepBalance + :delta, totalStepsEarned = CASE WHEN :delta > 0 THEN totalStepsEarned + :delta ELSE totalStepsEarned END WHERE id = 1")
+    suspend fun adjustStepBalance(delta: Long)
+
+    @Query("UPDATE player_profile SET gems = gems + :delta WHERE id = 1")
+    suspend fun adjustGems(delta: Long)
+
+    @Query("UPDATE player_profile SET powerStones = powerStones + :delta WHERE id = 1")
+    suspend fun adjustPowerStones(delta: Long)
+
+    @Query("UPDATE player_profile SET cardDust = cardDust + :delta WHERE id = 1")
+    suspend fun adjustCardDust(delta: Long)
 }

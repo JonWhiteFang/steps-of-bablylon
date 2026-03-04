@@ -19,4 +19,7 @@ interface UltimateWeaponDao {
 
     @Query("SELECT COUNT(*) FROM ultimate_weapon_state WHERE isEquipped = 1")
     fun countEquipped(): Flow<Int>
+
+    @Query("SELECT * FROM ultimate_weapon_state WHERE weaponType = :weaponType")
+    suspend fun getByType(weaponType: String): UltimateWeaponStateEntity?
 }

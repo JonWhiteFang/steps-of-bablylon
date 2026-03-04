@@ -27,4 +27,7 @@ interface CardDao {
 
     @Query("SELECT COUNT(*) FROM card_inventory WHERE isEquipped = 1")
     fun countEquipped(): Flow<Int>
+
+    @Query("SELECT * FROM card_inventory WHERE id = :id")
+    suspend fun getById(id: Int): CardInventoryEntity?
 }
