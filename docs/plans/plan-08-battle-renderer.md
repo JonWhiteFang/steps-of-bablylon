@@ -1,6 +1,6 @@
 # Plan 08 — Battle Renderer: Game Loop & Ziggurat
 
-**Status:** Not Started
+**Status:** Complete
 **Dependencies:** Plan 06 (Home Screen & Navigation)
 **Layer:** `presentation/battle/` — Custom SurfaceView renderer
 

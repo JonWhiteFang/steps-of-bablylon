@@ -162,16 +162,17 @@ graph TD
 - [x] **Plan 05: Health Connect Integration** ✓
 - [x] **Plan 06: Home Screen & Navigation** ✓
 - [x] **Plan 07: Workshop Screen & Upgrades** ✓
-- [ ] **Plan 08: Battle Renderer** ← next up (critical path)
+- [x] **Plan 08: Battle Renderer** ✓
+- [ ] **Plan 09: Battle System — Enemies & Waves** ← next up (critical path)
 
 ### Parallelizable Branches (after dependencies met)
 
 - Anti-cheat: Plan 25 (ready now — Plan 05 complete)
-- Workshop: Plan 07 complete ✓. Unlocks Plans 16, 17.
-- Battle Renderer: Plan 08 (ready now — Plan 06 complete) — CRITICAL PATH
+- Battle system: Plan 09 (ready now — Plan 08 complete) — CRITICAL PATH
+- Labs: Plan 16 (ready now — Plan 07 complete)
+- Cards: Plan 17 (ready now — Plan 07 complete)
 - Stats: Plan 22 (ready now — Plan 06 complete)
 - Walking features: Plans 19/20/21/23 (ready now — Plan 04 complete)
-- Workshop extensions: Plans 16/17 (after Plan 07)
 - Battle extensions: Plans 14/15 (after Plan 12, can run in parallel)
 
 ## Key Domain Concepts

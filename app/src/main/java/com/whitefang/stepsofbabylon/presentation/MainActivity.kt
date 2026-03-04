@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -22,8 +23,10 @@ import androidx.core.content.ContextCompat
 import androidx.health.connect.client.PermissionController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.whitefang.stepsofbabylon.data.healthconnect.HealthConnectClientWrapper
+import com.whitefang.stepsofbabylon.presentation.battle.BattleScreen
 import com.whitefang.stepsofbabylon.presentation.home.HomeScreen
 import com.whitefang.stepsofbabylon.presentation.navigation.BottomNavBar
 import com.whitefang.stepsofbabylon.presentation.navigation.Screen
@@ -91,7 +94,12 @@ class MainActivity : ComponentActivity() {
                 }
 
                 Scaffold(
-                    bottomBar = { BottomNavBar(navController) }
+                    bottomBar = {
+                        val backStackEntry by navController.currentBackStackEntryAsState()
+                        if (backStackEntry?.destination?.route != Screen.Battle.route) {
+                            BottomNavBar(navController)
+                        }
+                    }
                 ) { innerPadding ->
                     NavHost(
                         navController = navController,
@@ -105,7 +113,7 @@ class MainActivity : ComponentActivity() {
                             WorkshopScreen()
                         }
                         composable(Screen.Battle.route) {
-                            PlaceholderScreen("Battle")
+                            BattleScreen(onExitBattle = { navController.popBackStack() })
                         }
                         composable(Screen.Labs.route) {
                             PlaceholderScreen("Labs")

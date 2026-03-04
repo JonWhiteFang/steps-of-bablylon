@@ -100,7 +100,7 @@ graph TD
 - [x] Plan 05: Health Connect Integration
 - [x] Plan 06: Home Screen & Navigation
 - [x] Plan 07: Workshop Screen & Upgrades
-- [ ] Plan 08: Battle Renderer — Game Loop & Ziggurat
+- [x] Plan 08: Battle Renderer — Game Loop & Ziggurat
 - [ ] Plan 09: Battle System — Enemies & Waves
 - [ ] Plan 10: Battle System — Stats & Combat
 - [ ] Plan 11: In-Round Upgrades & Cash Economy

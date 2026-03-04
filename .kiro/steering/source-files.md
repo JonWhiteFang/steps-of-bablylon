@@ -92,6 +92,7 @@ domain/model/CardRarity.kt            # Common, Rare, Epic
 domain/model/CardType.kt              # 9 card types with effects
 domain/model/CardLoadout.kt           # Card loadout (max 3)
 domain/model/RoundState.kt            # Transient battle state
+domain/model/ZigguratBaseStats.kt     # Base stat constants (HP, damage, attack speed, range, regen, projectile speed)
 ```
 
 ## Domain Layer — Interfaces & Use Cases
@@ -124,6 +125,16 @@ presentation/workshop/WorkshopViewModel.kt         # @HiltViewModel: upgrades + 
 presentation/workshop/WorkshopUiState.kt           # UI state: upgrade list, balance, selected category
 presentation/workshop/WorkshopScreen.kt            # 3-tab layout, upgrade list, Quick Invest FAB
 presentation/workshop/UpgradeCard.kt               # Reusable upgrade card (affordable/expensive/maxed states)
+presentation/battle/BattleScreen.kt                # Compose wrapper: AndroidView + overlay HUD (speed, pause, exit)
+presentation/battle/BattleViewModel.kt             # @HiltViewModel: loads tier, exposes BattleUiState + BattleEvent
+presentation/battle/BattleUiState.kt               # UI state: wave, HP, cash, speed, pause
+presentation/battle/GameSurfaceView.kt             # SurfaceView + SurfaceHolder.Callback, manages game loop thread
+presentation/battle/GameLoopThread.kt              # Dedicated thread: fixed timestep (60 UPS), accumulator, speed multiplier
+presentation/battle/engine/GameEngine.kt           # Central coordinator: entity list, update/render dispatch
+presentation/battle/engine/Entity.kt               # Abstract base: x, y, width, height, isAlive, update(), render()
+presentation/battle/entities/ZigguratEntity.kt     # 5-layer ziggurat, auto-fire projectiles, HP tracking
+presentation/battle/entities/ProjectileEntity.kt   # Moves toward target, self-destructs on arrival
+presentation/battle/ui/HealthBarRenderer.kt        # HP bar: green→yellow→red gradient, numeric text
 presentation/ui/theme/Color.kt                     # Compose color definitions
 presentation/ui/theme/Theme.kt                     # Compose theme setup (Material3)
 ```

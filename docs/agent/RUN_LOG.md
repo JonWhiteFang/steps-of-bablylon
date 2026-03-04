@@ -103,3 +103,29 @@
 - Open questions / blockers: None.
 - Follow-ups created: None.
 - Memory updated: STATE ✅ / RUN_LOG ✅
+
+## 2026-03-04 — Plan 08: Battle Renderer — Game Loop & Ziggurat
+- Goal: Build custom SurfaceView battle renderer with game loop, ziggurat entity, projectiles, health bar, and Compose overlay.
+- Decisions made:
+  - (b) ZigguratBaseStats as domain/model object — proper constants for Plan 10's ResolveStats to consume.
+  - (a) Simple geometric ziggurat — 5 stacked rectangles in sandstone tones.
+  - (a) Hidden bottom nav during battle — full-screen immersive.
+- Changes made:
+  - Created `domain/model/ZigguratBaseStats.kt` — base stat constants (HP, damage, attack speed, range, regen, knockback, projectile speed)
+  - Created `presentation/battle/engine/Entity.kt` — abstract base class (x, y, width, height, isAlive, update, render)
+  - Created `presentation/battle/engine/GameEngine.kt` — entity list, update/render dispatch, HealthBarRenderer integration
+  - Created `presentation/battle/entities/ZigguratEntity.kt` — 5-layer ziggurat, auto-fire via callback, HP tracking
+  - Created `presentation/battle/entities/ProjectileEntity.kt` — moves toward target, self-destructs on arrival
+  - Created `presentation/battle/ui/HealthBarRenderer.kt` — green/yellow/red HP bar with numeric text
+  - Created `presentation/battle/GameLoopThread.kt` — fixed timestep (60 UPS), accumulator pattern, speed multiplier, FPS counter
+  - Created `presentation/battle/GameSurfaceView.kt` — SurfaceHolder.Callback, manages game loop thread lifecycle
+  - Created `presentation/battle/BattleUiState.kt` — UI state for Compose overlay
+  - Created `presentation/battle/BattleViewModel.kt` — @HiltViewModel, loads tier, exposes state + BattleEvent
+  - Created `presentation/battle/BattleScreen.kt` — Compose wrapper (AndroidView + overlay: wave counter, speed controls, pause, exit)
+  - Updated `presentation/MainActivity.kt` — BattleScreen replaces placeholder, bottom nav hidden on Battle route
+- Commands/tests run: `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL, zero warnings
+- Open questions / blockers:
+  - Ziggurat fires at fixed test target (top-center) — Plan 09 replaces with nearest enemy
+  - Workshop bonuses not applied to base stats yet — Plan 10 adds ResolveStats
+- Follow-ups created: None.
+- Memory updated: STATE ✅ / RUN_LOG ✅
