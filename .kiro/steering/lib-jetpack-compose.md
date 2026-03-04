@@ -1,3 +1,8 @@
+---
+inclusion: fileMatch
+fileMatchPattern: "**/presentation/**,**/*Screen*,**/*ViewModel*"
+---
+
 # Jetpack Compose — Reference Guide
 
 ## State Management
@@ -9,9 +14,13 @@
 
 ```kotlin
 // ViewModel exposing StateFlow
-class MyViewModel : ViewModel() {
-    private val _uiState = MutableStateFlow(MyUiState())
-    val uiState: StateFlow<MyUiState> = _uiState.asStateFlow()
+@HiltViewModel
+class MyViewModel @Inject constructor(
+    private val repository: MyRepository
+) : ViewModel() {
+    val uiState: StateFlow<MyUiState> = repository.observeData()
+        .map { data -> MyUiState(data) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MyUiState())
 }
 
 // Composable collecting it
@@ -28,7 +37,6 @@ fun MyScreen(viewModel: MyViewModel = hiltViewModel()) {
 - `rememberUpdatedState(value)` — captures the latest value inside a long-lived effect without restarting it
 
 ```kotlin
-// LaunchedEffect: runs once on composition, restarts if pulseRateMs changes
 LaunchedEffect(pulseRateMs) {
     while (isActive) {
         delay(pulseRateMs)
@@ -37,7 +45,6 @@ LaunchedEffect(pulseRateMs) {
     }
 }
 
-// DisposableEffect: observe lifecycle, clean up on dispose
 DisposableEffect(lifecycleOwner) {
     val observer = LifecycleEventObserver { _, event ->
         if (event == Lifecycle.Event.ON_START) currentOnStart()
@@ -45,19 +52,19 @@ DisposableEffect(lifecycleOwner) {
     lifecycleOwner.lifecycle.addObserver(observer)
     onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
 }
-
-// rememberUpdatedState: keep latest callback without restarting LaunchedEffect
-val currentOnTimeout by rememberUpdatedState(onTimeout)
-LaunchedEffect(true) {
-    delay(SplashWaitTimeMillis)
-    currentOnTimeout()
-}
 ```
 
 ## Navigation
 
 - Use Navigation Compose (`NavHost`, `composable()` routes)
 - Pass simple args via route strings; complex data via ViewModels or saved state
+- Single Activity architecture (`MainActivity` hosts all Compose content)
+
+## Activity Setup
+
+- `@AndroidEntryPoint` for Hilt injection
+- `enableEdgeToEdge()` for full-screen rendering
+- `setContent { StepsOfBabylonTheme { ... } }` wraps all screens in the app theme
 
 ## Project Conventions
 
@@ -65,3 +72,4 @@ LaunchedEffect(true) {
 - ViewModels expose `StateFlow`, never `LiveData`
 - Battle renderer uses custom `SurfaceView`, not Compose
 - Theme defined in `presentation/ui/theme/` (Material3)
+- Use `stateIn` with `WhileSubscribed(5000)` to share flows in ViewModels

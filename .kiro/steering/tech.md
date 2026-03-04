@@ -6,8 +6,11 @@
 - **Min SDK:** 34 (Android 14) / Target & Compile SDK: 36
 - **Architecture:** MVVM + Clean Architecture
 - **Build:** Gradle 9.3.1 with Kotlin DSL, version catalog at `gradle/libs.versions.toml`
+- **Database encryption:** SQLCipher via Android Keystore-managed passphrase
 
 ## Key Libraries & Versions
+
+All versions managed in `gradle/libs.versions.toml`. Never hardcode versions in build files.
 
 | Library | Version | Purpose |
 |---|---|---|
@@ -20,6 +23,14 @@
 | Navigation Compose | 2.9.7 | Compose navigation |
 | Lifecycle | 2.9.0 | ViewModel, StateFlow integration |
 | WorkManager | 2.11.0 | Background step sync |
+| SQLCipher | 4.13.0 | Database encryption |
+| SQLite KTX | 2.4.0 | SQLite support library |
+| Core KTX | 1.17.0 | Kotlin extensions for Android |
+| Activity Compose | 1.12.3 | Compose Activity integration |
+
+## Gradle Plugins
+
+`android.application`, `kotlin.compose`, `hilt`, `ksp`, `room` — all aliased from version catalog.
 
 ## Architecture Layers
 
@@ -34,6 +45,7 @@ Data flow: `presentation → domain ← data`. Domain has no Android dependencie
 - Jetpack Compose for all menus and screens
 - Custom `SurfaceView` with dedicated game loop thread for the battle renderer (not Compose)
 - Fixed timestep game loop, entity system for ziggurat/enemies/projectiles
+- Edge-to-edge rendering via `enableEdgeToEdge()`
 
 ## Async
 
@@ -47,30 +59,22 @@ Data flow: `presentation → domain ← data`. Domain has no Android dependencie
 - Google Fit SDK for cross-validation and Activity Minute Parity
 - WorkManager + Foreground Service for reliable background counting
 
-## Common Commands
+## Build Commands
 
 ```bash
-# Build debug APK
-./gradlew assembleDebug
-
-# Build release APK
-./gradlew assembleRelease
-
-# Run unit tests
-./gradlew test
-
-# Run instrumented tests (requires device/emulator)
-./gradlew connectedAndroidTest
-
-# Check for lint issues
-./gradlew lint
-
-# Clean build
-./gradlew clean
+./gradlew assembleDebug       # Debug APK
+./gradlew assembleRelease     # Release APK
+./gradlew test                # Unit tests
+./gradlew connectedAndroidTest # Instrumented tests (device/emulator)
+./gradlew lint                # Lint check
+./gradlew clean               # Clean build
 ```
+
+In non-TTY environments (Kiro CLI, CI), use `./run-gradle.sh <task>` instead of `./gradlew` to avoid output buffering. See `README.md` for the script.
 
 ## Notes
 
 - All annotation processing uses KSP (not kapt)
 - Room schema exports to `app/schemas/` — commit these files
+- Database uses SQLCipher encryption with `fallbackToDestructiveMigration` during development
 - All new dependencies must be added to `gradle/libs.versions.toml`, not hardcoded in build files

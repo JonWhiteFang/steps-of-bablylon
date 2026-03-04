@@ -1,3 +1,8 @@
+---
+inclusion: fileMatch
+fileMatchPattern: "**/*Repository*,**/*ViewModel*,**/*UseCase*,**/usecase/**,**/repository/**,**/service/**"
+---
+
 # Kotlin Coroutines & Flow — Reference Guide
 
 ## Structured Concurrency
@@ -7,7 +12,6 @@
 - `coroutineScope {}` — creates a child scope; waits for all children, propagates exceptions
 
 ```kotlin
-// Parallel work with structured concurrency
 suspend fun loadData() = coroutineScope {
     val profile = async { repository.getProfile() }
     val wallet = async { repository.getWallet() }
@@ -33,7 +37,6 @@ suspend fun loadData() = coroutineScope {
 - `MutableStateFlow<T>` — mutable version for ViewModels
 
 ```kotlin
-// ViewModel pattern: collect Flow from repository, expose StateFlow to UI
 @HiltViewModel
 class MyViewModel @Inject constructor(
     private val repository: MyRepository
@@ -47,8 +50,9 @@ class MyViewModel @Inject constructor(
 ## Key Operators
 
 - `map`, `filter` — transform/filter emissions
+- `filterNotNull()` — used after Room DAO flows to skip null emissions
 - `combine` — merge multiple flows
-- `stateIn` — convert cold Flow to hot StateFlow (use `SharingStarted.WhileSubscribed(5000)`)
+- `stateIn` — convert cold Flow to hot StateFlow
 - `flatMapLatest` — switch to new flow when upstream emits
 
 ## Cancellation
@@ -61,6 +65,6 @@ class MyViewModel @Inject constructor(
 
 - All async operations use coroutines and Flow (no RxJava, no callbacks)
 - ViewModels use `viewModelScope` for launching coroutines
-- Repositories return `Flow<T>` for observable data
-- One-shot operations are `suspend` functions
+- Repositories return `Flow<T>` for observable data, `suspend` for one-shot writes
 - Use `stateIn` with `WhileSubscribed(5000)` to share flows in ViewModels
+- Repository pattern: `dao.get().filterNotNull().map { it.toDomain() }`

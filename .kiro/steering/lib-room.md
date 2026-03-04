@@ -1,3 +1,8 @@
+---
+inclusion: fileMatch
+fileMatchPattern: "**/data/local/**,**/data/repository/**,**/di/DatabaseModule*,**/AppDatabase*"
+---
+
 # Room Database — Reference Guide
 
 ## Core Annotations
@@ -9,60 +14,71 @@
 ## DAO Patterns
 
 - `@Query` returning `Flow<T>` — re-emits when observed tables change (reactive)
-- `@Insert(onConflict = OnConflictStrategy.REPLACE)` — insert or replace
-- `@Upsert` — insert if new, update if exists (preferred over manual check)
+- `@Upsert` — insert if new, update if exists (preferred approach in this project)
 - `@Update`, `@Delete` — standard mutations
-- Use `suspend` for one-shot operations; `Flow` for observable queries
+- Use `suspend` for one-shot write operations; `Flow` for observable reads
+- Atomic field updates via `@Query("UPDATE ... SET col = col + :delta")` for currency adjustments
 
 ```kotlin
 @Dao
-interface PlayerDao {
-    @Query("SELECT * FROM player_profile WHERE id = :id")
-    fun observePlayer(id: Long): Flow<PlayerProfileEntity?>
-
-    @Query("SELECT * FROM player_profile WHERE id = :id")
-    suspend fun getPlayer(id: Long): PlayerProfileEntity?
+interface PlayerProfileDao {
+    @Query("SELECT * FROM player_profile WHERE id = 1")
+    fun get(): Flow<PlayerProfileEntity?>
 
     @Upsert
-    suspend fun upsertPlayer(player: PlayerProfileEntity)
+    suspend fun upsert(entity: PlayerProfileEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertPlayer(player: PlayerProfileEntity)
+    @Query("UPDATE player_profile SET currentStepBalance = currentStepBalance + :delta, totalStepsEarned = CASE WHEN :delta > 0 THEN totalStepsEarned + :delta ELSE totalStepsEarned END WHERE id = 1")
+    suspend fun adjustStepBalance(delta: Long)
 }
 ```
 
 ## TypeConverters
 
-- Use `@TypeConverter` for types Room can't store natively (enums, lists, custom objects)
+- Use `@TypeConverter` for types Room can't store natively
 - Register via `@TypeConverters` on the `@Database` class
+- This project converts `Map<Int, Int>` and `Map<String, Int>` to/from JSON strings
 
 ```kotlin
 class Converters {
     @TypeConverter
-    fun fromCurrency(value: Currency): String = value.name
+    fun fromIntIntMap(map: Map<Int, Int>): String =
+        JSONObject(map.mapKeys { it.key.toString() }).toString()
 
     @TypeConverter
-    fun toCurrency(value: String): Currency = Currency.valueOf(value)
+    fun toIntIntMap(json: String): Map<Int, Int> =
+        JSONObject(json).let { obj ->
+            obj.keys().asSequence().associate { it.toInt() to obj.getInt(it) }
+        }
 }
 ```
+
+## Database Setup
+
+- SQLCipher encryption via `SupportOpenHelperFactory` with Android Keystore-managed passphrase
+- `fallbackToDestructiveMigration(dropAllTables = true)` during development
+- Schema exported to `app/schemas/` — commit these files
+- Schema location configured via Room Gradle plugin: `room { schemaDirectory("$projectDir/schemas") }`
 
 ## Migrations
 
 - Auto migrations: `@Database(autoMigrations = [@AutoMigration(from = 1, to = 2)])`
 - Manual migrations for complex changes (column renames, data transforms)
-- Export schemas to `app/schemas/` — commit these files
-- Configure in build.gradle: `ksp { arg("room.schemaLocation", "$projectDir/schemas") }`
+- Current schema version: 1
 
 ## Flow Integration
 
-- `Flow<List<T>>` queries automatically re-emit when underlying table data changes
+- `Flow` queries automatically re-emit when underlying table data changes
 - Collect in ViewModel, expose as `StateFlow` to Compose
 - No manual invalidation needed — Room handles it
+- Repository pattern: DAO Flow → `filterNotNull()` → `map { entity.toDomain() }`
 
 ```kotlin
-class PlayerRepositoryImpl(private val dao: PlayerDao) : PlayerRepository {
-    override fun observeWallet(playerId: Long): Flow<PlayerWallet> =
-        dao.observePlayer(playerId).map { it?.toWallet() ?: PlayerWallet() }
+class PlayerRepositoryImpl @Inject constructor(
+    private val dao: PlayerProfileDao,
+) : PlayerRepository {
+    override fun observeWallet(): Flow<PlayerWallet> =
+        dao.get().filterNotNull().map { it.toDomain().toWallet() }
 }
 ```
 
@@ -70,6 +86,8 @@ class PlayerRepositoryImpl(private val dao: PlayerDao) : PlayerRepository {
 
 - Entity files: `*Entity.kt` in `data/local/`
 - DAO files: `*Dao.kt` in `data/local/`
-- Database: `AppDatabase.kt` in `data/local/`
+- Database: `AppDatabase.kt` in `data/local/` (7 entities, 7 DAOs)
 - Room is the single source of truth for all game state
-- Schema version starts at 1; increment with each migration
+- Player profile uses single-row pattern (id=1)
+- Prefer `@Upsert` over `@Insert(onConflict = REPLACE)`
+- Room handles its own threading — no need to wrap DAO calls in `withContext(IO)`

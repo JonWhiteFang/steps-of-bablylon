@@ -14,6 +14,7 @@ Walk → Earn Steps → Spend Steps on Workshop upgrades → Fight battles → R
 | Cash | Killing enemies in-round | In-round upgrades (resets each round) |
 | Gems | Milestones, daily login | Card Packs, Lab rush |
 | Power Stones | Weekly challenges, wave milestones | Ultimate Weapon unlock/upgrade |
+| Card Dust | Duplicate card recycling | Card upgrades |
 
 ## Key Systems
 
@@ -31,3 +32,4 @@ Walk → Earn Steps → Spend Steps on Workshop upgrades → Fight battles → R
 - Anti-cheat: 200 steps/min rate limit, 50,000 steps/day ceiling, Google Fit cross-validation
 - Solo experience — no multiplayer, no server backend required for v1.0
 - Monetization is cosmetic/convenience only (ads, IAP for Gems/cosmetics, Season Pass)
+- Room database is the single source of truth for all game state
