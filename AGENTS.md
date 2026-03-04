@@ -161,13 +161,13 @@ graph TD
 - [x] **Plan 04: Step Counter Service** ✓
 - [x] **Plan 05: Health Connect Integration** ✓
 - [x] **Plan 06: Home Screen & Navigation** ✓
-- [ ] **Plan 07: Workshop Screen & Upgrades**
+- [x] **Plan 07: Workshop Screen & Upgrades** ✓
 - [ ] **Plan 08: Battle Renderer** ← next up (critical path)
 
 ### Parallelizable Branches (after dependencies met)
 
 - Anti-cheat: Plan 25 (ready now — Plan 05 complete)
-- Workshop: Plan 07 (ready now — Plan 06 complete)
+- Workshop: Plan 07 complete ✓. Unlocks Plans 16, 17.
 - Battle Renderer: Plan 08 (ready now — Plan 06 complete) — CRITICAL PATH
 - Stats: Plan 22 (ready now — Plan 06 complete)
 - Walking features: Plans 19/20/21/23 (ready now — Plan 04 complete)

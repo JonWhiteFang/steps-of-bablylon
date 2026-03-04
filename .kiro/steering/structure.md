@@ -16,6 +16,7 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 ├── presentation/       # Android/Compose layer
 │   ├── navigation/     # Screen routes, BottomNavBar
 │   ├── home/           # Home screen, ViewModel, UiState
+│   ├── workshop/       # Workshop screen, ViewModel, UpgradeCard
 │   └── ui/theme/       # Compose theme, colors (Material3)
 ├── di/                 # Hilt modules (DatabaseModule, RepositoryModule, StepModule, HealthConnectModule)
 └── service/            # Foreground step-counting service, WorkManager workers, boot receiver

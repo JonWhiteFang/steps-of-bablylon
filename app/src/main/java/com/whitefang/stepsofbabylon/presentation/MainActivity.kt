@@ -28,6 +28,7 @@ import com.whitefang.stepsofbabylon.presentation.home.HomeScreen
 import com.whitefang.stepsofbabylon.presentation.navigation.BottomNavBar
 import com.whitefang.stepsofbabylon.presentation.navigation.Screen
 import com.whitefang.stepsofbabylon.presentation.ui.theme.StepsOfBabylonTheme
+import com.whitefang.stepsofbabylon.presentation.workshop.WorkshopScreen
 import com.whitefang.stepsofbabylon.service.StepCounterService
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -45,12 +46,10 @@ class MainActivity : ComponentActivity() {
                 val context = LocalContext.current
                 val navController = rememberNavController()
 
-                // Health Connect permission launcher
                 val hcPermissionLauncher = rememberLauncherForActivityResult(
                     PermissionController.createRequestPermissionResultContract()
-                ) { /* HC permissions granted or denied — either way, app works */ }
+                ) { }
 
-                // Standard Android permission launcher
                 val permissionLauncher = rememberLauncherForActivityResult(
                     ActivityResultContracts.RequestMultiplePermissions()
                 ) { results ->
@@ -103,7 +102,7 @@ class MainActivity : ComponentActivity() {
                             HomeScreen(onBattleClick = { navController.navigate(Screen.Battle.route) })
                         }
                         composable(Screen.Workshop.route) {
-                            PlaceholderScreen("Workshop")
+                            WorkshopScreen()
                         }
                         composable(Screen.Battle.route) {
                             PlaceholderScreen("Battle")

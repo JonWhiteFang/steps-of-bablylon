@@ -87,3 +87,19 @@
 - Open questions / blockers: None.
 - Follow-ups created: None.
 - Memory updated: STATE ✅ / RUN_LOG ✅
+
+## 2026-03-04 — Plan 07: Workshop Screen & Upgrades
+- Goal: Build Workshop screen with 3-tab layout, 23 upgrades, tap-to-buy, Quick Invest.
+- Changes made:
+  - Created `domain/usecase/PurchaseUpgrade.kt` — checks affordability, deducts Steps, increments level
+  - Created `domain/usecase/QuickInvest.kt` — recommends cheapest affordable upgrade
+  - Created `presentation/workshop/WorkshopUiState.kt` — UpgradeDisplayInfo + WorkshopUiState
+  - Created `presentation/workshop/WorkshopViewModel.kt` — @HiltViewModel, combines upgrades + wallet flows
+  - Created `presentation/workshop/UpgradeCard.kt` — reusable card with 3 visual states
+  - Created `presentation/workshop/WorkshopScreen.kt` — PrimaryTabRow, LazyColumn, Quick Invest FAB
+  - Updated `presentation/home/HomeViewModel.kt` — added workshopRepository.ensureUpgradesExist() in init
+  - Updated `presentation/MainActivity.kt` — replaced Workshop placeholder with WorkshopScreen()
+- Commands/tests run: `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL, zero warnings
+- Open questions / blockers: None.
+- Follow-ups created: None.
+- Memory updated: STATE ✅ / RUN_LOG ✅

@@ -1,0 +1,74 @@
+package com.whitefang.stepsofbabylon.presentation.workshop
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Tab
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.whitefang.stepsofbabylon.domain.model.UpgradeCategory
+
+@Composable
+fun WorkshopScreen(viewModel: WorkshopViewModel = hiltViewModel()) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val categories = UpgradeCategory.entries
+    val selectedIndex = categories.indexOf(state.selectedCategory)
+
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            // Balance header
+            Text(
+                text = "Balance: ${state.stepBalance} Steps",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(16.dp),
+            )
+
+            // Category tabs
+            PrimaryTabRow(selectedTabIndex = selectedIndex) {
+                categories.forEachIndexed { index, category ->
+                    Tab(
+                        selected = index == selectedIndex,
+                        onClick = { viewModel.selectCategory(category) },
+                        text = { Text(category.name) },
+                    )
+                }
+            }
+
+            // Upgrade list
+            LazyColumn(
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                items(state.upgrades, key = { it.type.name }) { info ->
+                    UpgradeCard(info = info, onClick = { viewModel.purchase(info.type) })
+                }
+            }
+        }
+
+        // Quick Invest FAB
+        FloatingActionButton(
+            onClick = { viewModel.quickInvest() },
+            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+        ) {
+            Text("⚡", style = MaterialTheme.typography.titleLarge)
+        }
+    }
+}

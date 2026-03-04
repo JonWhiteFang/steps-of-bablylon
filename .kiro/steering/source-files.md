@@ -106,6 +106,8 @@ domain/repository/StepRepository.kt             # Daily step records + escrow + 
 domain/repository/WalkingEncounterRepository.kt # Walking encounter interface
 domain/usecase/CalculateUpgradeCost.kt          # Cost formula: baseCost * scaling^level
 domain/usecase/CanAffordUpgrade.kt              # Affordability check against wallet
+domain/usecase/PurchaseUpgrade.kt               # Deducts Steps, increments upgrade level
+domain/usecase/QuickInvest.kt                   # Recommends cheapest affordable upgrade
 ```
 
 ## Presentation Layer
@@ -118,6 +120,10 @@ presentation/navigation/BottomNavBar.kt            # Bottom navigation bar with 
 presentation/home/HomeViewModel.kt                 # @HiltViewModel: combines profile + step flows → HomeUiState
 presentation/home/HomeUiState.kt                   # UI state: steps, balance, tier, biome, bestWave
 presentation/home/HomeScreen.kt                    # Dashboard: step card, currencies, tier/biome, battle button
+presentation/workshop/WorkshopViewModel.kt         # @HiltViewModel: upgrades + wallet → WorkshopUiState
+presentation/workshop/WorkshopUiState.kt           # UI state: upgrade list, balance, selected category
+presentation/workshop/WorkshopScreen.kt            # 3-tab layout, upgrade list, Quick Invest FAB
+presentation/workshop/UpgradeCard.kt               # Reusable upgrade card (affordable/expensive/maxed states)
 presentation/ui/theme/Color.kt                     # Compose color definitions
 presentation/ui/theme/Theme.kt                     # Compose theme setup (Material3)
 ```

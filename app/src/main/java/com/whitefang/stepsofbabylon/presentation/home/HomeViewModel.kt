@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.whitefang.stepsofbabylon.domain.model.Biome
 import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
 import com.whitefang.stepsofbabylon.domain.repository.StepRepository
+import com.whitefang.stepsofbabylon.domain.repository.WorkshopRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -18,10 +19,14 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val playerRepository: PlayerRepository,
     private val stepRepository: StepRepository,
+    private val workshopRepository: WorkshopRepository,
 ) : ViewModel() {
 
     init {
-        viewModelScope.launch { playerRepository.ensureProfileExists() }
+        viewModelScope.launch {
+            playerRepository.ensureProfileExists()
+            workshopRepository.ensureUpgradesExist()
+        }
     }
 
     val uiState: StateFlow<HomeUiState> = combine(

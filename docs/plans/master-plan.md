@@ -99,7 +99,7 @@ graph TD
 - [x] Plan 04: Step Counter Service
 - [x] Plan 05: Health Connect Integration
 - [x] Plan 06: Home Screen & Navigation
-- [ ] Plan 07: Workshop Screen & Upgrades
+- [x] Plan 07: Workshop Screen & Upgrades
 - [ ] Plan 08: Battle Renderer — Game Loop & Ziggurat
 - [ ] Plan 09: Battle System — Enemies & Waves
 - [ ] Plan 10: Battle System — Stats & Combat
