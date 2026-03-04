@@ -6,7 +6,8 @@
 app/src/main/java/com/whitefang/stepsofbabylon/
 ├── data/
 │   ├── local/          # Room database, entities, DAOs, TypeConverters, SQLCipher key manager
-│   └── repository/     # Repository implementations (Room-backed, @Inject constructors)
+│   ├── repository/     # Repository implementations (Room-backed, @Inject constructors)
+│   └── sensor/         # Step sensor data source, rate limiter, daily step manager
 ├── domain/             # Pure Kotlin — no Android imports
 │   ├── model/          # Data classes and enums
 │   ├── repository/     # Repository interfaces (Flow-based)
@@ -14,8 +15,8 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 ├── presentation/       # Android/Compose layer
 │   ├── home/           # Home screen
 │   └── ui/theme/       # Compose theme, colors (Material3)
-├── di/                 # Hilt modules (DatabaseModule, RepositoryModule)
-└── service/            # Foreground service, WorkManager workers (placeholder — Plan 04)
+├── di/                 # Hilt modules (DatabaseModule, RepositoryModule, StepModule)
+└── service/            # Foreground step-counting service, WorkManager workers, boot receiver
 ```
 
 ## Layer Rules
@@ -61,15 +62,21 @@ All in `domain/model/`:
 
 | File | Purpose |
 |---|---|
-| `StepsOfBabylonApp.kt` | `@HiltAndroidApp` Application class |
+| `StepsOfBabylonApp.kt` | `@HiltAndroidApp`, `Configuration.Provider` (HiltWorkerFactory) |
 | `di/DatabaseModule.kt` | Hilt module: Room DB (SQLCipher) + all 7 DAOs |
 | `di/RepositoryModule.kt` | Hilt module: binds all 7 repository interfaces to impls |
+| `di/StepModule.kt` | Hilt module: provides SensorManager |
 | `data/local/AppDatabase.kt` | Room database (7 entities, 7 DAOs, version 1) |
 | `data/local/DatabaseKeyManager.kt` | SQLCipher passphrase via Android Keystore |
 | `data/local/Converters.kt` | TypeConverters for `Map<Int,Int>` and `Map<String,Int>` (JSON) |
+| `data/sensor/StepSensorDataSource.kt` | TYPE_STEP_COUNTER wrapper, emits deltas via callbackFlow |
+| `data/sensor/StepRateLimiter.kt` | Anti-cheat: 200 steps/min cap (250 burst) |
+| `data/sensor/DailyStepManager.kt` | Orchestrates rate limit → 50k ceiling → Room persist |
+| `service/StepCounterService.kt` | Foreground service (health type), START_STICKY |
+| `service/StepSyncWorker.kt` | @HiltWorker, 15-min periodic catch-up |
 | `domain/usecase/CalculateUpgradeCost.kt` | Cost formula: `baseCost × scaling^level` |
 | `domain/usecase/CanAffordUpgrade.kt` | Affordability check against wallet |
-| `presentation/MainActivity.kt` | Single Activity, Compose host, edge-to-edge |
+| `presentation/MainActivity.kt` | Single Activity, Compose host, edge-to-edge, runtime permissions |
 | `gradle/libs.versions.toml` | All dependency versions |
 | `app/schemas/` | Room schema exports (commit these) |
 | `docs/plans/` | Numbered implementation plans (01–30) |

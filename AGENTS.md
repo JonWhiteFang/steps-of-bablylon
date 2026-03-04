@@ -158,13 +158,14 @@ graph TD
 - [x] **Plan 01: Domain Models & Currency System** ✓
 - [x] **Plan 02: Room Database & DAOs** ✓
 - [x] **Plan 03: Repository Layer** ✓
-- [ ] **Plan 04: Step Counter Service** ← next up (or Plan 06)
+- [x] **Plan 04: Step Counter Service** ✓
+- [ ] **Plan 06: Home Screen & Navigation** ← next up
 
 ### Parallelizable Branches (after dependencies met)
 
-- Step tracking: Plans 04/05 (ready now — Plan 03 complete)
+- Google Fit: Plan 05 (ready now — Plan 04 complete)
 - Home screen & navigation: Plan 06 (ready now — Plan 03 complete)
-- Walking features: Plans 19/20/21/23 (after Plan 04)
+- Walking features: Plans 19/20/21/23 (ready now — Plan 04 complete)
 - Workshop extensions: Plans 16/17 (after Plan 07)
 - Battle extensions: Plans 14/15 (after Plan 12, can run in parallel)
 - Stats: Plan 22 (after Plan 06)

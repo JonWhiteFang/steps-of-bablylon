@@ -5,9 +5,10 @@ All paths relative to `app/src/main/java/com/whitefang/stepsofbabylon/`.
 ## Application & DI
 
 ```
-StepsOfBabylonApp.kt              # @HiltAndroidApp Application class
+StepsOfBabylonApp.kt              # @HiltAndroidApp, Configuration.Provider (HiltWorkerFactory)
 di/DatabaseModule.kt               # Hilt: Room DB (SQLCipher) + 7 DAO providers
 di/RepositoryModule.kt             # Hilt: 7 repository interface → impl bindings (@Singleton)
+di/StepModule.kt                   # Hilt: SensorManager provider
 ```
 
 ## Data Layer — Room
@@ -40,8 +41,16 @@ data/repository/WorkshopRepositoryImpl.kt        # Workshop upgrades
 data/repository/LabRepositoryImpl.kt             # Lab research
 data/repository/CardRepositoryImpl.kt            # Card inventory
 data/repository/UltimateWeaponRepositoryImpl.kt  # Ultimate weapon state
-data/repository/StepRepositoryImpl.kt            # Daily step records
+data/repository/StepRepositoryImpl.kt            # Daily step records + one-shot getDailyRecord()
 data/repository/WalkingEncounterRepositoryImpl.kt # Walking encounters
+```
+
+## Data Layer — Sensor
+
+```
+data/sensor/StepSensorDataSource.kt  # TYPE_STEP_COUNTER wrapper, emits deltas via callbackFlow
+data/sensor/StepRateLimiter.kt       # Rolling 1-min window rate limiter (200/min, 250 burst)
+data/sensor/DailyStepManager.kt      # Orchestrates: rate limit → 50k ceiling → Room persist
 ```
 
 ## Domain Layer — Models
@@ -81,7 +90,7 @@ domain/repository/WorkshopRepository.kt         # Workshop upgrades interface
 domain/repository/LabRepository.kt              # Lab research interface
 domain/repository/CardRepository.kt             # Card inventory interface
 domain/repository/UltimateWeaponRepository.kt   # Ultimate weapon interface
-domain/repository/StepRepository.kt             # Daily step records interface
+domain/repository/StepRepository.kt             # Daily step records interface + getDailyRecord()
 domain/repository/WalkingEncounterRepository.kt # Walking encounter interface
 domain/usecase/CalculateUpgradeCost.kt          # Cost formula: baseCost * scaling^level
 domain/usecase/CanAffordUpgrade.kt              # Affordability check against wallet
@@ -90,7 +99,7 @@ domain/usecase/CanAffordUpgrade.kt              # Affordability check against wa
 ## Presentation Layer
 
 ```
-presentation/MainActivity.kt         # Single Activity, Compose host, edge-to-edge
+presentation/MainActivity.kt         # Single Activity, Compose host, edge-to-edge, runtime permissions
 presentation/home/HomeScreen.kt      # Home screen placeholder
 presentation/ui/theme/Color.kt       # Compose color definitions
 presentation/ui/theme/Theme.kt       # Compose theme setup (Material3)
@@ -99,5 +108,9 @@ presentation/ui/theme/Theme.kt       # Compose theme setup (Material3)
 ## Service Layer
 
 ```
-service/                              # Empty — placeholder for Plan 04 (Step Counter Service)
+service/StepCounterService.kt        # Foreground service (health type), START_STICKY, collects sensor flow
+service/StepNotificationManager.kt   # Notification channel + builder, 30s throttled updates
+service/BootReceiver.kt              # BOOT_COMPLETED → restart StepCounterService
+service/StepSyncWorker.kt            # @HiltWorker CoroutineWorker, 15-min periodic catch-up
+service/StepSyncScheduler.kt         # Enqueues periodic WorkManager request
 ```

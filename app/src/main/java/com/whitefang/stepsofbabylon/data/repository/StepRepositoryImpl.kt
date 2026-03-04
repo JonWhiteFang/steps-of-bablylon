@@ -23,6 +23,9 @@ class StepRepositoryImpl @Inject constructor(
         dao.upsert(existing.copy(sensorSteps = sensorSteps, creditedSteps = creditedSteps))
     }
 
+    override suspend fun getDailyRecord(date: String): DailyStepSummary? =
+        dao.getByDateOnce(date)?.toDomain()
+
     override suspend fun updateGoogleFitSteps(date: String, googleFitSteps: Long) {
         val existing = dao.getByDateOnce(date) ?: DailyStepRecordEntity(date = date)
         dao.upsert(existing.copy(googleFitSteps = googleFitSteps))

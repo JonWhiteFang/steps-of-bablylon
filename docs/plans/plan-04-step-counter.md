@@ -1,6 +1,6 @@
 # Plan 04 — Step Counter Service
 
-**Status:** Not Started
+**Status:** Complete
 **Dependencies:** Plan 03 (Repository Layer)
 **Layer:** `service/` + `data/` — Android service layer
 

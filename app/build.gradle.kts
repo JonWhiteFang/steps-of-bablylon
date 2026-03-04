@@ -65,6 +65,10 @@ dependencies {
     // WorkManager
     implementation(libs.workmanager)
 
+    // Hilt WorkManager
+    implementation(libs.hilt.work)
+    ksp(libs.hilt.androidx.compiler)
+
     // SQLCipher
     implementation(libs.sqlcipher)
     implementation(libs.sqlite)
