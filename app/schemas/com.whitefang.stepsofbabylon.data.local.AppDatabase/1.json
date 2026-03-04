@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "06e25061c4e388ffa4c7995d15c557ad",
+    "identityHash": "8b1e5fca88ff820123f7202933ffee89",
     "entities": [
       {
         "tableName": "player_profile",
@@ -202,7 +202,7 @@
       },
       {
         "tableName": "daily_step_record",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`date` TEXT NOT NULL, `sensorSteps` INTEGER NOT NULL, `googleFitSteps` INTEGER NOT NULL, `creditedSteps` INTEGER NOT NULL, `activityMinutes` TEXT NOT NULL, `stepEquivalents` INTEGER NOT NULL, PRIMARY KEY(`date`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`date` TEXT NOT NULL, `sensorSteps` INTEGER NOT NULL, `healthConnectSteps` INTEGER NOT NULL, `creditedSteps` INTEGER NOT NULL, `escrowSteps` INTEGER NOT NULL, `escrowSyncCount` INTEGER NOT NULL, `activityMinutes` TEXT NOT NULL, `stepEquivalents` INTEGER NOT NULL, PRIMARY KEY(`date`))",
         "fields": [
           {
             "fieldPath": "date",
@@ -217,14 +217,26 @@
             "notNull": true
           },
           {
-            "fieldPath": "googleFitSteps",
-            "columnName": "googleFitSteps",
+            "fieldPath": "healthConnectSteps",
+            "columnName": "healthConnectSteps",
             "affinity": "INTEGER",
             "notNull": true
           },
           {
             "fieldPath": "creditedSteps",
             "columnName": "creditedSteps",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "escrowSteps",
+            "columnName": "escrowSteps",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "escrowSyncCount",
+            "columnName": "escrowSyncCount",
             "affinity": "INTEGER",
             "notNull": true
           },
@@ -304,7 +316,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '06e25061c4e388ffa4c7995d15c557ad')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8b1e5fca88ff820123f7202933ffee89')"
     ]
   }
 }

@@ -68,4 +68,38 @@ class DailyStepManager @Inject constructor(
         stepRepository.updateDailySteps(currentDate, dailySensorTotal, dailyCreditedTotal)
         playerRepository.addSteps(credited)
     }
+
+    /**
+     * Record activity minute step-equivalents (from Health Connect exercise sessions).
+     * Subject to the same daily ceiling as sensor steps.
+     */
+    suspend fun recordActivityMinutes(activityMinutes: Map<String, Int>, stepEquivalents: Long) {
+        if (stepEquivalents <= 0) return
+
+        val today = todayDate()
+        if (today != currentDate) {
+            currentDate = today
+            dailySensorTotal = 0L
+            dailyCreditedTotal = 0L
+            initialized = false
+        }
+
+        if (!initialized) {
+            val existing = stepRepository.getDailyRecord(currentDate)
+            if (existing != null) {
+                dailySensorTotal = existing.sensorSteps
+                dailyCreditedTotal = existing.creditedSteps
+            }
+            initialized = true
+        }
+
+        val remainingCeiling = (DAILY_CEILING - dailyCreditedTotal).coerceAtLeast(0)
+        val credited = stepEquivalents.coerceAtMost(remainingCeiling)
+        if (credited <= 0) return
+
+        dailyCreditedTotal += credited
+
+        stepRepository.updateActivityMinutes(currentDate, activityMinutes, credited)
+        playerRepository.addSteps(credited)
+    }
 }

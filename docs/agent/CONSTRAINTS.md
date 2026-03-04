@@ -19,7 +19,7 @@
 ## Anti-cheat rules
 - Rate limit: 200 steps/min maximum.
 - Daily ceiling: 50,000 steps/day.
-- Google Fit cross-validation required.
+- Health Connect cross-validation required.
 - Step counting must work reliably when app is backgrounded or killed.
 
 ## Security

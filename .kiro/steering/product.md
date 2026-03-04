@@ -29,7 +29,7 @@ Walk → Earn Steps → Spend Steps on Workshop upgrades → Fight battles → R
 ## Hard Design Rules
 
 - Steps can **never** be generated passively in-game or purchased with real money
-- Anti-cheat: 200 steps/min rate limit, 50,000 steps/day ceiling, Google Fit cross-validation
+- Anti-cheat: 200 steps/min rate limit, 50,000 steps/day ceiling, Health Connect cross-validation
 - Solo experience — no multiplayer, no server backend required for v1.0
 - Monetization is cosmetic/convenience only (ads, IAP for Gems/cosmetics, Season Pass)
 - Room database is the single source of truth for all game state

@@ -41,3 +41,33 @@
   - Replace placeholder notification icon with custom app icon (when assets exist)
   - Notification balance could show live wallet balance via Flow observation
 - Memory updated: STATE ✅ / RUN_LOG ✅
+
+## 2026-03-04 — Plan 05: Health Connect Integration
+- Goal: Implement Health Connect (replacing deprecated Google Fit) for step cross-validation, gap-filling, and Activity Minute Parity.
+- Key decision: ADR-worthy — used Health Connect instead of Google Fit (Google Fit APIs deprecated, shutting down 2026). See docs/agent/DECISIONS/ for ADR.
+- Changes made:
+  - Added `health-connect-client:1.2.0-alpha02` to version catalog + build.gradle.kts
+  - Created `data/healthconnect/HealthConnectClientWrapper.kt` — client setup, availability, permissions
+  - Created `data/healthconnect/HealthConnectStepReader.kt` — aggregated step reading
+  - Created `data/healthconnect/StepCrossValidator.kt` — escrow system (>20% discrepancy, 3-sync lifecycle)
+  - Created `data/healthconnect/StepGapFiller.kt` — recovers missed steps from HC
+  - Created `data/healthconnect/ExerciseSessionReader.kt` — reads exercise sessions
+  - Created `data/healthconnect/ActivityMinuteConverter.kt` — conversion table with per-activity caps + double-counting prevention
+  - Created `di/HealthConnectModule.kt` — organizational Hilt module
+  - Created `presentation/HealthConnectPermissionActivity.kt` — privacy policy stub
+  - Updated `DailyStepRecordEntity.kt` — renamed googleFitSteps→healthConnectSteps, added escrowSteps + escrowSyncCount
+  - Updated `DailyStepSummary.kt` — matching field changes
+  - Updated `StepRepository.kt` — renamed method, added escrow methods
+  - Updated `StepRepositoryImpl.kt` — implemented escrow methods
+  - Updated `DailyStepDao.kt` — added clearEscrow query
+  - Updated `DailyStepManager.kt` — added recordActivityMinutes()
+  - Updated `StepSyncWorker.kt` — integrated HC gap-fill, cross-validation, activity minutes
+  - Updated `MainActivity.kt` — HC permission request via PermissionController
+  - Updated `AndroidManifest.xml` — HC permissions, privacy policy activity + activity-alias
+- Commands/tests run: `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL, zero warnings
+- Open questions / blockers:
+  - StepSyncWorker passes empty sensorStepsPerMinute map to ActivityMinuteConverter (full per-minute tracking deferred)
+- Follow-ups created:
+  - Update GDD/step-tracking docs to reference Health Connect instead of Google Fit
+  - Create ADR for Google Fit → Health Connect decision
+- Memory updated: STATE ✅ / RUN_LOG ✅

@@ -26,9 +26,9 @@ class StepRepositoryImpl @Inject constructor(
     override suspend fun getDailyRecord(date: String): DailyStepSummary? =
         dao.getByDateOnce(date)?.toDomain()
 
-    override suspend fun updateGoogleFitSteps(date: String, googleFitSteps: Long) {
+    override suspend fun updateHealthConnectSteps(date: String, healthConnectSteps: Long) {
         val existing = dao.getByDateOnce(date) ?: DailyStepRecordEntity(date = date)
-        dao.upsert(existing.copy(googleFitSteps = googleFitSteps))
+        dao.upsert(existing.copy(healthConnectSteps = healthConnectSteps))
     }
 
     override suspend fun updateActivityMinutes(date: String, activityMinutes: Map<String, Int>, stepEquivalents: Long) {
@@ -36,11 +36,22 @@ class StepRepositoryImpl @Inject constructor(
         dao.upsert(existing.copy(activityMinutes = activityMinutes, stepEquivalents = stepEquivalents))
     }
 
+    override suspend fun updateEscrow(date: String, escrowSteps: Long, syncCount: Int) {
+        val existing = dao.getByDateOnce(date) ?: DailyStepRecordEntity(date = date)
+        dao.upsert(existing.copy(escrowSteps = escrowSteps, escrowSyncCount = syncCount))
+    }
+
+    override suspend fun releaseEscrow(date: String) = dao.clearEscrow(date)
+
+    override suspend fun discardEscrow(date: String) = dao.clearEscrow(date)
+
     private fun DailyStepRecordEntity.toDomain() = DailyStepSummary(
         date = date,
         sensorSteps = sensorSteps,
-        googleFitSteps = googleFitSteps,
+        healthConnectSteps = healthConnectSteps,
         creditedSteps = creditedSteps,
+        escrowSteps = escrowSteps,
+        escrowSyncCount = escrowSyncCount,
         activityMinutes = activityMinutes,
         stepEquivalents = stepEquivalents,
     )

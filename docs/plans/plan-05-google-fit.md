@@ -1,6 +1,6 @@
-# Plan 05 — Google Fit Integration
+# Plan 05 — Health Connect Integration (formerly Google Fit)
 
-**Status:** Not Started
+**Status:** Complete
 **Dependencies:** Plan 04 (Step Counter Service)
 **Layer:** `data/` — Google Fit data source
 

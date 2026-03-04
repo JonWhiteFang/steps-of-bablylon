@@ -5,7 +5,7 @@
 | Priority | Source | Purpose |
 |---|---|---|
 | Primary | `TYPE_STEP_COUNTER` | Cumulative hardware step count. Battery efficient. Persists across reboots. |
-| Secondary | Google Fit API | Cross-validation, gap-filling, Activity Minute Parity |
+| Secondary | Health Connect SDK | Cross-validation, gap-filling, Activity Minute Parity |
 | Tertiary | `TYPE_STEP_DETECTOR` | Real-time per-step events for notification/widget updates |
 
 `TYPE_STEP_COUNTER` returns a cumulative count since last reboot. Track deltas between readings to compute steps per interval.
@@ -22,9 +22,9 @@
 ### WorkManager
 
 - Periodic sync every 15 minutes
-- Reconciles local step count with Google Fit
+- Reconciles local step count with Health Connect
 - Catches up on missed steps if the foreground service was killed
-- Constraint: requires network for Google Fit sync
+- Constraint: requires Health Connect availability
 
 ### Boot Receiver
 
@@ -43,7 +43,7 @@
 |---|---|---|
 | Rate limit | 200 steps/min (250 burst for running) | Excess steps silently discarded |
 | Daily ceiling | 50,000 steps/day | Hard cap, no more steps credited |
-| Google Fit cross-validation | >20% discrepancy | Steps held in escrow until reconciled |
+| Health Connect cross-validation | >20% discrepancy | Steps held in escrow until reconciled |
 | Accelerometer pattern analysis | Mechanical regularity detected | Suspicious steps rejected |
 
 ### Rate Limiting Implementation
@@ -55,7 +55,7 @@
 
 ### Escrow System
 
-When Google Fit discrepancy >20%:
+When Health Connect discrepancy >20%:
 1. Steps are credited to an escrow balance (not spendable)
 2. Next WorkManager sync re-checks
 3. If resolved within 3 syncs, escrow releases to main balance
@@ -63,7 +63,7 @@ When Google Fit discrepancy >20%:
 
 ## Activity Minute Parity
 
-For non-ambulatory activities tracked by Google Fit:
+For non-ambulatory activities tracked by Health Connect:
 
 | Activity | Conversion | Daily Cap |
 |---|---|---|
@@ -79,13 +79,22 @@ For non-ambulatory activities tracked by Google Fit:
 
 Step-equivalents from Activity Minutes are only credited when the step sensor records <50 steps/min during that period. This prevents counting a walk as both steps AND active minutes.
 
+## Health Connect Integration
+
+Health Connect (replacing deprecated Google Fit) is used as the secondary data source:
+- `HealthConnectClient.getOrCreate()` — framework module on SDK 34+, always available
+- `aggregate()` with `StepsRecord.COUNT_TOTAL` for daily step totals
+- `readRecords()` with `ExerciseSessionRecord` for exercise sessions
+- Permissions: `android.permission.health.READ_STEPS`, `android.permission.health.READ_EXERCISE`
+- No OAuth required — uses standard Android health permissions
+
 ## Data Flow
 
 ```
 Sensor Event
   → Foreground Service (delta calculation, rate limiting)
     → Room (DailyStepRecord update)
-      → WorkManager (Google Fit reconciliation, escrow check)
+      → WorkManager (Health Connect reconciliation, escrow check)
         → Room (final credited steps)
           → PlayerProfile.currentStepBalance update
 ```
@@ -97,4 +106,5 @@ Sensor Event
 - `FOREGROUND_SERVICE_HEALTH` — foreground service type
 - `RECEIVE_BOOT_COMPLETED` — restart after reboot
 - `POST_NOTIFICATIONS` — step count notification
-- Google Fit OAuth scope: `FITNESS_ACTIVITY_READ`
+- `android.permission.health.READ_STEPS` — Health Connect step data
+- `android.permission.health.READ_EXERCISE` — Health Connect exercise sessions

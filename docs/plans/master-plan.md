@@ -14,7 +14,7 @@ See `docs/StepsOfBabylon_GDD.md` for the full game design document.
 | 02 | [Room Database & DAOs](./plan-02-database.md) | Create all Room entities, DAOs, and the database migration strategy. Player profile, workshop state, lab state, cards, UWs, walking encounters. | Plan 01 |
 | 03 | [Repository Layer](./plan-03-repositories.md) | Implement repository interfaces (domain) and their Room-backed implementations (data). Expose game state as Flows. | Plan 02 |
 | 04 | [Step Counter Service](./plan-04-step-counter.md) | Foreground service with persistent notification, TYPE_STEP_COUNTER sensor, WorkManager periodic sync, boot receiver, anti-cheat rate limiting, daily ceiling. | Plan 03 |
-| 05 | [Google Fit Integration](./plan-05-google-fit.md) | Google Fit SDK setup, step cross-validation, Activity Minute Parity (indoor workout credits), gap-filling when app is killed. | Plan 04 |
+| 05 | [Health Connect Integration](./plan-05-google-fit.md) | Health Connect SDK setup, step cross-validation, Activity Minute Parity (indoor workout credits), gap-filling when app is killed. | Plan 04 |
 | 06 | [Home Screen & Navigation](./plan-06-home-navigation.md) | Compose navigation graph, Home/Dashboard screen showing step count, step balance, current tier/biome, best wave, quick-launch battle button. Bottom nav bar. | Plan 03 |
 | 07 | [Workshop Screen & Upgrades](./plan-07-workshop.md) | Workshop UI (Attack/Defense/Utility tabs), purchase upgrades with Steps, cost formula engine, level persistence, "Quick Invest" button. | Plan 06 |
 | 08 | [Battle Renderer — Game Loop & Ziggurat](./plan-08-battle-renderer.md) | Custom SurfaceView with dedicated game loop thread, fixed timestep, ziggurat entity rendering, health bar, basic projectile system. | Plan 06 |
@@ -34,7 +34,7 @@ See `docs/StepsOfBabylon_GDD.md` for the full game design document.
 | 22 | [Stats & History Screen](./plan-22-stats-history.md) | Walking history charts (daily/weekly/monthly), battle statistics, all-time stats, Steps vs Activity Minute breakdown. | Plan 06 |
 | 23 | [Notifications & Widget](./plan-23-notifications-widget.md) | Persistent step count notification, home screen widget (2x2), smart reminders ("2,000 steps away from..."), milestone alerts, biome unlock cinematics. | Plan 04 |
 | 24 | [Accessibility](./plan-24-accessibility.md) | TalkBack support for all menu screens, battle screen audio cues, color-blind modes (3 palettes), adjustable text size (system font settings), rest day encouragement. | Plan 18 |
-| 25 | [Anti-Cheat & Validation](./plan-25-anti-cheat.md) | Rate limiting (200 steps/min), daily ceiling (50k), Google Fit cross-validation, accelerometer pattern analysis, Activity Minute gaming prevention, overlap deduction. | Plan 05 |
+| 25 | [Anti-Cheat & Validation](./plan-25-anti-cheat.md) | Rate limiting (200 steps/min), daily ceiling (50k), Health Connect cross-validation, accelerometer pattern analysis, Activity Minute gaming prevention, overlap deduction. | Plan 05 |
 | 26 | [Monetization & Ads](./plan-26-monetization.md) | Optional reward ads (post-round Gem, double PS, free Card Pack), ad removal IAP, Gem pack IAPs, Season Pass, cosmetic theme IAPs. | Plan 17 |
 | 27 | [Polish & Visual Effects](./plan-27-polish-vfx.md) | Projectile effects, UW visual spectacles, Overdrive auras, enemy death animations, wave transition effects, UI animations, sound effects integration. | Plan 18 |
 | 28 | [Balancing & Tuning](./plan-28-balancing.md) | Step economy tuning across player profiles, Workshop cost curves, enemy HP/damage scaling, tier difficulty curves, cash multiplier validation, Card balance pass. | Plan 27 |
@@ -52,7 +52,7 @@ graph TD
     P02 --> P03[03: Repository Layer]
     P03 --> P04[04: Step Counter Service]
     P03 --> P06[06: Home Screen & Nav]
-    P04 --> P05[05: Google Fit]
+    P04 --> P05[05: Health Connect]
     P04 --> P19[19: Walking Encounters]
     P04 --> P20[20: Premium Currencies]
     P04 --> P23[23: Notifications & Widget]
@@ -97,7 +97,7 @@ graph TD
 - [x] Plan 02: Room Database & DAOs
 - [x] Plan 03: Repository Layer
 - [x] Plan 04: Step Counter Service
-- [ ] Plan 05: Google Fit Integration
+- [x] Plan 05: Health Connect Integration
 - [ ] Plan 06: Home Screen & Navigation
 - [ ] Plan 07: Workshop Screen & Upgrades
 - [ ] Plan 08: Battle Renderer — Game Loop & Ziggurat

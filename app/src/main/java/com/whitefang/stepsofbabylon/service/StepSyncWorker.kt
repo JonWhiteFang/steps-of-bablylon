@@ -6,20 +6,25 @@ import android.hardware.SensorManager
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.whitefang.stepsofbabylon.data.healthconnect.ActivityMinuteConverter
+import com.whitefang.stepsofbabylon.data.healthconnect.ExerciseSessionReader
+import com.whitefang.stepsofbabylon.data.healthconnect.StepCrossValidator
+import com.whitefang.stepsofbabylon.data.healthconnect.StepGapFiller
 import com.whitefang.stepsofbabylon.data.sensor.DailyStepManager
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import java.time.LocalDate
 
-/**
- * Periodic worker that catches up on missed steps if the foreground service was killed.
- * Reads the current TYPE_STEP_COUNTER value and computes delta since last sync.
- */
 @HiltWorker
 class StepSyncWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted params: WorkerParameters,
     private val dailyStepManager: DailyStepManager,
     private val sensorManager: SensorManager,
+    private val stepGapFiller: StepGapFiller,
+    private val stepCrossValidator: StepCrossValidator,
+    private val exerciseSessionReader: ExerciseSessionReader,
+    private val activityMinuteConverter: ActivityMinuteConverter,
 ) : CoroutineWorker(appContext, params) {
 
     companion object {
@@ -28,14 +33,33 @@ class StepSyncWorker @AssistedInject constructor(
     }
 
     override suspend fun doWork(): Result {
-        val sensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) ?: return Result.success()
+        val today = LocalDate.now().toString()
 
-        // Read current cumulative counter via a one-shot trigger event
+        // 1. Sensor catch-up
+        sensorCatchUp()
+
+        // 2. Health Connect operations (best-effort)
+        try {
+            stepGapFiller.fillGaps(today)
+            stepCrossValidator.validate(today)
+
+            val sessions = exerciseSessionReader.getSessionsForDate(today)
+            if (sessions.isNotEmpty()) {
+                val result = activityMinuteConverter.convert(sessions, emptyMap())
+                dailyStepManager.recordActivityMinutes(result.activityMinutes, result.stepEquivalents)
+            }
+        } catch (_: Exception) {
+            // HC unavailable or error — skip gracefully
+        }
+
+        return Result.success()
+    }
+
+    private suspend fun sensorCatchUp() {
+        val sensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) ?: return
         val prefs = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val lastCounter = prefs.getLong(KEY_LAST_COUNTER, -1L)
-
-        // Use triggerEventListener for a one-shot reading
-        val currentCounter = readCurrentCounter(sensor) ?: return Result.retry()
+        val currentCounter = readCurrentCounter(sensor) ?: return
 
         if (lastCounter >= 0) {
             val delta = currentCounter - lastCounter
@@ -45,7 +69,6 @@ class StepSyncWorker @AssistedInject constructor(
         }
 
         prefs.edit().putLong(KEY_LAST_COUNTER, currentCounter).apply()
-        return Result.success()
     }
 
     private fun readCurrentCounter(sensor: Sensor): Long? {

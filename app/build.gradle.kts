@@ -69,6 +69,9 @@ dependencies {
     implementation(libs.hilt.work)
     ksp(libs.hilt.androidx.compiler)
 
+    // Health Connect
+    implementation(libs.health.connect.client)
+
     // SQLCipher
     implementation(libs.sqlcipher)
     implementation(libs.sqlite)

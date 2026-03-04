@@ -36,7 +36,7 @@ All versions managed in `gradle/libs.versions.toml`. Never hardcode versions in 
 
 - **presentation** — ViewModels (expose `StateFlow`), Compose screens, SurfaceView battle renderer
 - **domain** — Use cases, repository interfaces, pure Kotlin models. Zero Android imports.
-- **data** — Room entities, DAOs, repository implementations, sensor/Google Fit data sources
+- **data** — Room entities, DAOs, repository implementations, sensor/Health Connect data sources
 
 Data flow: `presentation → domain ← data`. Domain has no Android dependencies.
 
@@ -56,7 +56,7 @@ Data flow: `presentation → domain ← data`. Domain has no Android dependencie
 ## Step Tracking
 
 - Android Sensor API (`TYPE_STEP_COUNTER`) as primary source
-- Google Fit SDK for cross-validation and Activity Minute Parity
+- Health Connect SDK for cross-validation and Activity Minute Parity
 - WorkManager + Foreground Service for reliable background counting
 
 ## Build Commands

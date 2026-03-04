@@ -9,7 +9,7 @@
 - Steps can NEVER be generated passively in-game or purchased with real money.
 - Domain layer (`domain/`) must have zero Android imports — pure Kotlin only.
 - Room database is the single source of truth for all game state.
-- Anti-cheat: 200 steps/min rate limit, 50,000 steps/day ceiling, Google Fit cross-validation.
+- Anti-cheat: 200 steps/min rate limit, 50,000 steps/day ceiling, Health Connect cross-validation.
 - All monetization is cosmetic/convenience only.
 - No multiplayer, no server backend for v1.0.
 

@@ -9,6 +9,7 @@ StepsOfBabylonApp.kt              # @HiltAndroidApp, Configuration.Provider (Hil
 di/DatabaseModule.kt               # Hilt: Room DB (SQLCipher) + 7 DAO providers
 di/RepositoryModule.kt             # Hilt: 7 repository interface → impl bindings (@Singleton)
 di/StepModule.kt                   # Hilt: SensorManager provider
+di/HealthConnectModule.kt          # Hilt: Health Connect organizational module
 ```
 
 ## Data Layer — Room
@@ -27,8 +28,8 @@ data/local/CardInventoryEntity.kt # Card inventory entity
 data/local/CardDao.kt             # Card inventory DAO
 data/local/UltimateWeaponStateEntity.kt # UW state entity
 data/local/UltimateWeaponDao.kt   # UW state DAO
-data/local/DailyStepRecordEntity.kt # Daily step record entity
-data/local/DailyStepDao.kt        # Daily step record DAO
+data/local/DailyStepRecordEntity.kt # Daily step record entity (with escrow fields)
+data/local/DailyStepDao.kt        # Daily step record DAO (with escrow queries)
 data/local/WalkingEncounterEntity.kt # Walking encounter entity
 data/local/WalkingEncounterDao.kt # Walking encounter DAO
 ```
@@ -41,7 +42,7 @@ data/repository/WorkshopRepositoryImpl.kt        # Workshop upgrades
 data/repository/LabRepositoryImpl.kt             # Lab research
 data/repository/CardRepositoryImpl.kt            # Card inventory
 data/repository/UltimateWeaponRepositoryImpl.kt  # Ultimate weapon state
-data/repository/StepRepositoryImpl.kt            # Daily step records + one-shot getDailyRecord()
+data/repository/StepRepositoryImpl.kt            # Daily step records + escrow + getDailyRecord()
 data/repository/WalkingEncounterRepositoryImpl.kt # Walking encounters
 ```
 
@@ -50,7 +51,18 @@ data/repository/WalkingEncounterRepositoryImpl.kt # Walking encounters
 ```
 data/sensor/StepSensorDataSource.kt  # TYPE_STEP_COUNTER wrapper, emits deltas via callbackFlow
 data/sensor/StepRateLimiter.kt       # Rolling 1-min window rate limiter (200/min, 250 burst)
-data/sensor/DailyStepManager.kt      # Orchestrates: rate limit → 50k ceiling → Room persist
+data/sensor/DailyStepManager.kt      # Orchestrates: rate limit → 50k ceiling → Room persist + activity minutes
+```
+
+## Data Layer — Health Connect
+
+```
+data/healthconnect/HealthConnectClientWrapper.kt  # HealthConnectClient wrapper, availability, permissions
+data/healthconnect/HealthConnectStepReader.kt      # Reads aggregated daily steps via aggregate()
+data/healthconnect/StepCrossValidator.kt           # Cross-validation, escrow system (>20% discrepancy)
+data/healthconnect/StepGapFiller.kt                # Recovers missed steps from HC when service killed
+data/healthconnect/ExerciseSessionReader.kt        # Reads exercise sessions for Activity Minute Parity
+data/healthconnect/ActivityMinuteConverter.kt      # Converts exercise minutes to step-equivalents with caps
 ```
 
 ## Domain Layer — Models
@@ -62,7 +74,7 @@ domain/model/PlayerProfile.kt         # Full profile (maps from PlayerProfileEnt
 domain/model/ActiveResearch.kt        # In-progress lab research
 domain/model/OwnedCard.kt             # Player-owned card instance
 domain/model/OwnedWeapon.kt           # Player-owned ultimate weapon
-domain/model/DailyStepSummary.kt      # Daily step record domain model
+domain/model/DailyStepSummary.kt      # Daily step record domain model (with escrow fields)
 domain/model/SupplyDrop.kt            # Walking encounter supply drop
 domain/model/UpgradeType.kt           # 23 Workshop upgrade types with configs
 domain/model/UpgradeCategory.kt       # Attack, Defense, Utility categories
@@ -90,7 +102,7 @@ domain/repository/WorkshopRepository.kt         # Workshop upgrades interface
 domain/repository/LabRepository.kt              # Lab research interface
 domain/repository/CardRepository.kt             # Card inventory interface
 domain/repository/UltimateWeaponRepository.kt   # Ultimate weapon interface
-domain/repository/StepRepository.kt             # Daily step records interface + getDailyRecord()
+domain/repository/StepRepository.kt             # Daily step records + escrow + Health Connect methods
 domain/repository/WalkingEncounterRepository.kt # Walking encounter interface
 domain/usecase/CalculateUpgradeCost.kt          # Cost formula: baseCost * scaling^level
 domain/usecase/CanAffordUpgrade.kt              # Affordability check against wallet
@@ -99,10 +111,11 @@ domain/usecase/CanAffordUpgrade.kt              # Affordability check against wa
 ## Presentation Layer
 
 ```
-presentation/MainActivity.kt         # Single Activity, Compose host, edge-to-edge, runtime permissions
-presentation/home/HomeScreen.kt      # Home screen placeholder
-presentation/ui/theme/Color.kt       # Compose color definitions
-presentation/ui/theme/Theme.kt       # Compose theme setup (Material3)
+presentation/MainActivity.kt                      # Single Activity, Compose host, edge-to-edge, runtime + HC permissions
+presentation/HealthConnectPermissionActivity.kt    # Privacy policy stub for Health Connect
+presentation/home/HomeScreen.kt                    # Home screen placeholder
+presentation/ui/theme/Color.kt                     # Compose color definitions
+presentation/ui/theme/Theme.kt                     # Compose theme setup (Material3)
 ```
 
 ## Service Layer
@@ -111,6 +124,6 @@ presentation/ui/theme/Theme.kt       # Compose theme setup (Material3)
 service/StepCounterService.kt        # Foreground service (health type), START_STICKY, collects sensor flow
 service/StepNotificationManager.kt   # Notification channel + builder, 30s throttled updates
 service/BootReceiver.kt              # BOOT_COMPLETED → restart StepCounterService
-service/StepSyncWorker.kt            # @HiltWorker CoroutineWorker, 15-min periodic catch-up
+service/StepSyncWorker.kt            # @HiltWorker CoroutineWorker, 15-min periodic: sensor catch-up + HC sync
 service/StepSyncScheduler.kt         # Enqueues periodic WorkManager request
 ```

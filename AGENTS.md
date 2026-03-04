@@ -33,7 +33,7 @@ Operating rules:
 - **DI:** Hilt (with KSP)
 - **Database:** Room (SQLite) with SQLCipher encryption — offline-first, all game state stored locally
 - **Background:** WorkManager + Foreground Service (step counting)
-- **Step Tracking:** Android Sensor API (`TYPE_STEP_COUNTER`) + Google Fit SDK
+- **Step Tracking:** Android Sensor API (`TYPE_STEP_COUNTER`) + Health Connect SDK (cross-validation, Activity Minute Parity)
 - **Build:** Gradle 9.3.1 (Kotlin DSL), version catalog at `gradle/libs.versions.toml`
 - **Security:** SQLCipher (database encryption), Android Keystore (key management), R8 (obfuscation), network security config (cleartext blocked)
 
@@ -85,7 +85,7 @@ Development follows a 30-plan master plan. See `docs/plans/master-plan.md` for t
 | 02 | Room Database & DAOs | All Room entities, DAOs, migration strategy. | Plan 01 |
 | 03 | Repository Layer | Repository interfaces (domain) + Room-backed impls (data). Flows. | Plan 02 |
 | 04 | Step Counter Service | Foreground service, TYPE_STEP_COUNTER, WorkManager sync, anti-cheat. | Plan 03 |
-| 05 | Google Fit Integration | Cross-validation, Activity Minute Parity, gap-filling. | Plan 04 |
+| 05 | Health Connect Integration | Cross-validation, Activity Minute Parity, gap-filling. | Plan 04 |
 | 06 | Home Screen & Navigation | Compose nav graph, dashboard, bottom nav bar. | Plan 03 |
 | 07 | Workshop Screen & Upgrades | Workshop UI (Attack/Defense/Utility tabs), Step purchases. | Plan 06 |
 | 08 | Battle Renderer — Game Loop & Ziggurat | Custom SurfaceView, game loop thread, fixed timestep, ziggurat. | Plan 06 |
@@ -105,7 +105,7 @@ Development follows a 30-plan master plan. See `docs/plans/master-plan.md` for t
 | 22 | Stats & History Screen | Walking history charts, battle stats, all-time stats. | Plan 06 |
 | 23 | Notifications & Widget | Persistent notification, home widget (2x2), smart reminders. | Plan 04 |
 | 24 | Accessibility | TalkBack, audio cues, color-blind modes, adjustable text. | Plan 18 |
-| 25 | Anti-Cheat & Validation | Rate limiting, daily ceiling, Google Fit cross-validation. | Plan 05 |
+| 25 | Anti-Cheat & Validation | Rate limiting, daily ceiling, Health Connect cross-validation. | Plan 05 |
 | 26 | Monetization & Ads | Reward ads, ad removal IAP, Gem packs, Season Pass, cosmetics. | Plan 17 |
 | 27 | Polish & Visual Effects | Projectile/UW/Overdrive effects, death anims, sound integration. | Plan 18 |
 | 28 | Balancing & Tuning | Step economy, Workshop cost curves, enemy scaling, Card balance. | Plan 27 |
@@ -121,7 +121,7 @@ graph TD
     P02 --> P03[03: Repository Layer]
     P03 --> P04[04: Step Counter Service]
     P03 --> P06[06: Home Screen & Nav]
-    P04 --> P05[05: Google Fit]
+    P04 --> P05[05: Health Connect]
     P04 --> P19[19: Walking Encounters]
     P04 --> P20[20: Premium Currencies]
     P04 --> P23[23: Notifications & Widget]
@@ -159,11 +159,12 @@ graph TD
 - [x] **Plan 02: Room Database & DAOs** ✓
 - [x] **Plan 03: Repository Layer** ✓
 - [x] **Plan 04: Step Counter Service** ✓
+- [x] **Plan 05: Health Connect Integration** ✓
 - [ ] **Plan 06: Home Screen & Navigation** ← next up
 
 ### Parallelizable Branches (after dependencies met)
 
-- Google Fit: Plan 05 (ready now — Plan 04 complete)
+- Anti-cheat: Plan 25 (ready now — Plan 05 complete)
 - Home screen & navigation: Plan 06 (ready now — Plan 03 complete)
 - Walking features: Plans 19/20/21/23 (ready now — Plan 04 complete)
 - Workshop extensions: Plans 16/17 (after Plan 07)
@@ -184,7 +185,7 @@ graph TD
 - **Biomes** — narrative environments tied to tier ranges (Hanging Gardens → Burning Sands → Frozen Ziggurats → Underworld of Kur → Celestial Gate).
 - **Step Overdrive** — mid-battle mechanic to burn Steps for a 60-second combat boost (once per round). 4 types.
 - **Walking Encounters** — Supply Drop rewards delivered via push notifications during walks.
-- **Activity Minute Parity** — Google Fit Active Minutes converted to Step-equivalents for indoor workouts.
+- **Activity Minute Parity** — Health Connect Active Minutes converted to Step-equivalents for indoor workouts.
 - **Enemies** — 6 types (Basic, Fast, Tank, Ranged, Boss, Scatter) with distinct speed/health/damage multipliers.
 
 ## Conventions
@@ -195,7 +196,7 @@ graph TD
 - All upgrade cost formulas follow: `baseCost * (scaling ^ level)`.
 - Step counting must work reliably when the app is backgrounded or killed.
 - Steps can **never** be generated passively in-game — this is a hard design rule.
-- Anti-cheat: rate-limit at 200 steps/min, daily ceiling of 50,000 steps, cross-validate with Google Fit.
+- Anti-cheat: rate-limit at 200 steps/min, daily ceiling of 50,000 steps, cross-validate with Health Connect.
 - Domain models are pure Kotlin — no Android imports in `domain/`.
 - Loadouts enforce max capacity: 3 UWs, 3 Cards.
 

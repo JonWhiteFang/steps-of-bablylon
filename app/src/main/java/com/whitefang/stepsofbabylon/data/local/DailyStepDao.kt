@@ -19,4 +19,7 @@ interface DailyStepDao {
 
     @Query("SELECT * FROM daily_step_record WHERE date = :date")
     suspend fun getByDateOnce(date: String): DailyStepRecordEntity?
+
+    @Query("UPDATE daily_step_record SET escrowSteps = 0, escrowSyncCount = 0 WHERE date = :date")
+    suspend fun clearEscrow(date: String)
 }
