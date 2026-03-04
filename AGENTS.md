@@ -6,6 +6,21 @@ Steps of Babylon is an Android mobile game that combines idle tower defense game
 
 See `docs/StepsOfBabylon_GDD.md` for the full game design document.
 
+## Project Memory (read first)
+
+| File | Purpose |
+|---|---|
+| `docs/agent/START_HERE.md` | Agent contract — what this is, how to work here |
+| `docs/agent/STATE.md` | One-page project snapshot (current objective, priorities, next actions) |
+| `docs/agent/CONSTRAINTS.md` | Architecture invariants, security rules, "never do" list |
+| `docs/agent/RUN_LOG.md` | Append-only log of every agent session |
+| `docs/agent/DECISIONS/` | Architecture Decision Records (ADRs) |
+
+Operating rules:
+- Always do Context Preflight before planning (see `.kiro/steering/11-agent-protocol.md`).
+- Always update STATE.md + append RUN_LOG.md at end of run.
+- Record meaningful decisions as ADRs in `docs/agent/DECISIONS/`.
+
 ## Tech Stack
 
 - **Language:** Kotlin (JVM target 17)
