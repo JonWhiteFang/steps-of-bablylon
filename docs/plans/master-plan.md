@@ -102,7 +102,7 @@ graph TD
 - [x] Plan 07: Workshop Screen & Upgrades
 - [x] Plan 08: Battle Renderer — Game Loop & Ziggurat
 - [x] Plan 09: Battle System — Enemies & Waves
-- [ ] Plan 10: Battle System — Stats & Combat
+- [x] Plan 10: Battle System — Stats & Combat
 - [ ] Plan 11: In-Round Upgrades & Cash Economy
 - [ ] Plan 12: Round Lifecycle & Post-Round
 - [ ] Plan 13: Tier System & Progression

@@ -93,6 +93,7 @@ domain/model/CardType.kt              # 9 card types with effects
 domain/model/CardLoadout.kt           # Card loadout (max 3)
 domain/model/RoundState.kt            # Transient battle state
 domain/model/ZigguratBaseStats.kt     # Base stat constants (HP, damage, attack speed, range, regen, projectile speed)
+domain/model/ResolvedStats.kt         # Computed combat stats from workshop + in-round upgrades
 ```
 
 ## Domain Layer — Interfaces & Use Cases
@@ -109,6 +110,9 @@ domain/usecase/CalculateUpgradeCost.kt          # Cost formula: baseCost * scali
 domain/usecase/CanAffordUpgrade.kt              # Affordability check against wallet
 domain/usecase/PurchaseUpgrade.kt               # Deducts Steps, increments upgrade level
 domain/usecase/QuickInvest.kt                   # Recommends cheapest affordable upgrade
+domain/usecase/ResolveStats.kt                  # Workshop + in-round levels → ResolvedStats
+domain/usecase/CalculateDamage.kt               # Raw damage + crit roll + damage/meter bonus → DamageResult
+domain/usecase/CalculateDefense.kt              # Damage reduction (cap 75%) + flat block
 ```
 
 ## Presentation Layer

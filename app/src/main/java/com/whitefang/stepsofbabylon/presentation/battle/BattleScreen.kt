@@ -43,6 +43,9 @@ fun BattleScreen(
     LaunchedEffect(surfaceView) { viewModel.startPollingEngine(surfaceView.engine) }
     LaunchedEffect(state.speedMultiplier) { surfaceView.setSpeedMultiplier(state.speedMultiplier) }
     LaunchedEffect(state.isPaused) { surfaceView.setPaused(state.isPaused) }
+    LaunchedEffect(state.isLoading) {
+        if (!state.isLoading) surfaceView.setResolvedStats(viewModel.resolvedStats)
+    }
     LaunchedEffect(Unit) { viewModel.events.collect { if (it is BattleEvent.RoundEnded) onExitBattle() } }
 
     Box(Modifier.fillMaxSize()) {

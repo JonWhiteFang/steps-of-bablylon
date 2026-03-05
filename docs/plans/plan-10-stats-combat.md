@@ -1,6 +1,6 @@
 # Plan 10 — Battle System: Stats & Combat
 
-**Status:** Not Started
+**Status:** Complete
 **Dependencies:** Plan 09 (Enemies & Waves)
 **Layer:** `domain/usecase/` + `presentation/battle/engine/`
 

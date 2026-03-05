@@ -106,3 +106,20 @@ presentation/battle/
 - Stats re-resolve dynamically on each in-round purchase
 - All temp upgrades reset when round ends
 - Cash display updates in real-time during battle
+
+## Deferred from Plan 10 (include in this plan)
+
+The following combat mechanics were deferred from Plan 10. Their stats are already computed in `ResolvedStats` but not yet wired to gameplay. Wire them as part of this plan since in-round upgrades allow leveling them mid-round:
+
+### Orbs System
+- Create `presentation/battle/entities/OrbEntity.kt` — orbiting projectiles circling the ziggurat
+- Count = `resolvedStats.orbCount` (cap 6), damage nearby enemies on contact
+- Orbit radius and speed configurable
+
+### Multishot
+- Update ziggurat attack logic: fire at `resolvedStats.multishotTargets` enemies simultaneously (cap 5)
+- Create `presentation/battle/engine/TargetingSystem.kt` — finds nearest N enemies
+
+### Bounce Shot
+- Update `ProjectileEntity`: on hitting an enemy, chain to `resolvedStats.bounceCount` additional enemies (cap 4)
+- Each bounce deals full damage to the next nearest enemy

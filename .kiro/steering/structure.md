@@ -60,6 +60,7 @@ All in `domain/model/`:
 - `OwnedCard` — player-owned card instance
 - `EnemyType`, `BattleCondition`, `RoundState` — Battle system
 - `ZigguratBaseStats` — Base stat constants for the ziggurat
+- `ResolvedStats` — Computed combat stats from workshop + in-round upgrades
 - `OverdriveType`, `UltimateWeaponType`, `UltimateWeaponLoadout` — Special abilities
 - `OwnedWeapon` — player-owned ultimate weapon
 - `Biome`, `ResearchType`, `ActiveResearch` — Progression systems
@@ -85,6 +86,9 @@ All in `domain/model/`:
 | `service/StepSyncWorker.kt` | @HiltWorker, 15-min periodic catch-up + HC sync |
 | `domain/usecase/CalculateUpgradeCost.kt` | Cost formula: `baseCost × scaling^level` |
 | `domain/usecase/CanAffordUpgrade.kt` | Affordability check against wallet |
+| `domain/usecase/ResolveStats.kt` | Workshop + in-round levels → ResolvedStats |
+| `domain/usecase/CalculateDamage.kt` | Raw damage + crit roll + damage/meter bonus |
+| `domain/usecase/CalculateDefense.kt` | Damage reduction (cap 75%) + flat block |
 | `presentation/MainActivity.kt` | Single Activity, Scaffold + NavHost + BottomNavBar (hidden during battle), permissions |
 | `presentation/navigation/Screen.kt` | 5 navigation routes (Home, Workshop, Battle, Labs, Stats) |
 | `presentation/home/HomeViewModel.kt` | Combines profile + step flows into HomeUiState |

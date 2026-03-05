@@ -2,9 +2,10 @@ package com.whitefang.stepsofbabylon.presentation.battle
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.whitefang.stepsofbabylon.domain.model.ZigguratBaseStats
+import com.whitefang.stepsofbabylon.domain.model.ResolvedStats
 import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
 import com.whitefang.stepsofbabylon.domain.repository.WorkshopRepository
+import com.whitefang.stepsofbabylon.domain.usecase.ResolveStats
 import com.whitefang.stepsofbabylon.presentation.battle.engine.GameEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
@@ -34,15 +35,19 @@ class BattleViewModel @Inject constructor(
     private val _events = MutableSharedFlow<BattleEvent>()
     val events = _events.asSharedFlow()
 
+    private val resolveStats = ResolveStats()
+    var resolvedStats: ResolvedStats = ResolvedStats(); private set
+
     init {
         viewModelScope.launch {
-            val tier = playerRepository.observeTier().first()
-            val maxHp = ZigguratBaseStats.BASE_HEALTH
-            _uiState.update { it.copy(maxHp = maxHp, currentHp = maxHp, isLoading = false) }
+            val workshopLevels = workshopRepository.observeAllUpgrades().first()
+            resolvedStats = resolveStats(workshopLevels)
+            _uiState.update { it.copy(maxHp = resolvedStats.maxHealth, currentHp = resolvedStats.maxHealth, isLoading = false) }
         }
     }
 
     fun startPollingEngine(engine: GameEngine) {
+        engine.setStats(resolvedStats)
         viewModelScope.launch {
             while (true) {
                 delay(200)
@@ -66,15 +71,7 @@ class BattleViewModel @Inject constructor(
         }
     }
 
-    fun setSpeed(multiplier: Float) {
-        _uiState.update { it.copy(speedMultiplier = multiplier) }
-    }
-
-    fun togglePause() {
-        _uiState.update { it.copy(isPaused = !it.isPaused) }
-    }
-
-    fun onRoundEnd() {
-        viewModelScope.launch { _events.emit(BattleEvent.RoundEnded) }
-    }
+    fun setSpeed(multiplier: Float) { _uiState.update { it.copy(speedMultiplier = multiplier) } }
+    fun togglePause() { _uiState.update { it.copy(isPaused = !it.isPaused) } }
+    fun onRoundEnd() { viewModelScope.launch { _events.emit(BattleEvent.RoundEnded) } }
 }

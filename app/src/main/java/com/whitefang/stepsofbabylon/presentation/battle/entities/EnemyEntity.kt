@@ -65,6 +65,10 @@ class EnemyEntity(
         if (currentHp <= 0.0) { isAlive = false; onDeath(this) }
     }
 
+    fun applyKnockback(forceX: Float, forceY: Float) {
+        x += forceX; y += forceY
+    }
+
     override fun render(canvas: Canvas) {
         val r = width / 2f
         when (enemyType) {

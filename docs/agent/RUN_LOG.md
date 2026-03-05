@@ -154,3 +154,27 @@
   - Workshop bonuses not applied to stats — Plan 10 adds ResolveStats
 - Follow-ups created: None.
 - Memory updated: STATE ✅ / RUN_LOG ✅
+
+## 2026-03-05 — Plan 10: Battle System — Stats & Combat
+- Goal: Stats resolution engine + core combat mechanics (crit, knockback, lifesteal, thorn, regen, death defy, defense).
+- Decisions made:
+  - (b) Core stats + simple mechanics now; Orbs/Multishot/Bounce deferred
+  - (a) GameEngine accepts ResolvedStats in init() — ViewModel resolves on round start
+  - (a) Centralized applyDamageToZiggurat() for all damage sources
+- Changes made:
+  - Created `domain/model/ResolvedStats.kt` — all computed combat stats data class
+  - Created `domain/usecase/ResolveStats.kt` — workshop + in-round levels → ResolvedStats
+  - Created `domain/usecase/CalculateDamage.kt` — raw damage + crit roll + damage/meter bonus
+  - Created `domain/usecase/CalculateDefense.kt` — damage reduction (cap 75%) + flat block
+  - Updated `presentation/battle/entities/ZigguratEntity.kt` — uses ResolvedStats for HP, attack speed, range, health regen
+  - Updated `presentation/battle/entities/EnemyEntity.kt` — added applyKnockback()
+  - Updated `presentation/battle/engine/CollisionSystem.kt` — delegates to engine callbacks
+  - Updated `presentation/battle/engine/GameEngine.kt` — centralized damage pipeline (defense → death defy → thorn), knockback, lifesteal
+  - Updated `presentation/battle/GameSurfaceView.kt` — accepts ResolvedStats, re-inits engine
+  - Updated `presentation/battle/BattleViewModel.kt` — resolves stats from workshop on init
+  - Updated `presentation/battle/BattleScreen.kt` — passes resolved stats to surface view
+- Commands/tests run: `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL, zero warnings
+- Open questions / blockers:
+  - Orbs, Multishot, Bounce Shot computed in ResolvedStats but not wired to gameplay
+  - In-round upgrades (Plan 11) will re-resolve stats on purchase
+- Memory updated: STATE ✅ / RUN_LOG ✅
