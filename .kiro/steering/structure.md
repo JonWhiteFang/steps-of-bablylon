@@ -18,8 +18,8 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 │   ├── home/           # Home screen, ViewModel, UiState
 │   ├── workshop/       # Workshop screen, ViewModel, UpgradeCard
 │   ├── battle/         # Battle renderer (SurfaceView, game loop, entities)
-│   │   ├── engine/     # GameEngine, Entity base class
-│   │   ├── entities/   # ZigguratEntity, ProjectileEntity
+│   │   ├── engine/     # GameEngine, Entity, WaveSpawner, EnemyScaler, CollisionSystem
+│   │   ├── entities/   # ZigguratEntity, ProjectileEntity, EnemyEntity, EnemyProjectileEntity
 │   │   └── ui/         # HealthBarRenderer
 │   └── ui/theme/       # Compose theme, colors (Material3)
 ├── di/                 # Hilt modules (DatabaseModule, RepositoryModule, StepModule, HealthConnectModule)
@@ -90,8 +90,11 @@ All in `domain/model/`:
 | `presentation/home/HomeViewModel.kt` | Combines profile + step flows into HomeUiState |
 | `presentation/battle/GameSurfaceView.kt` | SurfaceView managing game loop thread lifecycle |
 | `presentation/battle/GameLoopThread.kt` | Fixed timestep (60 UPS), accumulator, speed multiplier |
-| `presentation/battle/engine/GameEngine.kt` | Central coordinator: entity list, update/render dispatch |
-| `presentation/battle/BattleViewModel.kt` | Loads tier, exposes BattleUiState + BattleEvent |
+| `presentation/battle/engine/GameEngine.kt` | Central coordinator: entity list, update/render dispatch, wave/collision integration |
+| `presentation/battle/engine/WaveSpawner.kt` | Wave lifecycle: 26s spawn + 9s cooldown, enemy composition by wave |
+| `presentation/battle/engine/EnemyScaler.kt` | Wave-based stat scaling (1.05^wave), cash rewards per type |
+| `presentation/battle/engine/CollisionSystem.kt` | Projectile↔enemy and enemy projectile↔ziggurat collision |
+| `presentation/battle/BattleViewModel.kt` | Loads tier, polls engine state, exposes BattleUiState + BattleEvent |
 | `gradle/libs.versions.toml` | All dependency versions |
 | `app/schemas/` | Room schema exports (commit these) |
 | `docs/plans/` | Numbered implementation plans (01–30) |

@@ -163,12 +163,13 @@ graph TD
 - [x] **Plan 06: Home Screen & Navigation** ✓
 - [x] **Plan 07: Workshop Screen & Upgrades** ✓
 - [x] **Plan 08: Battle Renderer** ✓
-- [ ] **Plan 09: Battle System — Enemies & Waves** ← next up (critical path)
+- [x] **Plan 09: Battle System — Enemies & Waves** ✓
+- [ ] **Plan 10: Battle System — Stats & Combat** ← next up (critical path)
 
 ### Parallelizable Branches (after dependencies met)
 
 - Anti-cheat: Plan 25 (ready now — Plan 05 complete)
-- Battle system: Plan 09 (ready now — Plan 08 complete) — CRITICAL PATH
+- Stats & Combat: Plan 10 (ready now — Plan 09 complete) — CRITICAL PATH
 - Labs: Plan 16 (ready now — Plan 07 complete)
 - Cards: Plan 17 (ready now — Plan 07 complete)
 - Stats: Plan 22 (ready now — Plan 06 complete)

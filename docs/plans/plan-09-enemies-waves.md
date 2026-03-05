@@ -1,6 +1,6 @@
 # Plan 09 — Battle System: Enemies & Waves
 
-**Status:** Not Started
+**Status:** Complete
 **Dependencies:** Plan 08 (Battle Renderer)
 **Layer:** `presentation/battle/` — Game entities and wave system
 

@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.whitefang.stepsofbabylon.domain.model.ZigguratBaseStats
 import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
 import com.whitefang.stepsofbabylon.domain.repository.WorkshopRepository
+import com.whitefang.stepsofbabylon.presentation.battle.engine.GameEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,8 +37,32 @@ class BattleViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val tier = playerRepository.observeTier().first()
-            val maxHp = ZigguratBaseStats.BASE_HEALTH // Plan 10 will apply workshop bonuses
+            val maxHp = ZigguratBaseStats.BASE_HEALTH
             _uiState.update { it.copy(maxHp = maxHp, currentHp = maxHp, isLoading = false) }
+        }
+    }
+
+    fun startPollingEngine(engine: GameEngine) {
+        viewModelScope.launch {
+            while (true) {
+                delay(200)
+                val zig = engine.ziggurat ?: continue
+                val spawner = engine.waveSpawner
+                _uiState.update {
+                    it.copy(
+                        currentWave = spawner?.currentWave ?: 1,
+                        currentHp = zig.currentHp,
+                        maxHp = zig.maxHp,
+                        cash = engine.cash,
+                        enemyCount = spawner?.enemiesAlive ?: 0,
+                        wavePhase = spawner?.phase?.name ?: "",
+                    )
+                }
+                if (engine.roundOver) {
+                    _events.emit(BattleEvent.RoundEnded)
+                    break
+                }
+            }
         }
     }
 

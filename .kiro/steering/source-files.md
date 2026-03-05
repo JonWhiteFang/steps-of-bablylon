@@ -130,10 +130,15 @@ presentation/battle/BattleViewModel.kt             # @HiltViewModel: loads tier,
 presentation/battle/BattleUiState.kt               # UI state: wave, HP, cash, speed, pause
 presentation/battle/GameSurfaceView.kt             # SurfaceView + SurfaceHolder.Callback, manages game loop thread
 presentation/battle/GameLoopThread.kt              # Dedicated thread: fixed timestep (60 UPS), accumulator, speed multiplier
-presentation/battle/engine/GameEngine.kt           # Central coordinator: entity list, update/render dispatch
+presentation/battle/engine/GameEngine.kt           # Central coordinator: entity list, update/render dispatch, wave/collision integration
 presentation/battle/engine/Entity.kt               # Abstract base: x, y, width, height, isAlive, update(), render()
-presentation/battle/entities/ZigguratEntity.kt     # 5-layer ziggurat, auto-fire projectiles, HP tracking
+presentation/battle/engine/WaveSpawner.kt          # Wave lifecycle: 26s spawn + 9s cooldown, enemy composition by wave
+presentation/battle/engine/EnemyScaler.kt          # Wave-based stat scaling (1.05^wave), cash rewards per type
+presentation/battle/engine/CollisionSystem.kt      # Projectile↔enemy and enemy projectile↔ziggurat collision
+presentation/battle/entities/ZigguratEntity.kt     # 5-layer ziggurat, nearest-enemy targeting, HP tracking
 presentation/battle/entities/ProjectileEntity.kt   # Moves toward target, self-destructs on arrival
+presentation/battle/entities/EnemyEntity.kt        # 6 enemy types, movement, melee/ranged attack, mini HP bar
+presentation/battle/entities/EnemyProjectileEntity.kt # Ranged enemy projectiles targeting ziggurat
 presentation/battle/ui/HealthBarRenderer.kt        # HP bar: green→yellow→red gradient, numeric text
 presentation/ui/theme/Color.kt                     # Compose color definitions
 presentation/ui/theme/Theme.kt                     # Compose theme setup (Material3)

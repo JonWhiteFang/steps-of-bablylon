@@ -3,6 +3,7 @@ package com.whitefang.stepsofbabylon.presentation.battle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -26,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 
@@ -38,6 +40,7 @@ fun BattleScreen(
     val context = LocalContext.current
     val surfaceView = remember { GameSurfaceView(context) }
 
+    LaunchedEffect(surfaceView) { viewModel.startPollingEngine(surfaceView.engine) }
     LaunchedEffect(state.speedMultiplier) { surfaceView.setSpeedMultiplier(state.speedMultiplier) }
     LaunchedEffect(state.isPaused) { surfaceView.setPaused(state.isPaused) }
     LaunchedEffect(Unit) { viewModel.events.collect { if (it is BattleEvent.RoundEnded) onExitBattle() } }
@@ -45,13 +48,26 @@ fun BattleScreen(
     Box(Modifier.fillMaxSize()) {
         AndroidView(factory = { surfaceView }, modifier = Modifier.fillMaxSize())
 
-        // Top-left: wave counter
-        Text(
-            text = "Wave ${state.currentWave}",
-            color = Color.White,
-            style = MaterialTheme.typography.titleMedium,
+        // Top-left: wave info + cash
+        Column(
             modifier = Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 80.dp),
-        )
+        ) {
+            Text(
+                text = "Wave ${state.currentWave} · ${state.enemyCount} enemies",
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = state.wavePhase.lowercase().replaceFirstChar { it.uppercase() },
+                color = Color.White.copy(alpha = 0.6f),
+                fontSize = 12.sp,
+            )
+            Text(
+                text = "$${state.cash}",
+                color = Color(0xFFD4A843),
+                style = MaterialTheme.typography.titleSmall,
+            )
+        }
 
         // Top-right: exit button
         IconButton(
@@ -72,19 +88,15 @@ fun BattleScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             listOf(1f, 2f, 4f).forEach { speed ->
-                val selected = state.speedMultiplier == speed
-                if (selected) {
+                if (state.speedMultiplier == speed) {
                     Button(onClick = {}) { Text("${speed.toInt()}x") }
                 } else {
                     FilledTonalButton(
                         onClick = { viewModel.setSpeed(speed) },
-                        colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = Color.White.copy(alpha = 0.2f),
-                        ),
+                        colors = ButtonDefaults.filledTonalButtonColors(containerColor = Color.White.copy(alpha = 0.2f)),
                     ) { Text("${speed.toInt()}x", color = Color.White) }
                 }
             }
-
             FilledTonalButton(
                 onClick = { viewModel.togglePause() },
                 colors = ButtonDefaults.filledTonalButtonColors(

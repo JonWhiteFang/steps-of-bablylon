@@ -129,3 +129,28 @@
   - Workshop bonuses not applied to base stats yet — Plan 10 adds ResolveStats
 - Follow-ups created: None.
 - Memory updated: STATE ✅ / RUN_LOG ✅
+
+## 2026-03-05 — Plan 09: Battle System — Enemies & Waves
+- Goal: Add 6 enemy types, wave spawning, enemy scaling, collision, cash, nearest-enemy targeting, round end.
+- Decisions made:
+  - (b) Enemies spawn from top + left + right edges (converging on ziggurat)
+  - (b) Fix EnemyType enum to match battle-formulas.md (FAST dmg 0.5→0.7, RANGED spd 1.0→0.8 + dmg 1.5→1.2, BOSS hp 10→20)
+  - (b) Wave scaling: 1.05^wave (gentler curve, tunable in Plan 28)
+- Changes made:
+  - Updated `domain/model/EnemyType.kt` — corrected multipliers to match balance spec
+  - Created `presentation/battle/engine/EnemyScaler.kt` — wave-based stat scaling (1.05^wave), cash rewards per type
+  - Created `presentation/battle/entities/EnemyEntity.kt` — 6 types, movement, melee/ranged attack, distinct shapes/colors, mini HP bar
+  - Created `presentation/battle/entities/EnemyProjectileEntity.kt` — red projectiles for Ranged enemies
+  - Created `presentation/battle/engine/WaveSpawner.kt` — 26s spawn + 9s cooldown, enemy composition by wave, boss every 10 waves
+  - Created `presentation/battle/engine/CollisionSystem.kt` — projectile↔enemy and enemy projectile↔ziggurat collision
+  - Updated `presentation/battle/engine/GameEngine.kt` — integrated WaveSpawner, CollisionSystem, cash tracking, Scatter splitting, round end detection, findNearestEnemy()
+  - Updated `presentation/battle/entities/ZigguratEntity.kt` — targets nearest enemy via lambda, only fires when enemy in range
+  - Updated `presentation/battle/BattleUiState.kt` — added enemyCount, wavePhase
+  - Updated `presentation/battle/BattleViewModel.kt` — polls engine state every 200ms, detects roundOver
+  - Updated `presentation/battle/BattleScreen.kt` — shows enemy count, wave phase, cash in overlay
+- Commands/tests run: `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL, zero warnings
+- Open questions / blockers:
+  - Cash economy simplified (base per type) — Plan 11 adds full formula
+  - Workshop bonuses not applied to stats — Plan 10 adds ResolveStats
+- Follow-ups created: None.
+- Memory updated: STATE ✅ / RUN_LOG ✅
