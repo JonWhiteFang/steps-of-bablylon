@@ -253,3 +253,25 @@
 - Commands/tests run: `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL, zero warnings
 - Open questions / blockers: None.
 - Memory updated: STATE ✅ / RUN_LOG ✅
+
+## 2026-03-06 — Domain Layer Unit Testing (Regression Safety Net)
+- Goal: Add pure JVM unit tests covering all domain use cases, key domain models, and critical pure-Kotlin logic outside domain.
+- Decisions made:
+  - JVM-only tests (no instrumented/emulator tests) for speed and simplicity
+  - JUnit 5 + kotlinx-coroutines-test as test framework (no Turbine needed yet)
+  - Injected `Random` into `CalculateDamage` for deterministic crit testing (default param, zero caller impact)
+  - Created fake repositories (FakePlayerRepository, FakeWorkshopRepository) for use case tests
+- Changes made:
+  - Updated `gradle/libs.versions.toml` — added junit5=5.11.4, coroutinesTest=1.10.1, test library entries
+  - Updated `app/build.gradle.kts` — added testImplementation deps, JUnit Platform config, platform launcher
+  - Refactored `domain/usecase/CalculateDamage.kt` — injectable Random parameter
+  - Created `test/fakes/FakePlayerRepository.kt` — in-memory MutableStateFlow-backed fake
+  - Created `test/fakes/FakeWorkshopRepository.kt` — in-memory MutableStateFlow-backed fake
+  - Created 15 test classes (80 tests total):
+    - `domain/usecase/`: CalculateUpgradeCostTest, CanAffordUpgradeTest, QuickInvestTest, PurchaseUpgradeTest, UpdateBestWaveTest, ResolveStatsTest, CalculateDamageTest, CalculateDefenseTest
+    - `domain/model/`: TierConfigTest, BiomeTest, CardLoadoutTest, UltimateWeaponLoadoutTest, UpgradeTypeTest, EnemyTypeTest
+    - `presentation/battle/engine/`: EnemyScalerTest
+    - `data/sensor/`: StepRateLimiterTest
+- Commands/tests run: `./run-gradle.sh testDebugUnitTest` — BUILD SUCCESSFUL, 80 tests, 0 failures
+- Open questions / blockers: None. ViewModel tests and instrumented tests deferred to Plan 29.
+- Memory updated: STATE ✅ / RUN_LOG ✅

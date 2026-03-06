@@ -30,6 +30,11 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    @Suppress("UnstableApiUsage")
+    testOptions {
+        unitTests.all { it.useJUnitPlatform() }
+    }
 }
 
 room {
@@ -77,4 +82,9 @@ dependencies {
     // SQLCipher
     implementation(libs.sqlcipher)
     implementation(libs.sqlite)
+
+    // Testing
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation(libs.coroutines.test)
 }

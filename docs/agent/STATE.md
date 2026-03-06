@@ -6,6 +6,7 @@
 ## What works
 - Plans 01–12 + 10b: All foundation layers, battle system, stats engine, cash economy, in-round upgrades, all combat mechanics, and full round lifecycle complete.
 - Plan 12 complete: Round start flow, post-round summary overlay (wave record, enemies killed, cash earned, time survived), best wave persistence per tier, pause overlay with Resume/Quit, auto-pause on background, Play Again resets engine in-place, Return to Workshop navigates out.
+- Domain layer unit tests: 80 JVM tests covering all 8 use cases, 6 domain models, EnemyScaler, and StepRateLimiter. JUnit 5 + coroutines-test. All green.
 
 ## Known issues / debt
 - Notification uses placeholder system icon.

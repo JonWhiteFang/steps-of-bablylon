@@ -162,3 +162,28 @@ service/BootReceiver.kt              # BOOT_COMPLETED → restart StepCounterSer
 service/StepSyncWorker.kt            # @HiltWorker CoroutineWorker, 15-min periodic: sensor catch-up + HC sync
 service/StepSyncScheduler.kt         # Enqueues periodic WorkManager request
 ```
+
+## Test Layer
+
+All paths relative to `app/src/test/java/com/whitefang/stepsofbabylon/`.
+
+```
+fakes/FakePlayerRepository.kt                    # In-memory StateFlow-backed fake for PlayerRepository
+fakes/FakeWorkshopRepository.kt                  # In-memory StateFlow-backed fake for WorkshopRepository
+domain/usecase/CalculateUpgradeCostTest.kt        # Cost formula: baseCost × scaling^level, all 23 types
+domain/usecase/CanAffordUpgradeTest.kt            # Affordability checks against wallet
+domain/usecase/QuickInvestTest.kt                 # Cheapest affordable upgrade recommendation
+domain/usecase/PurchaseUpgradeTest.kt             # Purchase flow with fake repos
+domain/usecase/UpdateBestWaveTest.kt              # Best wave tracking, new record detection
+domain/usecase/ResolveStatsTest.kt                # Multiplicative stacking, all stat caps
+domain/usecase/CalculateDamageTest.kt             # Crit/no-crit with injectable Random, damage/meter bonus
+domain/usecase/CalculateDefenseTest.kt            # Percent reduction, flat block, floor at 0
+domain/model/TierConfigTest.kt                    # All 10 tiers, battle conditions, invalid tier
+domain/model/BiomeTest.kt                         # All tier→biome mappings
+domain/model/CardLoadoutTest.kt                   # Max 3, no duplicates, add/remove
+domain/model/UltimateWeaponLoadoutTest.kt         # Max 3, no duplicates, add/remove
+domain/model/UpgradeTypeTest.kt                   # 23 entries, category counts, valid configs
+domain/model/EnemyTypeTest.kt                     # 6 entries, multiplier correctness
+presentation/battle/engine/EnemyScalerTest.kt     # Wave scaling, speed, cash rewards
+data/sensor/StepRateLimiterTest.kt                # Normal/burst caps, window expiry, edge cases
+```

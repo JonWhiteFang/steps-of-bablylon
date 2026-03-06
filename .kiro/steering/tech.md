@@ -23,6 +23,8 @@ All versions managed in `gradle/libs.versions.toml`. Never hardcode versions in 
 | Navigation Compose | 2.9.7 | Compose navigation |
 | Lifecycle | 2.9.0 | ViewModel, StateFlow integration |
 | WorkManager | 2.11.0 | Background step sync |
+| JUnit 5 | 5.11.4 | Unit testing framework |
+| kotlinx-coroutines-test | 1.10.1 | Coroutine test utilities |
 | SQLCipher | 4.13.0 | Database encryption |
 | SQLite KTX | 2.4.0 | SQLite support library |
 | Core KTX | 1.17.0 | Kotlin extensions for Android |
