@@ -53,6 +53,9 @@ class GameEngine {
     @Volatile var elapsedTimeSeconds: Float = 0f; private set
     @Volatile var activeOverdrive: OverdriveType? = null; private set
     @Volatile var overdriveTimeRemaining: Float = 0f; private set
+    @Volatile var secondWindHpPercent: Double = 0.0
+    @Volatile var secondWindUsed: Boolean = false
+    @Volatile var cashBonusPercent: Double = 0.0
     private var preOverdriveStats: ResolvedStats? = null
     private var fortuneMultiplier: Double = 1.0
 
@@ -81,6 +84,7 @@ class GameEngine {
         cash = 0L; totalCashEarned = 0L; roundOver = false
         totalEnemiesKilled = 0; elapsedTimeSeconds = 0f
         activeOverdrive = null; overdriveTimeRemaining = 0f; preOverdriveStats = null; fortuneMultiplier = 1.0
+        secondWindUsed = false
         uwStates.clear(); uwEffects.clear(); chronoActive = false; goldenZigActive = false; preGoldenStats = null
         stats = resolvedStats; tier = playerTier; workshopLevels = wsLevels
         conditions = BattleConditionEffects.fromTier(tier)
@@ -413,6 +417,11 @@ class GameEngine {
                 zig.currentHp = 1.0; applyThorn(rawDamage, attacker); return
             }
         }
+        if (zig.currentHp - mitigated <= 0.0 && !secondWindUsed && secondWindHpPercent > 0.0) {
+            secondWindUsed = true
+            zig.currentHp = zig.maxHp * secondWindHpPercent
+            applyThorn(rawDamage, attacker); return
+        }
         zig.currentHp = (zig.currentHp - mitigated).coerceAtLeast(0.0)
         applyThorn(rawDamage, attacker)
     }
@@ -439,7 +448,7 @@ class GameEngine {
         val baseCash = EnemyScaler.cashReward(enemy.enemyType)
         val tierMult = TierConfig.forTier(tier).cashMultiplier
         val cashBonus = 1.0 + wsLevel(UpgradeType.CASH_BONUS) * 0.03
-        val killCash = (baseCash * tierMult * cashBonus * fortuneMultiplier).toLong()
+        val killCash = (baseCash * tierMult * cashBonus * fortuneMultiplier * (1.0 + cashBonusPercent / 100.0)).toLong()
         cash += killCash
         totalCashEarned += killCash
         waveSpawner?.onEnemyKilled()

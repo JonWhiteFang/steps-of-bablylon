@@ -24,8 +24,8 @@ class FakePlayerRepository(
     override suspend fun spendGems(amount: Long) { profile.update { it.copy(gems = it.gems - amount) } }
     override suspend fun addPowerStones(amount: Long) { profile.update { it.copy(powerStones = it.powerStones + amount) } }
     override suspend fun spendPowerStones(amount: Long) { profile.update { it.copy(powerStones = it.powerStones - amount) } }
-    override suspend fun addCardDust(amount: Long) {}
-    override suspend fun spendCardDust(amount: Long) {}
+    override suspend fun addCardDust(amount: Long) { profile.update { it.copy(cardDust = it.cardDust + amount) } }
+    override suspend fun spendCardDust(amount: Long) { profile.update { it.copy(cardDust = it.cardDust - amount) } }
     override suspend fun updateTier(tier: Int) { profile.update { it.copy(currentTier = tier) } }
     override suspend fun updateHighestUnlockedTier(tier: Int) { profile.update { it.copy(highestUnlockedTier = tier) } }
     override suspend fun updateLabSlotCount(count: Int) { profile.update { it.copy(labSlotCount = count) } }

@@ -1,0 +1,28 @@
+package com.whitefang.stepsofbabylon.presentation.cards
+
+import com.whitefang.stepsofbabylon.domain.model.CardType
+import com.whitefang.stepsofbabylon.domain.usecase.CardResult
+import com.whitefang.stepsofbabylon.domain.usecase.PackTier
+
+data class CardDisplayInfo(
+    val id: Int,
+    val type: CardType,
+    val level: Int,
+    val isEquipped: Boolean,
+    val isMaxLevel: Boolean,
+    val upgradeDustCost: Long,
+    val canAffordUpgrade: Boolean,
+    val effectDescription: String,
+)
+
+data class CardsUiState(
+    val ownedCards: List<CardDisplayInfo> = emptyList(),
+    val equippedCount: Int = 0,
+    val gems: Long = 0,
+    val cardDust: Long = 0,
+    val packOptions: List<PackOption> = PackTier.entries.map { PackOption(it, false) },
+    val lastPackResult: List<CardResult>? = null,
+    val isLoading: Boolean = true,
+)
+
+data class PackOption(val tier: PackTier, val canAfford: Boolean)

@@ -4,14 +4,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.whitefang.stepsofbabylon.data.BiomePreferences
 import com.whitefang.stepsofbabylon.domain.model.Biome
+import com.whitefang.stepsofbabylon.domain.model.OwnedCard
 import com.whitefang.stepsofbabylon.domain.model.OwnedWeapon
 import com.whitefang.stepsofbabylon.domain.model.OverdriveType
 import com.whitefang.stepsofbabylon.domain.model.ResolvedStats
 import com.whitefang.stepsofbabylon.domain.model.UpgradeType
 import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
+import com.whitefang.stepsofbabylon.domain.repository.CardRepository
 import com.whitefang.stepsofbabylon.domain.repository.UltimateWeaponRepository
 import com.whitefang.stepsofbabylon.domain.repository.WorkshopRepository
 import com.whitefang.stepsofbabylon.domain.usecase.ActivateOverdrive
+import com.whitefang.stepsofbabylon.domain.usecase.ApplyCardEffects
 import com.whitefang.stepsofbabylon.domain.usecase.CalculateUpgradeCost
 import com.whitefang.stepsofbabylon.domain.usecase.CheckTierUnlock
 import com.whitefang.stepsofbabylon.domain.usecase.ResolveStats
@@ -37,6 +40,7 @@ class BattleViewModel @Inject constructor(
     private val playerRepository: PlayerRepository,
     private val biomePreferences: BiomePreferences,
     private val uwRepository: UltimateWeaponRepository,
+    private val cardRepository: CardRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BattleUiState())
@@ -47,6 +51,7 @@ class BattleViewModel @Inject constructor(
     private val updateBestWave = UpdateBestWave(playerRepository)
     private val checkTierUnlock = CheckTierUnlock()
     private val activateOverdriveUseCase = ActivateOverdrive()
+    private val applyCardEffects = ApplyCardEffects()
 
     var resolvedStats: ResolvedStats = ResolvedStats(); private set
     private var workshopLevels: Map<UpgradeType, Int> = emptyMap()
@@ -55,6 +60,9 @@ class BattleViewModel @Inject constructor(
     private var surfaceView: GameSurfaceView? = null
     var tier: Int = 1; private set
     private var equippedWeapons: List<OwnedWeapon> = emptyList()
+    private var equippedCards: List<OwnedCard> = emptyList()
+    private var cardCashBonus: Double = 0.0
+    private var cardSecondWind: Double = 0.0
     private var roundEnded = false
 
     init {
@@ -64,6 +72,12 @@ class BattleViewModel @Inject constructor(
             tier = profile.currentTier
             resolvedStats = resolveStats(workshopLevels)
             equippedWeapons = uwRepository.observeEquippedWeapons().first()
+
+            equippedCards = cardRepository.observeEquippedCards().first()
+            val cardResult = applyCardEffects(resolvedStats, equippedCards)
+            resolvedStats = cardResult.stats
+            cardCashBonus = cardResult.cashBonusPercent
+            cardSecondWind = cardResult.secondWindHpPercent
 
             val biome = Biome.forTier(tier)
             val transition = if (!biomePreferences.hasSeenBiome(biome)) BiomeTransitionInfo(biome, profile.totalStepsEarned) else null
@@ -83,7 +97,9 @@ class BattleViewModel @Inject constructor(
 
     fun startPollingEngine(engine: GameEngine, surfaceView: GameSurfaceView) {
         this.engine = engine; this.surfaceView = surfaceView
-        engine.setStats(resolvedStats); engine.initUWs(equippedWeapons); roundEnded = false
+        engine.setStats(resolvedStats); engine.initUWs(equippedWeapons)
+        engine.secondWindHpPercent = cardSecondWind; engine.cashBonusPercent = cardCashBonus
+        roundEnded = false
         viewModelScope.launch {
             while (true) {
                 delay(200)
@@ -129,10 +145,15 @@ class BattleViewModel @Inject constructor(
     fun playAgain() {
         roundEnded = false; inRoundLevels.clear()
         resolvedStats = resolveStats(workshopLevels)
+        val cardResult = applyCardEffects(resolvedStats, equippedCards)
+        resolvedStats = cardResult.stats
+        cardCashBonus = cardResult.cashBonusPercent
+        cardSecondWind = cardResult.secondWindHpPercent
         _uiState.update { BattleUiState(maxHp = resolvedStats.maxHealth, currentHp = resolvedStats.maxHealth,
             speedMultiplier = it.speedMultiplier, isLoading = false, stepBalance = it.stepBalance) }
         surfaceView?.configure(resolvedStats, tier, emptyMap())
         engine?.initUWs(equippedWeapons)
+        engine?.secondWindHpPercent = cardSecondWind; engine?.cashBonusPercent = cardCashBonus
         val eng = engine ?: return; val sv = surfaceView ?: return
         startPollingEngine(eng, sv)
     }

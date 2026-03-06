@@ -417,3 +417,32 @@
 - Commands/tests run: `./run-gradle.sh testDebugUnitTest` — 133 tests, 0 failures. `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL.
 - Open questions / blockers: None.
 - Memory updated: STATE ✅ / RUN_LOG ✅
+
+## 2026-03-06 — Plan 17: Cards System
+- Goal: Implement Cards system — 9 card types, 3 rarities, pack opening, Card Dust upgrades, loadout, battle integration.
+- Decisions made:
+  - (a) Pack distributions: Common 80/18/2, Rare 50/40/10, Epic 20/40/40. Dust from dupes: 5/15/50.
+  - (a) Numeric fields on CardType enum with linear interpolation for level scaling.
+  - (b) Post-process pattern: ApplyCardEffects modifies ResolvedStats copy, ResolveStats untouched.
+- Changes made:
+  - Updated `domain/model/CardType.kt` — added valueLv1/valueLv5/secondaryLv1/secondaryLv5, effectAtLevel(), secondaryAtLevel()
+  - Updated `domain/model/CardRarity.kt` — added dustValue (5/15/50) and upgradeDustPerLevel (10/25/50)
+  - Created `domain/usecase/OpenCardPack.kt` — PackTier enum, CardResult, rarity rolling, duplicate→dust
+  - Created `domain/usecase/UpgradeCard.kt` — Card Dust cost scaling by rarity and level
+  - Created `domain/usecase/ApplyCardEffects.kt` — CardEffectResult, 9 card effects as post-process on ResolvedStats
+  - Created `domain/usecase/ManageCardLoadout.kt` — equip/unequip with max 3 validation
+  - Created `presentation/cards/CardsUiState.kt` — CardDisplayInfo, PackOption, CardsUiState
+  - Created `presentation/cards/CardsViewModel.kt` — combines cards + wallet, all actions
+  - Created `presentation/cards/CardsScreen.kt` — pack buttons, card collection, equip/upgrade, rarity colors
+  - Updated `presentation/battle/BattleViewModel.kt` — inject CardRepository, apply card effects at round start + playAgain
+  - Updated `presentation/battle/engine/GameEngine.kt` — Second Wind revive, cashBonusPercent in kill rewards
+  - Updated `presentation/navigation/Screen.kt` — added Cards route
+  - Updated `presentation/MainActivity.kt` — added Cards composable
+  - Updated `presentation/workshop/WorkshopScreen.kt` — added "🃏 Cards" navigation button
+  - Created `test/fakes/FakeCardRepository.kt` — in-memory StateFlow-backed fake
+  - Updated `test/fakes/FakePlayerRepository.kt` — implemented addCardDust/spendCardDust
+  - Created 4 test classes (22 new tests):
+    - OpenCardPackTest (4), UpgradeCardTest (4), ApplyCardEffectsTest (11), ManageCardLoadoutTest (3)
+- Commands/tests run: `./run-gradle.sh testDebugUnitTest` — 155 tests, 0 failures. `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL.
+- Open questions / blockers: Step Surge gemMultiplier tracked but not consumed (no Gem earning in battle — deferred to Plan 20).
+- Memory updated: STATE ✅ / RUN_LOG ✅

@@ -112,7 +112,7 @@ graph TD
 - [x] Plan 14: Step Overdrive
 - [x] Plan 15: Ultimate Weapons
 - [x] Plan 16: Labs System
-- [ ] Plan 17: Cards System
+- [x] Plan 17: Cards System
 - [x] Plan 18: Narrative Biome Progression
 - [ ] Plan 19: Walking Encounters & Supply Drops
 - [ ] Plan 20: Power Stone & Gem Economy

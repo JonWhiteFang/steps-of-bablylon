@@ -26,16 +26,19 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.whitefang.stepsofbabylon.domain.model.UpgradeCategory
 
 @Composable
-fun WorkshopScreen(onNavigateToWeapons: () -> Unit = {}, viewModel: WorkshopViewModel = hiltViewModel()) {
+fun WorkshopScreen(onNavigateToWeapons: () -> Unit = {}, onNavigateToCards: () -> Unit = {}, viewModel: WorkshopViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val categories = UpgradeCategory.entries
     val selectedIndex = categories.indexOf(state.selectedCategory)
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            // Weapons button
-            OutlinedButton(onClick = onNavigateToWeapons, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+            // Weapons + Cards buttons
+            OutlinedButton(onClick = onNavigateToWeapons, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
                 Text("⚔ Ultimate Weapons")
+            }
+            OutlinedButton(onClick = onNavigateToCards, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+                Text("🃏 Cards")
             }
 
             // Balance header

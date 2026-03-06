@@ -1,6 +1,6 @@
 # Plan 17 — Cards System
 
-**Status:** Not Started
+**Status:** Complete
 **Dependencies:** Plan 07 (Workshop Screen & Upgrades)
 **Layer:** `presentation/` + `domain/usecase/`
 

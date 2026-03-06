@@ -27,6 +27,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.whitefang.stepsofbabylon.data.healthconnect.HealthConnectClientWrapper
 import com.whitefang.stepsofbabylon.presentation.battle.BattleScreen
+import com.whitefang.stepsofbabylon.presentation.cards.CardsScreen
 import com.whitefang.stepsofbabylon.presentation.home.HomeScreen
 import com.whitefang.stepsofbabylon.presentation.labs.LabsScreen
 import com.whitefang.stepsofbabylon.presentation.navigation.BottomNavBar
@@ -112,10 +113,16 @@ class MainActivity : ComponentActivity() {
                             HomeScreen(onBattleClick = { navController.navigate(Screen.Battle.route) })
                         }
                         composable(Screen.Workshop.route) {
-                            WorkshopScreen(onNavigateToWeapons = { navController.navigate(Screen.Weapons.route) })
+                            WorkshopScreen(
+                                onNavigateToWeapons = { navController.navigate(Screen.Weapons.route) },
+                                onNavigateToCards = { navController.navigate(Screen.Cards.route) },
+                            )
                         }
                         composable(Screen.Weapons.route) {
                             UltimateWeaponScreen()
+                        }
+                        composable(Screen.Cards.route) {
+                            CardsScreen()
                         }
                         composable(Screen.Battle.route) {
                             BattleScreen(onExitBattle = { navController.popBackStack() })

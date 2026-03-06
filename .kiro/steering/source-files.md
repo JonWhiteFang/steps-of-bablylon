@@ -127,6 +127,10 @@ domain/usecase/CompleteResearch.kt               # Completes research when timer
 domain/usecase/RushResearch.kt                   # Instant complete via Gems (50–200 linear cost)
 domain/usecase/UnlockLabSlot.kt                  # Unlock lab slot (200 Gems, max 4)
 domain/usecase/CheckResearchCompletion.kt        # Auto-completes all expired research on app launch
+domain/usecase/OpenCardPack.kt                   # Opens card pack: 3 tiers, rarity rolling, duplicate→dust
+domain/usecase/UpgradeCard.kt                    # Card upgrade: Card Dust cost by rarity × level
+domain/usecase/ApplyCardEffects.kt               # Post-process ResolvedStats with equipped card effects
+domain/usecase/ManageCardLoadout.kt              # Equip/unequip cards (max 3 loadout)
 ```
 
 ## Presentation Layer
@@ -175,6 +179,9 @@ presentation/weapons/UltimateWeaponScreen.kt       # UW management: 6 cards with
 presentation/labs/LabsViewModel.kt                  # @HiltViewModel: research state + wallet + countdown ticker
 presentation/labs/LabsUiState.kt                    # UI state: research list, slots, balances
 presentation/labs/LabsScreen.kt                     # Labs screen: research cards, start/rush/unlock slot
+presentation/cards/CardsViewModel.kt                # @HiltViewModel: card collection + wallet + pack/upgrade/loadout
+presentation/cards/CardsUiState.kt                  # UI state: owned cards, pack options, dust balance
+presentation/cards/CardsScreen.kt                   # Cards screen: pack opening, collection, equip/upgrade
 ```
 
 ## Service Layer
@@ -196,6 +203,7 @@ fakes/FakePlayerRepository.kt                    # In-memory StateFlow-backed fa
 fakes/FakeWorkshopRepository.kt                  # In-memory StateFlow-backed fake for WorkshopRepository
 fakes/FakeUltimateWeaponRepository.kt            # In-memory StateFlow-backed fake for UltimateWeaponRepository
 fakes/FakeLabRepository.kt                       # In-memory StateFlow-backed fake for LabRepository
+fakes/FakeCardRepository.kt                      # In-memory StateFlow-backed fake for CardRepository
 domain/usecase/CalculateUpgradeCostTest.kt        # Cost formula: baseCost × scaling^level, all 23 types
 domain/usecase/CanAffordUpgradeTest.kt            # Affordability checks against wallet
 domain/usecase/QuickInvestTest.kt                 # Cheapest affordable upgrade recommendation
@@ -215,6 +223,10 @@ domain/usecase/CompleteResearchTest.kt            # Complete research: timer gat
 domain/usecase/RushResearchTest.kt                # Rush research: linear Gem cost (50–200), deducts Gems
 domain/usecase/UnlockLabSlotTest.kt               # Unlock slot: 200 Gems, max 4
 domain/usecase/CheckResearchCompletionTest.kt     # Auto-complete: expired research, skip not-ready
+domain/usecase/OpenCardPackTest.kt                # Pack opening: gem deduction, rarity rolling, duplicates→dust
+domain/usecase/UpgradeCardTest.kt                 # Card upgrade: dust cost by rarity, max level
+domain/usecase/ApplyCardEffectsTest.kt            # All 9 card effects, level scaling, buff+debuff combos
+domain/usecase/ManageCardLoadoutTest.kt           # Equip/unequip, loadout full
 domain/model/TierConfigTest.kt                    # All 10 tiers, battle conditions, invalid tier
 domain/model/BiomeTest.kt                         # All tier→biome mappings
 domain/model/CardLoadoutTest.kt                   # Max 3, no duplicates, add/remove
