@@ -10,12 +10,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -33,6 +41,7 @@ import com.whitefang.stepsofbabylon.presentation.ui.theme.LapisLazuli
 @Composable
 fun HomeScreen(
     onBattleClick: () -> Unit = {},
+    onSuppliesClick: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -72,6 +81,15 @@ fun HomeScreen(
             }
 
             Text("Best Wave: ${state.bestWave}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
+
+            if (state.unclaimedDropCount > 0) {
+                OutlinedButton(onClick = onSuppliesClick, modifier = Modifier.fillMaxWidth()) {
+                    BadgedBox(badge = { Badge { Text("${state.unclaimedDropCount}") } }) {
+                        Icon(Icons.Default.Email, contentDescription = "Supplies")
+                    }
+                    Text("  Unclaimed Supplies", fontWeight = FontWeight.Bold)
+                }
+            }
 
             Spacer(Modifier.weight(1f))
 

@@ -12,5 +12,6 @@ data class HomeUiState(
     val currentBiome: Biome = Biome.HANGING_GARDENS,
     val bestWave: Int = 0,
     val bestWavePerTier: Map<Int, Int> = emptyMap(),
+    val unclaimedDropCount: Int = 0,
     val isLoading: Boolean = true,
 )

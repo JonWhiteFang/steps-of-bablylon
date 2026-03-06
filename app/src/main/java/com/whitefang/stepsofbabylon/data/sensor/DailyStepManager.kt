@@ -1,20 +1,26 @@
 package com.whitefang.stepsofbabylon.data.sensor
 
+import com.whitefang.stepsofbabylon.domain.model.DropGeneratorState
 import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
 import com.whitefang.stepsofbabylon.domain.repository.StepRepository
+import com.whitefang.stepsofbabylon.domain.repository.WalkingEncounterRepository
+import com.whitefang.stepsofbabylon.domain.usecase.GenerateSupplyDrop
+import com.whitefang.stepsofbabylon.service.SupplyDropNotificationManager
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Orchestrates step crediting: rate limit → daily ceiling → persist to Room.
+ * Orchestrates step crediting: rate limit → daily ceiling → persist to Room → supply drop generation.
  */
 @Singleton
 class DailyStepManager @Inject constructor(
     private val stepRepository: StepRepository,
     private val playerRepository: PlayerRepository,
     private val rateLimiter: StepRateLimiter,
+    private val walkingEncounterRepository: WalkingEncounterRepository,
+    private val supplyDropNotificationManager: SupplyDropNotificationManager,
 ) {
     companion object {
         const val DAILY_CEILING = 50_000L
@@ -25,6 +31,9 @@ class DailyStepManager @Inject constructor(
     private var dailySensorTotal: Long = 0L
     private var dailyCreditedTotal: Long = 0L
     private var initialized = false
+
+    private val generateSupplyDrop = GenerateSupplyDrop()
+    private var dropState = DropGeneratorState()
 
     fun getDailyCredited(): Long = dailyCreditedTotal
 
@@ -39,10 +48,10 @@ class DailyStepManager @Inject constructor(
 
         val today = todayDate()
         if (today != currentDate) {
-            // Day rollover
             currentDate = today
             dailySensorTotal = 0L
             dailyCreditedTotal = 0L
+            dropState = DropGeneratorState()
             initialized = false
         }
 
@@ -51,6 +60,7 @@ class DailyStepManager @Inject constructor(
             if (existing != null) {
                 dailySensorTotal = existing.sensorSteps
                 dailyCreditedTotal = existing.creditedSteps
+                dropState = dropState.copy(lastCheckSteps = dailyCreditedTotal)
             }
             initialized = true
         }
@@ -67,6 +77,20 @@ class DailyStepManager @Inject constructor(
 
         stepRepository.updateDailySteps(currentDate, dailySensorTotal, dailyCreditedTotal)
         playerRepository.addSteps(credited)
+
+        // Supply drop generation
+        val prevSteps = dropState.lastCheckSteps
+        val unclaimedCount = walkingEncounterRepository.getUnclaimedCount()
+        val drop = generateSupplyDrop(dailyCreditedTotal, prevSteps, timestampMs, unclaimedCount)
+        if (drop != null) {
+            walkingEncounterRepository.enforceInboxCap(GenerateSupplyDrop.MAX_INBOX)
+            val id = walkingEncounterRepository.createDrop(drop.trigger, drop.reward, drop.rewardAmount)
+            supplyDropNotificationManager.notify(drop.copy(id = id.toInt()))
+        }
+        dropState = dropState.copy(
+            lastCheckSteps = dailyCreditedTotal,
+            milestoneTriggered = dropState.milestoneTriggered || (drop?.trigger == com.whitefang.stepsofbabylon.domain.model.SupplyDropTrigger.DAILY_MILESTONE),
+        )
     }
 
     /**
@@ -81,6 +105,7 @@ class DailyStepManager @Inject constructor(
             currentDate = today
             dailySensorTotal = 0L
             dailyCreditedTotal = 0L
+            dropState = DropGeneratorState()
             initialized = false
         }
 
@@ -89,6 +114,7 @@ class DailyStepManager @Inject constructor(
             if (existing != null) {
                 dailySensorTotal = existing.sensorSteps
                 dailyCreditedTotal = existing.creditedSteps
+                dropState = dropState.copy(lastCheckSteps = dailyCreditedTotal)
             }
             initialized = true
         }

@@ -25,12 +25,13 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 │   ├── weapons/        # UltimateWeaponScreen, UltimateWeaponViewModel
 │   ├── labs/           # LabsScreen, LabsViewModel
 │   ├── cards/          # CardsScreen, CardsViewModel
+│   ├── supplies/       # UnclaimedSuppliesScreen, UnclaimedSuppliesViewModel
 │   └── ui/theme/       # Compose theme, colors (Material3)
 ├── di/                 # Hilt modules (DatabaseModule, RepositoryModule, StepModule, HealthConnectModule)
 └── service/            # Foreground step-counting service, WorkManager workers, boot receiver
 
 app/src/test/java/com/whitefang/stepsofbabylon/
-├── fakes/              # In-memory fake repositories (FakePlayerRepository, FakeWorkshopRepository, FakeUltimateWeaponRepository, FakeLabRepository, FakeCardRepository)
+├── fakes/              # In-memory fake repositories (FakePlayerRepository, FakeWorkshopRepository, FakeUltimateWeaponRepository, FakeLabRepository, FakeCardRepository, FakeWalkingEncounterRepository)
 ├── domain/
 │   ├── model/          # Domain model invariant tests (TierConfig, Biome, Loadouts, UpgradeType, EnemyType)
 │   └── usecase/        # Use case tests (cost, damage, defense, stats, purchase, best wave)
@@ -81,6 +82,9 @@ All in `domain/model/`:
 - `Biome`, `ResearchType`, `ActiveResearch` — Progression systems
 - `DailyStepSummary` — daily step record domain model
 - `SupplyDrop` — walking encounter supply drop
+- `SupplyDropTrigger` — 4 trigger types with notification messages
+- `SupplyDropReward` — 4 reward types (Steps, Gems, Power Stones, Card Dust)
+- `DropGeneratorState` — generator state tracking
 
 ## Key Files
 

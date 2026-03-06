@@ -76,7 +76,10 @@ domain/model/ActiveResearch.kt        # In-progress lab research
 domain/model/OwnedCard.kt             # Player-owned card instance
 domain/model/OwnedWeapon.kt           # Player-owned ultimate weapon
 domain/model/DailyStepSummary.kt      # Daily step record domain model (with escrow fields)
-domain/model/SupplyDrop.kt            # Walking encounter supply drop
+domain/model/SupplyDrop.kt              # Walking encounter supply drop
+domain/model/SupplyDropTrigger.kt        # 4 trigger types with notification messages
+domain/model/SupplyDropReward.kt         # 4 reward types (Steps, Gems, Power Stones, Card Dust)
+domain/model/DropGeneratorState.kt       # Generator state tracking (lastCheckSteps, milestoneTriggered)
 domain/model/UpgradeType.kt           # 23 Workshop upgrade types with configs
 domain/model/UpgradeCategory.kt       # Attack, Defense, Utility categories
 domain/model/UpgradeConfig.kt         # Upgrade configuration (baseCost, scaling, maxLevel)
@@ -131,6 +134,8 @@ domain/usecase/OpenCardPack.kt                   # Opens card pack: 3 tiers, rar
 domain/usecase/UpgradeCard.kt                    # Card upgrade: Card Dust cost by rarity × level
 domain/usecase/ApplyCardEffects.kt               # Post-process ResolvedStats with equipped card effects
 domain/usecase/ManageCardLoadout.kt              # Equip/unequip cards (max 3 loadout)
+domain/usecase/GenerateSupplyDrop.kt             # Seeded random supply drop generation (4 triggers)
+domain/usecase/ClaimSupplyDrop.kt                # Credits reward to player, marks drop claimed
 ```
 
 ## Presentation Layer
@@ -182,6 +187,9 @@ presentation/labs/LabsScreen.kt                     # Labs screen: research card
 presentation/cards/CardsViewModel.kt                # @HiltViewModel: card collection + wallet + pack/upgrade/loadout
 presentation/cards/CardsUiState.kt                  # UI state: owned cards, pack options, dust balance
 presentation/cards/CardsScreen.kt                   # Cards screen: pack opening, collection, equip/upgrade
+presentation/supplies/UnclaimedSuppliesViewModel.kt  # @HiltViewModel: claim/claimAll supply drops
+presentation/supplies/SuppliesUiState.kt             # UI state: unclaimed drops list
+presentation/supplies/UnclaimedSuppliesScreen.kt     # Inbox: drop cards, claim buttons, empty state
 ```
 
 ## Service Layer
@@ -189,6 +197,7 @@ presentation/cards/CardsScreen.kt                   # Cards screen: pack opening
 ```
 service/StepCounterService.kt        # Foreground service (health type), START_STICKY, collects sensor flow
 service/StepNotificationManager.kt   # Notification channel + builder, 30s throttled updates
+service/SupplyDropNotificationManager.kt # Supply drop notification channel + deep-link to inbox
 service/BootReceiver.kt              # BOOT_COMPLETED → restart StepCounterService
 service/StepSyncWorker.kt            # @HiltWorker CoroutineWorker, 15-min periodic: sensor catch-up + HC sync
 service/StepSyncScheduler.kt         # Enqueues periodic WorkManager request
@@ -204,6 +213,7 @@ fakes/FakeWorkshopRepository.kt                  # In-memory StateFlow-backed fa
 fakes/FakeUltimateWeaponRepository.kt            # In-memory StateFlow-backed fake for UltimateWeaponRepository
 fakes/FakeLabRepository.kt                       # In-memory StateFlow-backed fake for LabRepository
 fakes/FakeCardRepository.kt                      # In-memory StateFlow-backed fake for CardRepository
+fakes/FakeWalkingEncounterRepository.kt          # In-memory StateFlow-backed fake for WalkingEncounterRepository
 domain/usecase/CalculateUpgradeCostTest.kt        # Cost formula: baseCost × scaling^level, all 23 types
 domain/usecase/CanAffordUpgradeTest.kt            # Affordability checks against wallet
 domain/usecase/QuickInvestTest.kt                 # Cheapest affordable upgrade recommendation
@@ -227,6 +237,8 @@ domain/usecase/OpenCardPackTest.kt                # Pack opening: gem deduction,
 domain/usecase/UpgradeCardTest.kt                 # Card upgrade: dust cost by rarity, max level
 domain/usecase/ApplyCardEffectsTest.kt            # All 9 card effects, level scaling, buff+debuff combos
 domain/usecase/ManageCardLoadoutTest.kt           # Equip/unequip, loadout full
+domain/usecase/GenerateSupplyDropTest.kt          # Drop generation: inbox cap, milestone, threshold, random triggers
+domain/usecase/ClaimSupplyDropTest.kt             # Claim flow: reward crediting, already-claimed guard
 domain/model/TierConfigTest.kt                    # All 10 tiers, battle conditions, invalid tier
 domain/model/BiomeTest.kt                         # All tier→biome mappings
 domain/model/CardLoadoutTest.kt                   # Max 3, no duplicates, add/remove

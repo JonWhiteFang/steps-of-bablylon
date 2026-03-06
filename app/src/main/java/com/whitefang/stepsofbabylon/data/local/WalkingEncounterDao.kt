@@ -22,4 +22,10 @@ interface WalkingEncounterDao {
 
     @Query("SELECT COUNT(*) FROM walking_encounter WHERE claimed = 0")
     fun countUnclaimed(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM walking_encounter WHERE claimed = 0")
+    suspend fun countUnclaimedOnce(): Int
+
+    @Query("DELETE FROM walking_encounter WHERE claimed = 0 AND id = (SELECT id FROM walking_encounter WHERE claimed = 0 ORDER BY createdAt ASC LIMIT 1)")
+    suspend fun deleteOldestUnclaimed()
 }

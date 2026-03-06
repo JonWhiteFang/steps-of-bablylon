@@ -6,6 +6,7 @@ import com.whitefang.stepsofbabylon.domain.model.Biome
 import com.whitefang.stepsofbabylon.domain.repository.LabRepository
 import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
 import com.whitefang.stepsofbabylon.domain.repository.StepRepository
+import com.whitefang.stepsofbabylon.domain.repository.WalkingEncounterRepository
 import com.whitefang.stepsofbabylon.domain.repository.WorkshopRepository
 import com.whitefang.stepsofbabylon.domain.usecase.CheckResearchCompletion
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,6 +24,7 @@ class HomeViewModel @Inject constructor(
     private val stepRepository: StepRepository,
     private val workshopRepository: WorkshopRepository,
     private val labRepository: LabRepository,
+    private val walkingEncounterRepository: WalkingEncounterRepository,
 ) : ViewModel() {
 
     init {
@@ -37,7 +39,8 @@ class HomeViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> = combine(
         playerRepository.observeProfile(),
         stepRepository.observeTodayRecord(LocalDate.now().toString()),
-    ) { profile, stepSummary ->
+        walkingEncounterRepository.countUnclaimed(),
+    ) { profile, stepSummary, unclaimedCount ->
         HomeUiState(
             todaySteps = stepSummary?.creditedSteps ?: 0,
             stepBalance = profile.stepBalance,
@@ -48,6 +51,7 @@ class HomeViewModel @Inject constructor(
             currentBiome = Biome.forTier(profile.currentTier),
             bestWave = profile.bestWavePerTier[profile.currentTier] ?: 0,
             bestWavePerTier = profile.bestWavePerTier,
+            unclaimedDropCount = unclaimedCount,
             isLoading = false,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())

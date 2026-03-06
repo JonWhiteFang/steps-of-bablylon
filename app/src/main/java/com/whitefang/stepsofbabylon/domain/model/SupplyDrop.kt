@@ -2,8 +2,8 @@ package com.whitefang.stepsofbabylon.domain.model
 
 data class SupplyDrop(
     val id: Int,
-    val triggerType: String,
-    val rewardType: String,
+    val trigger: SupplyDropTrigger,
+    val reward: SupplyDropReward,
     val rewardAmount: Int,
     val claimed: Boolean,
     val createdAt: Long,

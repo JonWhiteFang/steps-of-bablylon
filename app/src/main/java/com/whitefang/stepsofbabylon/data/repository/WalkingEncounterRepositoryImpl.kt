@@ -3,6 +3,8 @@ package com.whitefang.stepsofbabylon.data.repository
 import com.whitefang.stepsofbabylon.data.local.WalkingEncounterDao
 import com.whitefang.stepsofbabylon.data.local.WalkingEncounterEntity
 import com.whitefang.stepsofbabylon.domain.model.SupplyDrop
+import com.whitefang.stepsofbabylon.domain.model.SupplyDropReward
+import com.whitefang.stepsofbabylon.domain.model.SupplyDropTrigger
 import com.whitefang.stepsofbabylon.domain.repository.WalkingEncounterRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -18,10 +20,14 @@ class WalkingEncounterRepositoryImpl @Inject constructor(
     override fun observeHistory(limit: Int): Flow<List<SupplyDrop>> =
         dao.getHistory(limit).map { list -> list.map { it.toDomain() } }
 
-    override suspend fun createDrop(triggerType: String, rewardType: String, rewardAmount: Int): Long =
+    override fun countUnclaimed(): Flow<Int> = dao.countUnclaimed()
+
+    override suspend fun getUnclaimedCount(): Int = dao.countUnclaimedOnce()
+
+    override suspend fun createDrop(trigger: SupplyDropTrigger, reward: SupplyDropReward, rewardAmount: Int): Long =
         dao.insert(WalkingEncounterEntity(
-            triggerType = triggerType,
-            rewardType = rewardType,
+            triggerType = trigger.name,
+            rewardType = reward.name,
             rewardAmount = rewardAmount,
             createdAt = System.currentTimeMillis(),
         ))
@@ -29,12 +35,16 @@ class WalkingEncounterRepositoryImpl @Inject constructor(
     override suspend fun claimDrop(id: Int) =
         dao.markClaimed(id, System.currentTimeMillis())
 
-    override fun countUnclaimed(): Flow<Int> = dao.countUnclaimed()
+    override suspend fun enforceInboxCap(maxSize: Int) {
+        while (dao.countUnclaimedOnce() >= maxSize) {
+            dao.deleteOldestUnclaimed()
+        }
+    }
 
     private fun WalkingEncounterEntity.toDomain() = SupplyDrop(
         id = id,
-        triggerType = triggerType,
-        rewardType = rewardType,
+        trigger = SupplyDropTrigger.valueOf(triggerType),
+        reward = SupplyDropReward.valueOf(rewardType),
         rewardAmount = rewardAmount,
         claimed = claimed,
         createdAt = createdAt,

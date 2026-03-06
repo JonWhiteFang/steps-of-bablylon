@@ -446,3 +446,44 @@
 - Commands/tests run: `./run-gradle.sh testDebugUnitTest` — 155 tests, 0 failures. `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL.
 - Open questions / blockers: Step Surge gemMultiplier tracked but not consumed (no Gem earning in battle — deferred to Plan 20).
 - Memory updated: STATE ✅ / RUN_LOG ✅
+
+## Run — 2026-03-06 — Plan 19: Walking Encounters & Supply Drops
+
+### Objective
+Implement Plan 19: Supply drop generation during walks, push notifications, claim system, and inbox UI.
+
+### What was done
+1. **Task 1 — Enums & type safety**: Created `SupplyDropTrigger` (4 entries with notification messages) and `SupplyDropReward` (4 entries). Updated `SupplyDrop` domain model from raw `String` fields to type-safe enums. Updated `WalkingEncounterRepository` interface and `WalkingEncounterRepositoryImpl` to use enums (stored as `.name` strings in Room).
+
+2. **Task 2 — GenerateSupplyDrop use case**: Seeded random drop generation with 3 active triggers (milestone at 10k, threshold at 2k boundaries with 5% per 100 steps, random at 1% per 500 steps). Step burst deferred. Created `DropGeneratorState` for tracking. 9 unit tests, all green.
+
+3. **Task 3 — ClaimSupplyDrop use case**: Credits reward to correct `PlayerRepository` method based on `SupplyDropReward` type, marks drop claimed. Created `FakeWalkingEncounterRepository`. 6 unit tests, all green.
+
+4. **Task 4 — Inbox cap enforcement**: Added `deleteOldestUnclaimed()` and `countUnclaimedOnce()` to `WalkingEncounterDao`. Added `enforceInboxCap(maxSize)` and `getUnclaimedCount()` to repository interface/impl.
+
+5. **Task 5 — SupplyDropNotificationManager**: Dedicated `supply_drops` notification channel (IMPORTANCE_DEFAULT), unique notification IDs per drop, deep-link intent to supplies screen.
+
+6. **Task 6 — DailyStepManager integration**: Added `WalkingEncounterRepository` and `SupplyDropNotificationManager` as dependencies. After step crediting, calls `GenerateSupplyDrop`, enforces inbox cap, creates drop, and sends notification. Tracks `DropGeneratorState` with day rollover reset.
+
+7. **Task 7 — UnclaimedSuppliesScreen**: Added `Screen.Supplies` route. Created `UnclaimedSuppliesViewModel` (observes unclaimed drops, claim/claimAll), `SuppliesUiState`, and `UnclaimedSuppliesScreen` (LazyColumn with claim buttons, empty state, relative timestamps). Added route to `NavHost` in `MainActivity` with notification deep-link handling.
+
+8. **Task 8 — Home screen inbox badge**: Added `unclaimedDropCount` to `HomeUiState`. Injected `WalkingEncounterRepository` into `HomeViewModel`, added to `combine()`. Added `BadgedBox` button on `HomeScreen` that shows when count > 0, navigates to supplies. Added `onSuppliesClick` callback wired in `MainActivity`.
+
+### Decisions
+- No GPS triggers — step-based only, defer to future plan.
+- No free Overdrive charges — burst trigger deferred, avoids Room migration.
+- Inbox overflow discards oldest unclaimed drop silently.
+- No Card Pack reward — Card Dust instead, avoids coupling to OpenCardPack flow.
+- 10k milestone gives 5 Gems (single drop); Power Stones deferred to combined reward enhancement.
+- No notification action button — tap opens inbox screen (avoids BroadcastReceiver complexity).
+
+### Test results
+- 170 total JVM tests (155 existing + 15 new), all green, 0 failures.
+- New: GenerateSupplyDropTest (9), ClaimSupplyDropTest (6).
+
+### What remains
+- Step burst trigger (needs step velocity tracking in DailyStepManager).
+- 10k milestone second reward (Power Stones) — could be two drops or combined.
+- Custom notification icons (currently using system placeholders).
+- Supply drop notification preferences (on/off toggle — Plan 23).
+- Claim animation in UnclaimedSuppliesScreen (polish — Plan 27).

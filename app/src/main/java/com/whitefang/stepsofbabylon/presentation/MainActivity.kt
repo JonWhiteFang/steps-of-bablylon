@@ -32,6 +32,7 @@ import com.whitefang.stepsofbabylon.presentation.home.HomeScreen
 import com.whitefang.stepsofbabylon.presentation.labs.LabsScreen
 import com.whitefang.stepsofbabylon.presentation.navigation.BottomNavBar
 import com.whitefang.stepsofbabylon.presentation.navigation.Screen
+import com.whitefang.stepsofbabylon.presentation.supplies.UnclaimedSuppliesScreen
 import com.whitefang.stepsofbabylon.presentation.ui.theme.StepsOfBabylonTheme
 import com.whitefang.stepsofbabylon.presentation.weapons.UltimateWeaponScreen
 import com.whitefang.stepsofbabylon.presentation.workshop.WorkshopScreen
@@ -94,6 +95,11 @@ class MainActivity : ComponentActivity() {
                         }
                         permissionLauncher.launch(needed.toTypedArray())
                     }
+
+                    // Deep-link from supply drop notification
+                    if (intent?.getStringExtra("navigate_to") == "supplies") {
+                        navController.navigate(Screen.Supplies.route)
+                    }
                 }
 
                 Scaffold(
@@ -110,7 +116,10 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(innerPadding),
                     ) {
                         composable(Screen.Home.route) {
-                            HomeScreen(onBattleClick = { navController.navigate(Screen.Battle.route) })
+                            HomeScreen(
+                                onBattleClick = { navController.navigate(Screen.Battle.route) },
+                                onSuppliesClick = { navController.navigate(Screen.Supplies.route) },
+                            )
                         }
                         composable(Screen.Workshop.route) {
                             WorkshopScreen(
@@ -132,6 +141,9 @@ class MainActivity : ComponentActivity() {
                         }
                         composable(Screen.Stats.route) {
                             PlaceholderScreen("Stats")
+                        }
+                        composable(Screen.Supplies.route) {
+                            UnclaimedSuppliesScreen()
                         }
                     }
                 }

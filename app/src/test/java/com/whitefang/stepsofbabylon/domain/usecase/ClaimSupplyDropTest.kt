@@ -1,0 +1,84 @@
+package com.whitefang.stepsofbabylon.domain.usecase
+
+import com.whitefang.stepsofbabylon.domain.model.SupplyDrop
+import com.whitefang.stepsofbabylon.domain.model.SupplyDropReward
+import com.whitefang.stepsofbabylon.domain.model.SupplyDropTrigger
+import com.whitefang.stepsofbabylon.fakes.FakePlayerRepository
+import com.whitefang.stepsofbabylon.fakes.FakeWalkingEncounterRepository
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
+
+class ClaimSupplyDropTest {
+
+    private val playerRepo = FakePlayerRepository()
+    private val encounterRepo = FakeWalkingEncounterRepository()
+    private val sut = ClaimSupplyDrop(encounterRepo, playerRepo)
+
+    private fun makeDrop(reward: SupplyDropReward, amount: Int, claimed: Boolean = false) =
+        SupplyDrop(id = 1, trigger = SupplyDropTrigger.RANDOM, reward = reward, rewardAmount = amount, claimed = claimed, createdAt = 1000)
+
+    @Test
+    fun `claiming steps drop adds steps to player`() = runTest {
+        playerRepo.ensureProfileExists()
+        encounterRepo.createDrop(SupplyDropTrigger.RANDOM, SupplyDropReward.STEPS, 150)
+        val drop = encounterRepo.observeUnclaimed().first().first()
+
+        val result = sut(drop)
+
+        assertInstanceOf(ClaimSupplyDrop.Result.Success::class.java, result)
+        assertEquals(150L, playerRepo.observeWallet().first().stepBalance)
+    }
+
+    @Test
+    fun `claiming gems drop adds gems to player`() = runTest {
+        playerRepo.ensureProfileExists()
+        encounterRepo.createDrop(SupplyDropTrigger.STEP_THRESHOLD, SupplyDropReward.GEMS, 3)
+        val drop = encounterRepo.observeUnclaimed().first().first()
+
+        sut(drop)
+
+        assertEquals(3L, playerRepo.observeWallet().first().gems)
+    }
+
+    @Test
+    fun `claiming power stones drop adds power stones`() = runTest {
+        playerRepo.ensureProfileExists()
+        encounterRepo.createDrop(SupplyDropTrigger.RANDOM, SupplyDropReward.POWER_STONES, 2)
+        val drop = encounterRepo.observeUnclaimed().first().first()
+
+        sut(drop)
+
+        assertEquals(2L, playerRepo.observeWallet().first().powerStones)
+    }
+
+    @Test
+    fun `claiming card dust drop adds card dust`() = runTest {
+        playerRepo.ensureProfileExists()
+        encounterRepo.createDrop(SupplyDropTrigger.RANDOM, SupplyDropReward.CARD_DUST, 20)
+        val drop = encounterRepo.observeUnclaimed().first().first()
+
+        sut(drop)
+
+        assertEquals(20L, playerRepo.observeProfile().first().cardDust)
+    }
+
+    @Test
+    fun `claiming marks drop as claimed`() = runTest {
+        playerRepo.ensureProfileExists()
+        encounterRepo.createDrop(SupplyDropTrigger.RANDOM, SupplyDropReward.STEPS, 100)
+        val drop = encounterRepo.observeUnclaimed().first().first()
+
+        sut(drop)
+
+        assertEquals(0, encounterRepo.observeUnclaimed().first().size)
+    }
+
+    @Test
+    fun `claiming already claimed drop returns AlreadyClaimed`() = runTest {
+        val drop = makeDrop(SupplyDropReward.STEPS, 100, claimed = true)
+        val result = sut(drop)
+        assertInstanceOf(ClaimSupplyDrop.Result.AlreadyClaimed::class.java, result)
+    }
+}

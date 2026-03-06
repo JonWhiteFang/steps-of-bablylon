@@ -16,6 +16,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     data object Stats : Screen("stats", "Stats", Icons.Default.Star)
     data object Weapons : Screen("weapons", "Weapons", Icons.Default.Star)
     data object Cards : Screen("cards", "Cards", Icons.Default.Star)
+    data object Supplies : Screen("supplies", "Supplies", Icons.Default.Star)
 
     companion object {
         val items = listOf(Home, Workshop, Battle, Labs, Stats)

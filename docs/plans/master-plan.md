@@ -114,7 +114,7 @@ graph TD
 - [x] Plan 16: Labs System
 - [x] Plan 17: Cards System
 - [x] Plan 18: Narrative Biome Progression
-- [ ] Plan 19: Walking Encounters & Supply Drops
+- [x] Plan 19: Walking Encounters & Supply Drops
 - [ ] Plan 20: Power Stone & Gem Economy
 - [ ] Plan 21: Milestones & Daily Missions
 - [ ] Plan 22: Stats & History Screen
