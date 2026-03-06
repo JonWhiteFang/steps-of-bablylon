@@ -36,7 +36,10 @@ class GameEngine {
     private var workshopLevels: Map<UpgradeType, Int> = emptyMap()
 
     @Volatile var cash: Long = 0L; private set
-    @Volatile var roundOver: Boolean = false; private set
+    @Volatile var totalCashEarned: Long = 0L; private set
+    @Volatile var roundOver: Boolean = false
+    @Volatile var totalEnemiesKilled: Int = 0; private set
+    @Volatile var elapsedTimeSeconds: Float = 0f; private set
 
     private val bgColor = 0xFF6B3A2A.toInt()
 
@@ -53,7 +56,8 @@ class GameEngine {
     ) {
         screenWidth = width; screenHeight = height
         entities.clear(); pendingAdd.clear()
-        cash = 0L; roundOver = false
+        cash = 0L; totalCashEarned = 0L; roundOver = false
+        totalEnemiesKilled = 0; elapsedTimeSeconds = 0f
         stats = resolvedStats; tier = playerTier; workshopLevels = wsLevels
 
         val zig = ZigguratEntity(width, height, stats, ::findNearestEnemies) { sx, sy, tx, ty ->
@@ -99,6 +103,7 @@ class GameEngine {
     fun update(deltaTime: Float) {
         if (roundOver) return
         val zig = ziggurat ?: return
+        elapsedTimeSeconds += deltaTime
 
         waveSpawner?.update(deltaTime, screenWidth, screenHeight)
         entities.addAll(pendingAdd); pendingAdd.clear()
@@ -166,6 +171,7 @@ class GameEngine {
     private fun handleWaveComplete(wave: Int) {
         val waveCash = BASE_CASH_PER_WAVE + wsLevel(UpgradeType.CASH_PER_WAVE) * FLAT_BONUS_PER_WAVE_LEVEL
         cash += waveCash
+        totalCashEarned += waveCash
         val interestLevel = wsLevel(UpgradeType.INTEREST)
         if (interestLevel > 0) {
             cash += (cash * min(interestLevel * 0.005, 0.10)).toLong()
@@ -240,10 +246,12 @@ class GameEngine {
     }
 
     private fun handleEnemyDeath(enemy: EnemyEntity) {
+        totalEnemiesKilled++
         val baseCash = EnemyScaler.cashReward(enemy.enemyType)
         val tierMult = TierConfig.forTier(tier).cashMultiplier
         val cashBonus = 1.0 + wsLevel(UpgradeType.CASH_BONUS) * 0.03
         cash += (baseCash * tierMult * cashBonus).toLong()
+        totalCashEarned += (baseCash * tierMult * cashBonus).toLong()
         waveSpawner?.onEnemyKilled()
 
         if (enemy.enemyType == EnemyType.SCATTER) {

@@ -167,17 +167,18 @@ graph TD
 - [x] **Plan 10: Battle System — Stats & Combat** ✓
 - [x] **Plan 10b: Advanced Combat (Orbs, Multishot, Bounce)** ✓
 - [x] **Plan 11: In-Round Upgrades & Cash Economy** ✓
-- [ ] **Plan 12: Round Lifecycle & Post-Round** ← next up (critical path)
+- [x] **Plan 12: Round Lifecycle & Post-Round** ✓
+- [ ] **Plan 13: Tier System & Progression** ← next up (critical path)
 
 ### Parallelizable Branches (after dependencies met)
 
-- Round Lifecycle: Plan 12 (ready now — Plan 11 complete) — CRITICAL PATH
+- Round Lifecycle: Plan 12 (complete)
+- Battle extensions: Plans 14/15 (ready now — Plan 12 complete, can run in parallel)
 - Labs: Plan 16 (ready now — Plan 07 complete)
 - Cards: Plan 17 (ready now — Plan 07 complete)
 - Stats: Plan 22 (ready now — Plan 06 complete)
 - Anti-cheat: Plan 25 (ready now — Plan 05 complete)
 - Walking features: Plans 19/20/21/23 (ready now — Plan 04 complete)
-- Battle extensions: Plans 14/15 (after Plan 12, can run in parallel)
 
 ## Key Domain Concepts
 

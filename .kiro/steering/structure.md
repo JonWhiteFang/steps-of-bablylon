@@ -20,7 +20,7 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 │   ├── battle/         # Battle renderer (SurfaceView, game loop, entities)
 │   │   ├── engine/     # GameEngine, Entity, WaveSpawner, EnemyScaler, CollisionSystem
 │   │   ├── entities/   # ZigguratEntity, ProjectileEntity, EnemyEntity, EnemyProjectileEntity, OrbEntity
-│   │   └── ui/         # HealthBarRenderer, InRoundUpgradeMenu
+│   │   └── ui/         # HealthBarRenderer, InRoundUpgradeMenu, PostRoundOverlay, PauseOverlay
 │   └── ui/theme/       # Compose theme, colors (Material3)
 ├── di/                 # Hilt modules (DatabaseModule, RepositoryModule, StepModule, HealthConnectModule)
 └── service/            # Foreground step-counting service, WorkManager workers, boot receiver
@@ -89,6 +89,7 @@ All in `domain/model/`:
 | `domain/usecase/ResolveStats.kt` | Workshop + in-round levels → ResolvedStats |
 | `domain/usecase/CalculateDamage.kt` | Raw damage + crit roll + damage/meter bonus |
 | `domain/usecase/CalculateDefense.kt` | Damage reduction (cap 75%) + flat block |
+| `domain/usecase/UpdateBestWave.kt` | Compares wave to stored best, persists if new record |
 | `presentation/MainActivity.kt` | Single Activity, Scaffold + NavHost + BottomNavBar (hidden during battle), permissions |
 | `presentation/navigation/Screen.kt` | 5 navigation routes (Home, Workshop, Battle, Labs, Stats) |
 | `presentation/home/HomeViewModel.kt` | Combines profile + step flows into HomeUiState |

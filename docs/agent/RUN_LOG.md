@@ -235,3 +235,21 @@
   - `docs/temp/` contains a reference playbook from setup (harmless)
 - Commands/tests run: N/A (documentation-only changes)
 - Memory updated: STATE ✅ / RUN_LOG ✅
+
+## 2026-03-06 — Plan 12: Round Lifecycle & Post-Round
+- Goal: Full round lifecycle with post-round summary, best wave persistence, pause overlay, auto-pause.
+- Decisions made:
+  - (b) Post-round as overlay within Battle route (avoids ViewModel re-creation)
+  - (a) Engine owns totalEnemiesKilled + elapsedTimeSeconds (single source of truth)
+  - (a) Quit Round shows summary and saves best wave (player earned that progress)
+- Changes made:
+  - Updated `presentation/battle/engine/GameEngine.kt` — added totalEnemiesKilled, elapsedTimeSeconds, totalCashEarned tracking; made roundOver publicly settable for quit flow
+  - Created `domain/usecase/UpdateBestWave.kt` — compares wave to stored best, persists if new record, returns Result(isNewRecord, previousBest)
+  - Updated `presentation/battle/BattleUiState.kt` — added RoundEndState data class and roundEndState field
+  - Rewrote `presentation/battle/BattleViewModel.kt` — endRound(), quitRound(), playAgain(), pause(); removed BattleEvent; tracks surfaceView reference for play-again re-init
+  - Created `presentation/battle/ui/PostRoundOverlay.kt` — wave reached, enemies killed, cash earned, time survived, new record banner, Play Again / Return to Workshop buttons
+  - Created `presentation/battle/ui/PauseOverlay.kt` — Resume / Quit Round buttons
+  - Rewrote `presentation/battle/BattleScreen.kt` — integrated overlays, auto-pause via LifecycleEventObserver, exit button calls quitRound(), controls hidden when round over
+- Commands/tests run: `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL, zero warnings
+- Open questions / blockers: None.
+- Memory updated: STATE ✅ / RUN_LOG ✅

@@ -2,6 +2,15 @@ package com.whitefang.stepsofbabylon.presentation.battle
 
 import com.whitefang.stepsofbabylon.domain.model.UpgradeType
 
+data class RoundEndState(
+    val waveReached: Int,
+    val enemiesKilled: Int,
+    val totalCashEarned: Long,
+    val timeSurvivedSeconds: Float,
+    val isNewBestWave: Boolean,
+    val previousBest: Int,
+)
+
 data class BattleUiState(
     val currentWave: Int = 1,
     val currentHp: Double = 0.0,
@@ -15,4 +24,5 @@ data class BattleUiState(
     val showUpgradeMenu: Boolean = false,
     val inRoundLevels: Map<UpgradeType, Int> = emptyMap(),
     val lastPurchaseFree: Boolean = false,
+    val roundEndState: RoundEndState? = null,
 )

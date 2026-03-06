@@ -1,6 +1,6 @@
 # Plan 12 — Round Lifecycle & Post-Round
 
-**Status:** Not Started
+**Status:** Complete
 **Dependencies:** Plan 11 (In-Round Upgrades & Cash Economy)
 **Layer:** `presentation/battle/` + `domain/usecase/`
 

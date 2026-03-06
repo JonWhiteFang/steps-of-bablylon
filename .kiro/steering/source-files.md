@@ -113,6 +113,7 @@ domain/usecase/QuickInvest.kt                   # Recommends cheapest affordable
 domain/usecase/ResolveStats.kt                  # Workshop + in-round levels → ResolvedStats
 domain/usecase/CalculateDamage.kt               # Raw damage + crit roll + damage/meter bonus → DamageResult
 domain/usecase/CalculateDefense.kt              # Damage reduction (cap 75%) + flat block
+domain/usecase/UpdateBestWave.kt                # Compares wave to stored best, persists if new record
 ```
 
 ## Presentation Layer
@@ -129,9 +130,9 @@ presentation/workshop/WorkshopViewModel.kt         # @HiltViewModel: upgrades + 
 presentation/workshop/WorkshopUiState.kt           # UI state: upgrade list, balance, selected category
 presentation/workshop/WorkshopScreen.kt            # 3-tab layout, upgrade list, Quick Invest FAB
 presentation/workshop/UpgradeCard.kt               # Reusable upgrade card (affordable/expensive/maxed states)
-presentation/battle/BattleScreen.kt                # Compose wrapper: AndroidView + overlay HUD (speed, pause, exit)
-presentation/battle/BattleViewModel.kt             # @HiltViewModel: loads tier, exposes BattleUiState + BattleEvent
-presentation/battle/BattleUiState.kt               # UI state: wave, HP, cash, speed, pause
+presentation/battle/BattleScreen.kt                # Compose wrapper: AndroidView + overlays (HUD, pause, post-round), auto-pause
+presentation/battle/BattleViewModel.kt             # @HiltViewModel: round lifecycle (start, end, quit, play again), stats polling
+presentation/battle/BattleUiState.kt               # UI state: wave, HP, cash, speed, pause, RoundEndState
 presentation/battle/GameSurfaceView.kt             # SurfaceView + SurfaceHolder.Callback, manages game loop thread
 presentation/battle/GameLoopThread.kt              # Dedicated thread: fixed timestep (60 UPS), accumulator, speed multiplier
 presentation/battle/engine/GameEngine.kt           # Central coordinator: entity list, update/render dispatch, wave/collision integration
@@ -146,6 +147,8 @@ presentation/battle/entities/EnemyProjectileEntity.kt # Ranged enemy projectiles
 presentation/battle/entities/OrbEntity.kt          # Orbiting projectiles circling ziggurat, per-enemy hit cooldown
 presentation/battle/ui/HealthBarRenderer.kt        # HP bar: green→yellow→red gradient, numeric text
 presentation/battle/ui/InRoundUpgradeMenu.kt      # In-round upgrade menu: 3 tabs, purchase with Cash
+presentation/battle/ui/PostRoundOverlay.kt         # Post-round summary: wave, kills, cash, time, new record banner
+presentation/battle/ui/PauseOverlay.kt             # Pause overlay: Resume + Quit Round buttons
 presentation/ui/theme/Color.kt                     # Compose color definitions
 presentation/ui/theme/Theme.kt                     # Compose theme setup (Material3)
 ```
