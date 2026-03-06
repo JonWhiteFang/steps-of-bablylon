@@ -381,3 +381,39 @@
 - Commands/tests run: `./run-gradle.sh testDebugUnitTest` — 108 tests, 0 failures. `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL.
 - Open questions / blockers: None.
 - Memory updated: STATE ✅ / RUN_LOG ✅
+
+## 2026-03-06 — Plan 16: Labs System
+- Goal: Implement Labs research system — 10 time-gated research projects, lab slots, Gem rush, auto-completion.
+- Decisions made:
+  - (a) Cost scaling 1.15, time scaling 1.10 — moderate ramp matching Workshop feel.
+  - (a) Gem rush: linear interpolation `50 + fraction × 150` (range 50–200 Gems).
+  - (a) Per-type scaling fields on ResearchType enum (tunable in Plan 28).
+- Changes made:
+  - Updated `domain/model/ResearchType.kt` — added `costScaling: Double = 1.15` and `timeScaling: Double = 1.10`
+  - Created `domain/usecase/CalculateResearchCost.kt` — `baseCostSteps × costScaling^level`
+  - Created `domain/usecase/CalculateResearchTime.kt` — `baseTimeHours × timeScaling^level`
+  - Created `domain/usecase/StartResearch.kt` — validates slots, affordability, max level, deducts Steps
+  - Created `domain/usecase/CompleteResearch.kt` — gates on timer, increments level
+  - Created `domain/usecase/RushResearch.kt` — linear Gem cost, companion `calculateRushCost()`
+  - Created `domain/usecase/UnlockLabSlot.kt` — 200 Gems per slot, max 4
+  - Created `domain/usecase/CheckResearchCompletion.kt` — auto-completes expired research
+  - Updated `data/local/PlayerProfileEntity.kt` — added `labSlotCount` with `@ColumnInfo(defaultValue = "1")`
+  - Updated `data/local/PlayerProfileDao.kt` — added `updateLabSlotCount()`
+  - Updated `data/local/AppDatabase.kt` — bumped version to 3
+  - Updated `domain/model/PlayerProfile.kt` — added `labSlotCount`
+  - Updated `domain/repository/PlayerRepository.kt` — added `updateLabSlotCount()`
+  - Updated `data/repository/PlayerRepositoryImpl.kt` — implemented + toDomain mapping
+  - Updated `domain/repository/LabRepository.kt` — added `getResearchLevel()`, `getActiveResearchCount()`, updated `startResearch()` signature
+  - Updated `data/repository/LabRepositoryImpl.kt` — implemented new methods
+  - Created `presentation/labs/LabsUiState.kt` — ResearchDisplayInfo + LabsUiState
+  - Created `presentation/labs/LabsViewModel.kt` — combines research/wallet/tick flows, 1s countdown
+  - Created `presentation/labs/LabsScreen.kt` — full UI with slot indicator, research cards, start/rush/unlock
+  - Updated `presentation/MainActivity.kt` — replaced Labs placeholder with LabsScreen
+  - Updated `presentation/home/HomeViewModel.kt` — added labRepository.ensureResearchExists() + CheckResearchCompletion
+  - Created `test/fakes/FakeLabRepository.kt` — in-memory StateFlow-backed fake
+  - Updated `test/fakes/FakePlayerRepository.kt` — added updateLabSlotCount
+  - Created 7 test classes (25 new tests):
+    - CalculateResearchCostTest (4), CalculateResearchTimeTest (3), StartResearchTest (5), CompleteResearchTest (3), RushResearchTest (4), UnlockLabSlotTest (3), CheckResearchCompletionTest (3)
+- Commands/tests run: `./run-gradle.sh testDebugUnitTest` — 133 tests, 0 failures. `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL.
+- Open questions / blockers: None.
+- Memory updated: STATE ✅ / RUN_LOG ✅

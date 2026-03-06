@@ -49,7 +49,7 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 ├── domain/         # Pure Kotlin — no Android imports
 │   ├── model/      # Currency, PlayerWallet, PlayerProfile, BattleConditionEffects, and all game domain models
 │   ├── repository/ # Repository interfaces
-│   └── usecase/    # CalculateUpgradeCost, CanAffordUpgrade, ResolveStats, CalculateDamage, CalculateDefense, PurchaseUpgrade, QuickInvest, UpdateBestWave, CheckTierUnlock, ActivateOverdrive, UnlockUltimateWeapon, UpgradeUltimateWeapon
+│   └── usecase/    # CalculateUpgradeCost, CanAffordUpgrade, ResolveStats, CalculateDamage, CalculateDefense, PurchaseUpgrade, QuickInvest, UpdateBestWave, CheckTierUnlock, ActivateOverdrive, UnlockUltimateWeapon, UpgradeUltimateWeapon, CalculateResearchCost, CalculateResearchTime, StartResearch, CompleteResearch, RushResearch, UnlockLabSlot, CheckResearchCompletion
 ├── presentation/   # ViewModels, Compose screens, SurfaceView battle renderer
 │   ├── navigation/ # Screen routes, BottomNavBar
 │   ├── home/       # HomeScreen, TierSelector
@@ -60,6 +60,7 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 │   │   ├── biome/  # BiomeTheme, BackgroundRenderer
 │   │   └── ui/     # InRoundUpgradeMenu, PostRoundOverlay, PauseOverlay, HealthBarRenderer, BiomeTransitionOverlay, OverdriveMenu, UltimateWeaponBar
 │   ├── weapons/    # UltimateWeaponScreen, UltimateWeaponViewModel
+│   ├── labs/       # LabsScreen, LabsViewModel
 │   └── ui/theme/   # Color, Theme
 ├── di/             # Hilt modules (DatabaseModule, RepositoryModule, StepModule, HealthConnectModule)
 └── service/        # Foreground step-counting service, WorkManager workers (Plan 04)
@@ -183,13 +184,14 @@ graph TD
 - [x] **Plan 18: Narrative Biome Progression** ✓
 - [x] **Plan 14: Step Overdrive** ✓
 - [x] **Plan 15: Ultimate Weapons** ✓
+- [x] **Plan 16: Labs System** ✓
 - [ ] **Plan 27: Polish & Visual Effects** ← next on critical path
 
 ### Parallelizable Branches (after dependencies met)
 
 - Round Lifecycle: Plan 12 (complete)
-- Battle extensions: Plans 14/15 (ready now — Plan 12 complete, can run in parallel)
-- Labs: Plan 16 (ready now — Plan 07 complete)
+- Battle extensions: Plans 14/15 (complete)
+- Labs: Plan 16 (complete)
 - Cards: Plan 17 (ready now — Plan 07 complete)
 - Stats: Plan 22 (ready now — Plan 06 complete)
 - Anti-cheat: Plan 25 (ready now — Plan 05 complete)
@@ -242,8 +244,8 @@ The battle screen uses a custom `SurfaceView` with a game loop (not Compose). Ke
 - **Test framework:** JUnit 5 + kotlinx-coroutines-test (pure JVM, no emulator needed).
 - **Run tests:** `./run-gradle.sh testDebugUnitTest`
 - **Test source:** `app/src/test/java/com/whitefang/stepsofbabylon/`
-- **Fakes:** `test/fakes/` — FakePlayerRepository, FakeWorkshopRepository (in-memory StateFlow-backed).
-- **Current coverage:** 108 JVM tests — all use cases, domain models with validation logic, battle condition effects, tier unlock logic, biome themes, EnemyScaler, StepRateLimiter.
+- **Fakes:** `test/fakes/` — FakePlayerRepository, FakeWorkshopRepository, FakeUltimateWeaponRepository, FakeLabRepository (in-memory StateFlow-backed).
+- **Current coverage:** 133 JVM tests — all use cases, domain models with validation logic, battle condition effects, tier unlock logic, biome themes, EnemyScaler, StepRateLimiter, Labs research (cost/time/start/complete/rush/unlock/auto-complete).
 
 ## Important Notes
 

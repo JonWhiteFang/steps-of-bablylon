@@ -34,6 +34,7 @@ class PlayerRepositoryImpl @Inject constructor(
     override suspend fun spendCardDust(amount: Long) = dao.adjustCardDust(-amount)
     override suspend fun updateTier(tier: Int) = dao.updateTier(tier)
     override suspend fun updateHighestUnlockedTier(tier: Int) = dao.updateHighestUnlockedTier(tier)
+    override suspend fun updateLabSlotCount(count: Int) = dao.updateLabSlotCount(count)
 
     override suspend fun updateBestWave(tier: Int, wave: Int) {
         val entity = dao.get().first() ?: return
@@ -56,6 +57,7 @@ class PlayerRepositoryImpl @Inject constructor(
         cardDust = cardDust,
         currentTier = currentTier,
         highestUnlockedTier = highestUnlockedTier,
+        labSlotCount = labSlotCount,
         bestWavePerTier = bestWavePerTier,
         createdAt = createdAt,
         lastActiveAt = lastActiveAt,

@@ -28,6 +28,7 @@ import androidx.navigation.compose.rememberNavController
 import com.whitefang.stepsofbabylon.data.healthconnect.HealthConnectClientWrapper
 import com.whitefang.stepsofbabylon.presentation.battle.BattleScreen
 import com.whitefang.stepsofbabylon.presentation.home.HomeScreen
+import com.whitefang.stepsofbabylon.presentation.labs.LabsScreen
 import com.whitefang.stepsofbabylon.presentation.navigation.BottomNavBar
 import com.whitefang.stepsofbabylon.presentation.navigation.Screen
 import com.whitefang.stepsofbabylon.presentation.ui.theme.StepsOfBabylonTheme
@@ -120,7 +121,7 @@ class MainActivity : ComponentActivity() {
                             BattleScreen(onExitBattle = { navController.popBackStack() })
                         }
                         composable(Screen.Labs.route) {
-                            PlaceholderScreen("Labs")
+                            LabsScreen()
                         }
                         composable(Screen.Stats.route) {
                             PlaceholderScreen("Stats")

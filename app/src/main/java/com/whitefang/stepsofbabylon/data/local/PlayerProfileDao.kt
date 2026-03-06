@@ -49,4 +49,7 @@ interface PlayerProfileDao {
 
     @Query("UPDATE player_profile SET cardDust = cardDust + :delta WHERE id = 1")
     suspend fun adjustCardDust(delta: Long)
+
+    @Query("UPDATE player_profile SET labSlotCount = :count WHERE id = 1")
+    suspend fun updateLabSlotCount(count: Int)
 }

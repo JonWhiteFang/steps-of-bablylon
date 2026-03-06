@@ -6,6 +6,8 @@ enum class ResearchType(
     val maxLevel: Int,
     val effectPerLevel: Double,
     val description: String,
+    val costScaling: Double = 1.15,
+    val timeScaling: Double = 1.10,
 ) {
     DAMAGE_RESEARCH(2_000, 4.0, 20, 5.0, "+5% base damage multiplier"),
     HEALTH_RESEARCH(2_000, 4.0, 20, 5.0, "+5% max health multiplier"),

@@ -29,9 +29,15 @@ class LabRepositoryImpl @Inject constructor(
             ) }
         }
 
-    override suspend fun startResearch(type: ResearchType, completesAt: Long) {
+    override suspend fun getResearchLevel(type: ResearchType): Int =
+        dao.getByType(type.name).first()?.level ?: 0
+
+    override suspend fun getActiveResearchCount(): Int =
+        dao.getActive().first().size
+
+    override suspend fun startResearch(type: ResearchType, completesAt: Long, startedAt: Long) {
         val entity = dao.getByType(type.name).first() ?: return
-        dao.upsert(entity.copy(startedAt = System.currentTimeMillis(), completesAt = completesAt))
+        dao.upsert(entity.copy(startedAt = startedAt, completesAt = completesAt))
     }
 
     override suspend fun completeResearch(type: ResearchType) {

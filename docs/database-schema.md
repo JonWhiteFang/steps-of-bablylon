@@ -18,6 +18,7 @@ Primary player record. One row per player (single-player game).
 | cardDust | Long | Card Dust currency |
 | currentTier | Int | Selected play tier |
 | highestUnlockedTier | Int | Highest tier unlocked (default 1) |
+| labSlotCount | Int | Lab slots unlocked (default 1, max 4) |
 | bestWavePerTier | String (JSON) | Map<Int, Int> serialized |
 | createdAt | Long | Epoch millis |
 | lastActiveAt | Long | Epoch millis |
@@ -126,6 +127,7 @@ Each entity gets its own DAO:
 - Test migrations with `MigrationTestHelper` in instrumented tests
 - Current schema version: 2
 - v1→v2: Added `highestUnlockedTier` column to `player_profile` (Plan 13). Uses `fallbackToDestructiveMigration` during development.
+- v2→v3: Added `labSlotCount` column to `player_profile` (Plan 16). Uses `fallbackToDestructiveMigration` during development.
 
 ## Type Converters
 

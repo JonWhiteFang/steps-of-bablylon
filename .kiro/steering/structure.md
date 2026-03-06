@@ -23,12 +23,13 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 │   │   ├── biome/      # BiomeTheme, BackgroundRenderer (gradient sky + ambient particles)
 │   │   └── ui/         # HealthBarRenderer, InRoundUpgradeMenu, PostRoundOverlay, PauseOverlay, BiomeTransitionOverlay, OverdriveMenu, UltimateWeaponBar
 │   ├── weapons/        # UltimateWeaponScreen, UltimateWeaponViewModel
+│   ├── labs/           # LabsScreen, LabsViewModel
 │   └── ui/theme/       # Compose theme, colors (Material3)
 ├── di/                 # Hilt modules (DatabaseModule, RepositoryModule, StepModule, HealthConnectModule)
 └── service/            # Foreground step-counting service, WorkManager workers, boot receiver
 
 app/src/test/java/com/whitefang/stepsofbabylon/
-├── fakes/              # In-memory fake repositories (FakePlayerRepository, FakeWorkshopRepository, FakeUltimateWeaponRepository)
+├── fakes/              # In-memory fake repositories (FakePlayerRepository, FakeWorkshopRepository, FakeUltimateWeaponRepository, FakeLabRepository)
 ├── domain/
 │   ├── model/          # Domain model invariant tests (TierConfig, Biome, Loadouts, UpgradeType, EnemyType)
 │   └── usecase/        # Use case tests (cost, damage, defense, stats, purchase, best wave)
@@ -89,7 +90,7 @@ All in `domain/model/`:
 | `di/RepositoryModule.kt` | Hilt module: binds all 7 repository interfaces to impls |
 | `di/StepModule.kt` | Hilt module: provides SensorManager |
 | `di/HealthConnectModule.kt` | Hilt module: Health Connect organizational module |
-| `data/local/AppDatabase.kt` | Room database (7 entities, 7 DAOs, version 2) |
+| `data/local/AppDatabase.kt` | Room database (7 entities, 7 DAOs, version 3) |
 | `data/local/DatabaseKeyManager.kt` | SQLCipher passphrase via Android Keystore |
 | `data/local/Converters.kt` | TypeConverters for `Map<Int,Int>` and `Map<String,Int>` (JSON) |
 | `data/sensor/StepSensorDataSource.kt` | TYPE_STEP_COUNTER wrapper, emits deltas via callbackFlow |

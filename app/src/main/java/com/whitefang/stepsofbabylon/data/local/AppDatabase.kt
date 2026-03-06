@@ -14,7 +14,7 @@ import androidx.room.TypeConverters
         DailyStepRecordEntity::class,
         WalkingEncounterEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)

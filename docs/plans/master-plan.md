@@ -111,7 +111,7 @@ graph TD
 - [x] Plan 13: Tier System & Progression
 - [x] Plan 14: Step Overdrive
 - [x] Plan 15: Ultimate Weapons
-- [ ] Plan 16: Labs System
+- [x] Plan 16: Labs System
 - [ ] Plan 17: Cards System
 - [x] Plan 18: Narrative Biome Progression
 - [ ] Plan 19: Walking Encounters & Supply Drops

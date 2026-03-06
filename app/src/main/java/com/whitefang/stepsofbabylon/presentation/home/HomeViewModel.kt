@@ -3,9 +3,11 @@ package com.whitefang.stepsofbabylon.presentation.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.whitefang.stepsofbabylon.domain.model.Biome
+import com.whitefang.stepsofbabylon.domain.repository.LabRepository
 import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
 import com.whitefang.stepsofbabylon.domain.repository.StepRepository
 import com.whitefang.stepsofbabylon.domain.repository.WorkshopRepository
+import com.whitefang.stepsofbabylon.domain.usecase.CheckResearchCompletion
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -20,12 +22,15 @@ class HomeViewModel @Inject constructor(
     private val playerRepository: PlayerRepository,
     private val stepRepository: StepRepository,
     private val workshopRepository: WorkshopRepository,
+    private val labRepository: LabRepository,
 ) : ViewModel() {
 
     init {
         viewModelScope.launch {
             playerRepository.ensureProfileExists()
             workshopRepository.ensureUpgradesExist()
+            labRepository.ensureResearchExists()
+            CheckResearchCompletion(labRepository)()
         }
     }
 

@@ -15,7 +15,7 @@ di/HealthConnectModule.kt          # Hilt: Health Connect organizational module
 ## Data Layer — Room
 
 ```
-data/local/AppDatabase.kt         # @Database: 7 entities, 7 DAOs, version 2, exportSchema=true
+data/local/AppDatabase.kt         # @Database: 7 entities, 7 DAOs, version 3, exportSchema=true
 data/local/Converters.kt          # @TypeConverters: Map<Int,Int> and Map<String,Int> via JSON
 data/local/DatabaseKeyManager.kt  # SQLCipher passphrase via Android Keystore
 data/local/PlayerProfileEntity.kt # Player profile entity (single row, id=1)
@@ -120,6 +120,13 @@ domain/usecase/CheckTierUnlock.kt               # Checks wave milestones for tie
 domain/usecase/ActivateOverdrive.kt              # Validates overdrive activation (balance + once-per-round)
 domain/usecase/UnlockUltimateWeapon.kt           # Checks Power Stone balance, deducts, unlocks UW
 domain/usecase/UpgradeUltimateWeapon.kt          # Cost scaling per level, max level 10
+domain/usecase/CalculateResearchCost.kt          # Research cost: baseCostSteps × costScaling^level
+domain/usecase/CalculateResearchTime.kt          # Research time: baseTimeHours × timeScaling^level
+domain/usecase/StartResearch.kt                  # Validates slots/affordability/max level, deducts Steps, starts timer
+domain/usecase/CompleteResearch.kt               # Completes research when timer elapsed, increments level
+domain/usecase/RushResearch.kt                   # Instant complete via Gems (50–200 linear cost)
+domain/usecase/UnlockLabSlot.kt                  # Unlock lab slot (200 Gems, max 4)
+domain/usecase/CheckResearchCompletion.kt        # Auto-completes all expired research on app launch
 ```
 
 ## Presentation Layer
@@ -165,6 +172,9 @@ presentation/ui/theme/Color.kt                     # Compose color definitions
 presentation/ui/theme/Theme.kt                     # Compose theme setup (Material3)
 presentation/weapons/UltimateWeaponViewModel.kt    # @HiltViewModel: UW unlock/upgrade/equip state
 presentation/weapons/UltimateWeaponScreen.kt       # UW management: 6 cards with lock/unlock/equip/upgrade
+presentation/labs/LabsViewModel.kt                  # @HiltViewModel: research state + wallet + countdown ticker
+presentation/labs/LabsUiState.kt                    # UI state: research list, slots, balances
+presentation/labs/LabsScreen.kt                     # Labs screen: research cards, start/rush/unlock slot
 ```
 
 ## Service Layer
@@ -185,6 +195,7 @@ All paths relative to `app/src/test/java/com/whitefang/stepsofbabylon/`.
 fakes/FakePlayerRepository.kt                    # In-memory StateFlow-backed fake for PlayerRepository
 fakes/FakeWorkshopRepository.kt                  # In-memory StateFlow-backed fake for WorkshopRepository
 fakes/FakeUltimateWeaponRepository.kt            # In-memory StateFlow-backed fake for UltimateWeaponRepository
+fakes/FakeLabRepository.kt                       # In-memory StateFlow-backed fake for LabRepository
 domain/usecase/CalculateUpgradeCostTest.kt        # Cost formula: baseCost × scaling^level, all 23 types
 domain/usecase/CanAffordUpgradeTest.kt            # Affordability checks against wallet
 domain/usecase/QuickInvestTest.kt                 # Cheapest affordable upgrade recommendation
@@ -197,6 +208,13 @@ domain/usecase/UpgradeUltimateWeaponTest.kt       # UW upgrade cost scaling, max
 domain/usecase/ResolveStatsTest.kt                # Multiplicative stacking, all stat caps
 domain/usecase/CalculateDamageTest.kt             # Crit/no-crit with injectable Random, damage/meter bonus
 domain/usecase/CalculateDefenseTest.kt            # Percent reduction, flat block, floor at 0
+domain/usecase/CalculateResearchCostTest.kt       # Research cost scaling: baseCost × 1.15^level
+domain/usecase/CalculateResearchTimeTest.kt       # Research time scaling: baseTime × 1.10^level
+domain/usecase/StartResearchTest.kt               # Start research: slots, affordability, max level, deducts Steps
+domain/usecase/CompleteResearchTest.kt            # Complete research: timer gating, level increment
+domain/usecase/RushResearchTest.kt                # Rush research: linear Gem cost (50–200), deducts Gems
+domain/usecase/UnlockLabSlotTest.kt               # Unlock slot: 200 Gems, max 4
+domain/usecase/CheckResearchCompletionTest.kt     # Auto-complete: expired research, skip not-ready
 domain/model/TierConfigTest.kt                    # All 10 tiers, battle conditions, invalid tier
 domain/model/BiomeTest.kt                         # All tier→biome mappings
 domain/model/CardLoadoutTest.kt                   # Max 3, no duplicates, add/remove
