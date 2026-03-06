@@ -200,3 +200,18 @@
 - Open questions / blockers:
   - Orbs/Multishot/Bounce in Plan 10b (ready to implement anytime)
 - Memory updated: STATE ✅ / RUN_LOG ✅
+
+## 2026-03-06 — Plan 10b: Advanced Combat (Orbs, Multishot, Bounce Shot)
+- Goal: Wire the three deferred combat mechanics to gameplay.
+- Decisions made:
+  - (a) Orbs: damage on contact with 0.5s per-enemy cooldown, 50% resolved damage
+  - (a) Bounce: spawn new ProjectileEntity with bouncesRemaining, reuse collision pipeline
+  - (a) Multishot: findNearestEnemies(n) lambda, fire one projectile per target
+- Changes made:
+  - Updated `presentation/battle/entities/ProjectileEntity.kt` — added bouncesRemaining + hitEnemies
+  - Created `presentation/battle/entities/OrbEntity.kt` — orbiting entity, per-enemy cooldown, cyan rendering
+  - Updated `presentation/battle/entities/ZigguratEntity.kt` — multishot via findNearestEnemies(n) lambda
+  - Updated `presentation/battle/engine/GameEngine.kt` — findNearestEnemies(), bounce logic in onProjectileHitEnemy, orb spawn/despawn, onOrbHitEnemy
+- Commands/tests run: `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL, zero warnings
+- Open questions / blockers: None.
+- Memory updated: STATE ✅ / RUN_LOG ✅

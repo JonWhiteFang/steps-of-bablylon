@@ -4,14 +4,13 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import com.whitefang.stepsofbabylon.domain.model.ResolvedStats
 import com.whitefang.stepsofbabylon.presentation.battle.engine.Entity
-import kotlin.math.hypot
 import kotlin.math.min
 
 class ZigguratEntity(
     private val screenWidth: Float,
     private val screenHeight: Float,
     val stats: ResolvedStats,
-    private val findNearestEnemy: () -> EnemyEntity?,
+    private val findNearestEnemies: (Int) -> List<EnemyEntity>,
     private val onFireProjectile: (startX: Float, startY: Float, targetX: Float, targetY: Float) -> Unit,
 ) : Entity() {
 
@@ -42,15 +41,16 @@ class ZigguratEntity(
     val originY: Float get() = y - totalHeight
 
     override fun update(deltaTime: Float) {
-        // Health regen
         currentHp = min(currentHp + stats.healthRegen * deltaTime, maxHp)
 
         attackCooldown -= deltaTime
         if (attackCooldown <= 0f) {
-            val target = findNearestEnemy()
-            if (target != null && hypot(target.x - x, target.y - y) <= attackRange) {
+            val targets = findNearestEnemies(stats.multishotTargets)
+            if (targets.isNotEmpty()) {
                 attackCooldown = attackInterval
-                onFireProjectile(originX, originY, target.x, target.y)
+                for (target in targets) {
+                    onFireProjectile(originX, originY, target.x, target.y)
+                }
             } else {
                 attackCooldown = 0f
             }

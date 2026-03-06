@@ -1,31 +1,29 @@
 # Project State
 
 ## Current objective
-- Plan 11 (In-Round Upgrades & Cash Economy) is complete. Next: Plan 10b (Advanced Combat) or Plan 12 (Round Lifecycle) — both on critical path.
+- Plan 10b (Advanced Combat) is complete. Next: Plan 12 (Round Lifecycle & Post-Round) — CRITICAL PATH.
 
 ## What works
-- Plans 01–10: All foundation layers complete.
-- Plan 11 complete: Full cash economy (tier-scaled kill rewards, wave completion bonus, interest), in-round upgrade menu (3-tab Compose overlay, always accessible), purchase flow (affordability → free chance → deduct → re-resolve stats → push to engine), spendCash/updateZigguratStats on engine.
+- Plans 01–11 + 10b: All foundation layers, battle system, stats engine, cash economy, in-round upgrades, and all combat mechanics complete.
+- Plan 10b complete: Orbs (orbiting projectiles with per-enemy cooldown), Multishot (fire at N targets simultaneously), Bounce Shot (projectile chaining between enemies). All three respond to in-round upgrade changes.
 
 ## Known issues / debt
 - Notification uses placeholder system icon.
 - ActivityMinuteConverter passes empty sensorStepsPerMinute map (deferred).
 - GDD/docs still have some Google Fit references (cosmetic).
-- Orbs, Multishot, Bounce Shot deferred to Plan 10b (mini-plan created).
 
 ## Top priorities (next 5)
-1. Plan 10b: Advanced Combat Mechanics — Orbs, Multishot, Bounce Shot (parallelizable)
-2. Plan 12: Round Lifecycle & Post-Round (CRITICAL PATH)
+1. Plan 12: Round Lifecycle & Post-Round (CRITICAL PATH)
+2. Plan 13: Tier System & Progression (after Plan 12)
 3. Plan 16: Labs System (unblocked)
 4. Plan 17: Cards System (unblocked)
 5. Plan 22: Stats & History Screen (unblocked)
 
 ## Next actions (explicit order)
-1. Implement Plan 10b or Plan 12 — both are ready.
-2. Read the relevant plan file before starting.
+1. Implement Plan 12 (Round Lifecycle & Post-Round) — on critical path.
+2. Read `docs/plans/plan-12-round-lifecycle.md` before starting.
 
 ## Parallelizable branches (after dependencies met)
-- Plan 10b is ready (depends on Plan 10 ✓). Orbs/Multishot/Bounce.
 - Plan 12 is ready (depends on Plan 11 ✓). CRITICAL PATH. Unlocks Plans 13, 14, 15.
 - Plan 16 is ready (depends on Plan 07 ✓). Labs System.
 - Plan 17 is ready (depends on Plan 07 ✓). Cards System.
@@ -43,4 +41,4 @@
 ## References
 - Master plan: docs/plans/master-plan.md
 - Critical path: 01→02→03→06→08→09→10→11→12→13→18→27→28→29→30
-- Last run: 2026-03-06 (Plan 11 implementation)
+- Last run: 2026-03-06 (Plan 10b implementation)

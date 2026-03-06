@@ -104,7 +104,7 @@ graph TD
 - [x] Plan 08: Battle Renderer — Game Loop & Ziggurat
 - [x] Plan 09: Battle System — Enemies & Waves
 - [x] Plan 10: Battle System — Stats & Combat
-- [ ] Plan 10b: Advanced Combat Mechanics (Orbs, Multishot, Bounce Shot)
+- [x] Plan 10b: Advanced Combat Mechanics (Orbs, Multishot, Bounce Shot)
 - [x] Plan 11: In-Round Upgrades & Cash Economy
 - [ ] Plan 12: Round Lifecycle & Post-Round
 - [ ] Plan 13: Tier System & Progression

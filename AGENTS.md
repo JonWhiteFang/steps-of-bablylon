@@ -165,13 +165,12 @@ graph TD
 - [x] **Plan 08: Battle Renderer** ✓
 - [x] **Plan 09: Battle System — Enemies & Waves** ✓
 - [x] **Plan 10: Battle System — Stats & Combat** ✓
-- [ ] **Plan 10b: Advanced Combat (Orbs, Multishot, Bounce)** ← parallelizable
+- [x] **Plan 10b: Advanced Combat (Orbs, Multishot, Bounce)** ✓
 - [x] **Plan 11: In-Round Upgrades & Cash Economy** ✓
 - [ ] **Plan 12: Round Lifecycle & Post-Round** ← next up (critical path)
 
 ### Parallelizable Branches (after dependencies met)
 
-- Advanced Combat: Plan 10b (ready now — Plan 10 complete)
 - Round Lifecycle: Plan 12 (ready now — Plan 11 complete) — CRITICAL PATH
 - Labs: Plan 16 (ready now — Plan 07 complete)
 - Cards: Plan 17 (ready now — Plan 07 complete)

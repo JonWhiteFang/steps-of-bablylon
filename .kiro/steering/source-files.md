@@ -143,6 +143,7 @@ presentation/battle/entities/ZigguratEntity.kt     # 5-layer ziggurat, nearest-e
 presentation/battle/entities/ProjectileEntity.kt   # Moves toward target, self-destructs on arrival
 presentation/battle/entities/EnemyEntity.kt        # 6 enemy types, movement, melee/ranged attack, mini HP bar
 presentation/battle/entities/EnemyProjectileEntity.kt # Ranged enemy projectiles targeting ziggurat
+presentation/battle/entities/OrbEntity.kt          # Orbiting projectiles circling ziggurat, per-enemy hit cooldown
 presentation/battle/ui/HealthBarRenderer.kt        # HP bar: green→yellow→red gradient, numeric text
 presentation/battle/ui/InRoundUpgradeMenu.kt      # In-round upgrade menu: 3 tabs, purchase with Cash
 presentation/ui/theme/Color.kt                     # Compose color definitions

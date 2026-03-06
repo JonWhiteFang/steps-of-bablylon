@@ -19,7 +19,7 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 │   ├── workshop/       # Workshop screen, ViewModel, UpgradeCard
 │   ├── battle/         # Battle renderer (SurfaceView, game loop, entities)
 │   │   ├── engine/     # GameEngine, Entity, WaveSpawner, EnemyScaler, CollisionSystem
-│   │   ├── entities/   # ZigguratEntity, ProjectileEntity, EnemyEntity, EnemyProjectileEntity
+│   │   ├── entities/   # ZigguratEntity, ProjectileEntity, EnemyEntity, EnemyProjectileEntity, OrbEntity
 │   │   └── ui/         # HealthBarRenderer, InRoundUpgradeMenu
 │   └── ui/theme/       # Compose theme, colors (Material3)
 ├── di/                 # Hilt modules (DatabaseModule, RepositoryModule, StepModule, HealthConnectModule)

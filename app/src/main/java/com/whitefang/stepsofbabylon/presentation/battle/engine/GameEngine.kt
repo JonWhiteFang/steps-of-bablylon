@@ -10,9 +10,11 @@ import com.whitefang.stepsofbabylon.domain.usecase.CalculateDamage
 import com.whitefang.stepsofbabylon.domain.usecase.CalculateDefense
 import com.whitefang.stepsofbabylon.presentation.battle.entities.EnemyEntity
 import com.whitefang.stepsofbabylon.presentation.battle.entities.EnemyProjectileEntity
+import com.whitefang.stepsofbabylon.presentation.battle.entities.OrbEntity
 import com.whitefang.stepsofbabylon.presentation.battle.entities.ProjectileEntity
 import com.whitefang.stepsofbabylon.presentation.battle.entities.ZigguratEntity
 import com.whitefang.stepsofbabylon.presentation.battle.ui.HealthBarRenderer
+import kotlin.math.PI
 import kotlin.math.hypot
 import kotlin.math.min
 import kotlin.random.Random
@@ -54,11 +56,13 @@ class GameEngine {
         cash = 0L; roundOver = false
         stats = resolvedStats; tier = playerTier; workshopLevels = wsLevels
 
-        val zig = ZigguratEntity(width, height, stats, ::findNearestEnemy) { sx, sy, tx, ty ->
-            pendingAdd.add(ProjectileEntity(sx, sy, tx, ty, ZigguratBaseStats.PROJECTILE_SPEED))
+        val zig = ZigguratEntity(width, height, stats, ::findNearestEnemies) { sx, sy, tx, ty ->
+            pendingAdd.add(ProjectileEntity(sx, sy, tx, ty, ZigguratBaseStats.PROJECTILE_SPEED, bouncesRemaining = stats.bounceCount))
         }
         ziggurat = zig
         entities.add(zig)
+
+        spawnOrbs()
 
         waveSpawner = WaveSpawner(
             onSpawnEnemy = { pendingAdd.add(it) },
@@ -75,11 +79,16 @@ class GameEngine {
     fun setStats(resolvedStats: ResolvedStats) { stats = resolvedStats }
 
     fun updateZigguratStats(newStats: ResolvedStats) {
+        val oldOrbCount = stats.orbCount
         stats = newStats
         val zig = ziggurat ?: return
         val hpRatio = if (zig.maxHp > 0) zig.currentHp / zig.maxHp else 1.0
         zig.maxHp = newStats.maxHealth
         zig.currentHp = newStats.maxHealth * hpRatio
+        if (newStats.orbCount != oldOrbCount) {
+            entities.removeAll { it is OrbEntity }
+            spawnOrbs()
+        }
     }
 
     fun spendCash(amount: Long): Boolean {
@@ -115,20 +124,51 @@ class GameEngine {
 
     fun addEntity(entity: Entity) { pendingAdd.add(entity) }
 
+    // --- Orb management ---
+
+    private fun spawnOrbs() {
+        val zig = ziggurat ?: return
+        val count = stats.orbCount
+        if (count <= 0) return
+        val radius = stats.range * 0.4f
+        val damage = stats.damage * 0.5
+        for (i in 0 until count) {
+            val angle = (2.0 * PI / count * i).toFloat()
+            entities.add(OrbEntity(
+                zigX = zig.x, zigY = zig.y, orbitRadius = radius,
+                angle = angle, damage = damage,
+                getEnemies = ::getAliveEnemies,
+                onHitEnemy = ::onOrbHitEnemy,
+            ))
+        }
+    }
+
+    private fun getAliveEnemies(): List<EnemyEntity> =
+        entities.filterIsInstance<EnemyEntity>().filter { it.isAlive }
+
+    private fun onOrbHitEnemy(enemy: EnemyEntity, damage: Double) {
+        enemy.takeDamage(damage)
+        val zig = ziggurat ?: return
+        if (stats.knockbackForce > 0f) {
+            val dx = enemy.x - zig.x; val dy = enemy.y - zig.y
+            val d = hypot(dx, dy).coerceAtLeast(1f)
+            enemy.applyKnockback(dx / d * stats.knockbackForce * 0.5f, dy / d * stats.knockbackForce * 0.5f)
+        }
+        if (stats.lifestealPercent > 0) {
+            zig.currentHp = min(zig.currentHp + damage * stats.lifestealPercent, zig.maxHp)
+        }
+    }
+
     // --- Cash economy ---
 
     private fun wsLevel(type: UpgradeType): Int = workshopLevels[type] ?: 0
 
     private fun handleWaveComplete(wave: Int) {
-        // Wave cash bonus
         val waveCash = BASE_CASH_PER_WAVE + wsLevel(UpgradeType.CASH_PER_WAVE) * FLAT_BONUS_PER_WAVE_LEVEL
         cash += waveCash
-
-        // Interest
         val interestLevel = wsLevel(UpgradeType.INTEREST)
         if (interestLevel > 0) {
-            val interestRate = min(interestLevel * 0.005, 0.10)
-            cash += (cash * interestRate).toLong()
+            cash += (cash * min(interestLevel * 0.005, 0.10)).toLong()
         }
     }
 
@@ -140,6 +180,7 @@ class GameEngine {
         val result = calculateDamage(stats, dist)
 
         enemy.takeDamage(result.amount)
+        proj.hitEnemies.add(enemy)
         proj.isAlive = false
 
         if (stats.knockbackForce > 0f) {
@@ -147,16 +188,31 @@ class GameEngine {
             val d = hypot(dx, dy).coerceAtLeast(1f)
             enemy.applyKnockback(dx / d * stats.knockbackForce, dy / d * stats.knockbackForce)
         }
-
         if (stats.lifestealPercent > 0) {
             zig.currentHp = min(zig.currentHp + result.amount * stats.lifestealPercent, zig.maxHp)
+        }
+
+        // Bounce shot
+        if (proj.bouncesRemaining > 0) {
+            val nextTarget = entities.asSequence()
+                .filterIsInstance<EnemyEntity>()
+                .filter { it.isAlive && it !in proj.hitEnemies }
+                .minByOrNull { hypot(it.x - enemy.x, it.y - enemy.y) }
+            if (nextTarget != null) {
+                pendingAdd.add(ProjectileEntity(
+                    startX = enemy.x, startY = enemy.y,
+                    targetX = nextTarget.x, targetY = nextTarget.y,
+                    speed = ZigguratBaseStats.PROJECTILE_SPEED,
+                    bouncesRemaining = proj.bouncesRemaining - 1,
+                    hitEnemies = proj.hitEnemies,
+                ))
+            }
         }
     }
 
     private fun applyDamageToZiggurat(rawDamage: Double, attacker: EnemyEntity?) {
         val zig = ziggurat ?: return
         val mitigated = calculateDefense(rawDamage, stats)
-
         if (zig.currentHp - mitigated <= 0.0 && stats.deathDefyChance > 0) {
             if (Random.nextDouble() < stats.deathDefyChance) {
                 zig.currentHp = 1.0; applyThorn(rawDamage, attacker); return
@@ -173,19 +229,21 @@ class GameEngine {
 
     // --- Targeting & death ---
 
-    private fun findNearestEnemy(): EnemyEntity? {
-        val zig = ziggurat ?: return null
-        return entities.asSequence().filterIsInstance<EnemyEntity>()
-            .filter { it.isAlive }.minByOrNull { hypot(it.x - zig.x, it.y - zig.y) }
+    private fun findNearestEnemies(n: Int): List<EnemyEntity> {
+        val zig = ziggurat ?: return emptyList()
+        return entities.asSequence()
+            .filterIsInstance<EnemyEntity>()
+            .filter { it.isAlive && hypot(it.x - zig.x, it.y - zig.y) <= zig.attackRange }
+            .sortedBy { hypot(it.x - zig.x, it.y - zig.y) }
+            .take(n)
+            .toList()
     }
 
     private fun handleEnemyDeath(enemy: EnemyEntity) {
-        // Full cash formula
         val baseCash = EnemyScaler.cashReward(enemy.enemyType)
         val tierMult = TierConfig.forTier(tier).cashMultiplier
         val cashBonus = 1.0 + wsLevel(UpgradeType.CASH_BONUS) * 0.03
         cash += (baseCash * tierMult * cashBonus).toLong()
-
         waveSpawner?.onEnemyKilled()
 
         if (enemy.enemyType == EnemyType.SCATTER) {

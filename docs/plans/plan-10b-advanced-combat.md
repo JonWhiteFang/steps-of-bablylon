@@ -1,6 +1,6 @@
 # Plan 10b — Advanced Combat Mechanics (Orbs, Multishot, Bounce Shot)
 
-**Status:** Not Started
+**Status:** Complete
 **Dependencies:** Plan 10 (Stats & Combat)
 **Layer:** `presentation/battle/`
 
