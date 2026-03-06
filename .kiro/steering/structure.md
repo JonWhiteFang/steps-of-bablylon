@@ -20,7 +20,8 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 │   ├── battle/         # Battle renderer (SurfaceView, game loop, entities)
 │   │   ├── engine/     # GameEngine, Entity, WaveSpawner, EnemyScaler, CollisionSystem
 │   │   ├── entities/   # ZigguratEntity, ProjectileEntity, EnemyEntity, EnemyProjectileEntity, OrbEntity
-│   │   └── ui/         # HealthBarRenderer, InRoundUpgradeMenu, PostRoundOverlay, PauseOverlay
+│   │   ├── biome/      # BiomeTheme, BackgroundRenderer (gradient sky + ambient particles)
+│   │   └── ui/         # HealthBarRenderer, InRoundUpgradeMenu, PostRoundOverlay, PauseOverlay, BiomeTransitionOverlay
 │   └── ui/theme/       # Compose theme, colors (Material3)
 ├── di/                 # Hilt modules (DatabaseModule, RepositoryModule, StepModule, HealthConnectModule)
 └── service/            # Foreground step-counting service, WorkManager workers, boot receiver
@@ -31,7 +32,9 @@ app/src/test/java/com/whitefang/stepsofbabylon/
 │   ├── model/          # Domain model invariant tests (TierConfig, Biome, Loadouts, UpgradeType, EnemyType)
 │   └── usecase/        # Use case tests (cost, damage, defense, stats, purchase, best wave)
 ├── presentation/
-│   └── battle/engine/  # EnemyScaler tests
+│   └── battle/
+│       ├── engine/     # EnemyScaler tests
+│       └── biome/      # BiomeTheme tests
 └── data/sensor/        # StepRateLimiter tests
 ```
 

@@ -57,7 +57,8 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 │   ├── battle/     # BattleScreen, BattleViewModel
 │   │   ├── engine/ # GameEngine, WaveSpawner, EnemyScaler, CollisionSystem
 │   │   ├── entities/ # ZigguratEntity, EnemyEntity, ProjectileEntity, OrbEntity
-│   │   └── ui/     # InRoundUpgradeMenu, PostRoundOverlay, PauseOverlay, HealthBarRenderer
+│   │   ├── biome/  # BiomeTheme, BackgroundRenderer
+│   │   └── ui/     # InRoundUpgradeMenu, PostRoundOverlay, PauseOverlay, HealthBarRenderer, BiomeTransitionOverlay
 │   └── ui/theme/   # Color, Theme
 ├── di/             # Hilt modules (DatabaseModule, RepositoryModule, StepModule, HealthConnectModule)
 └── service/        # Foreground step-counting service, WorkManager workers (Plan 04)
