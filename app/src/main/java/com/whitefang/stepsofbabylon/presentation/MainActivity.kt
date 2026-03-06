@@ -31,6 +31,7 @@ import com.whitefang.stepsofbabylon.presentation.home.HomeScreen
 import com.whitefang.stepsofbabylon.presentation.navigation.BottomNavBar
 import com.whitefang.stepsofbabylon.presentation.navigation.Screen
 import com.whitefang.stepsofbabylon.presentation.ui.theme.StepsOfBabylonTheme
+import com.whitefang.stepsofbabylon.presentation.weapons.UltimateWeaponScreen
 import com.whitefang.stepsofbabylon.presentation.workshop.WorkshopScreen
 import com.whitefang.stepsofbabylon.service.StepCounterService
 import dagger.hilt.android.AndroidEntryPoint
@@ -110,7 +111,10 @@ class MainActivity : ComponentActivity() {
                             HomeScreen(onBattleClick = { navController.navigate(Screen.Battle.route) })
                         }
                         composable(Screen.Workshop.route) {
-                            WorkshopScreen()
+                            WorkshopScreen(onNavigateToWeapons = { navController.navigate(Screen.Weapons.route) })
+                        }
+                        composable(Screen.Weapons.route) {
+                            UltimateWeaponScreen()
                         }
                         composable(Screen.Battle.route) {
                             BattleScreen(onExitBattle = { navController.popBackStack() })

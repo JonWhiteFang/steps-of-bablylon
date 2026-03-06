@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Tab
 import androidx.compose.material3.PrimaryTabRow
@@ -25,13 +26,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.whitefang.stepsofbabylon.domain.model.UpgradeCategory
 
 @Composable
-fun WorkshopScreen(viewModel: WorkshopViewModel = hiltViewModel()) {
+fun WorkshopScreen(onNavigateToWeapons: () -> Unit = {}, viewModel: WorkshopViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val categories = UpgradeCategory.entries
     val selectedIndex = categories.indexOf(state.selectedCategory)
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
+            // Weapons button
+            OutlinedButton(onClick = onNavigateToWeapons, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text("⚔ Ultimate Weapons")
+            }
+
             // Balance header
             Text(
                 text = "Balance: ${state.stepBalance} Steps",

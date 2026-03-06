@@ -110,7 +110,7 @@ graph TD
 - [x] Domain Layer Unit Tests (80 JVM tests — use cases, models, formulas, anti-cheat)
 - [x] Plan 13: Tier System & Progression
 - [x] Plan 14: Step Overdrive
-- [ ] Plan 15: Ultimate Weapons
+- [x] Plan 15: Ultimate Weapons
 - [ ] Plan 16: Labs System
 - [ ] Plan 17: Cards System
 - [x] Plan 18: Narrative Biome Progression

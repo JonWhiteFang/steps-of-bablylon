@@ -21,13 +21,14 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 │   │   ├── engine/     # GameEngine, Entity, WaveSpawner, EnemyScaler, CollisionSystem
 │   │   ├── entities/   # ZigguratEntity, ProjectileEntity, EnemyEntity, EnemyProjectileEntity, OrbEntity
 │   │   ├── biome/      # BiomeTheme, BackgroundRenderer (gradient sky + ambient particles)
-│   │   └── ui/         # HealthBarRenderer, InRoundUpgradeMenu, PostRoundOverlay, PauseOverlay, BiomeTransitionOverlay, OverdriveMenu
+│   │   └── ui/         # HealthBarRenderer, InRoundUpgradeMenu, PostRoundOverlay, PauseOverlay, BiomeTransitionOverlay, OverdriveMenu, UltimateWeaponBar
+│   ├── weapons/        # UltimateWeaponScreen, UltimateWeaponViewModel
 │   └── ui/theme/       # Compose theme, colors (Material3)
 ├── di/                 # Hilt modules (DatabaseModule, RepositoryModule, StepModule, HealthConnectModule)
 └── service/            # Foreground step-counting service, WorkManager workers, boot receiver
 
 app/src/test/java/com/whitefang/stepsofbabylon/
-├── fakes/              # In-memory fake repositories (FakePlayerRepository, FakeWorkshopRepository)
+├── fakes/              # In-memory fake repositories (FakePlayerRepository, FakeWorkshopRepository, FakeUltimateWeaponRepository)
 ├── domain/
 │   ├── model/          # Domain model invariant tests (TierConfig, Biome, Loadouts, UpgradeType, EnemyType)
 │   └── usecase/        # Use case tests (cost, damage, defense, stats, purchase, best wave)
@@ -104,8 +105,10 @@ All in `domain/model/`:
 | `domain/usecase/UpdateBestWave.kt` | Compares wave to stored best, persists if new record |
 | `domain/usecase/CheckTierUnlock.kt` | Checks wave milestones for tier unlock eligibility |
 | `domain/usecase/ActivateOverdrive.kt` | Validates overdrive activation (balance + once-per-round) |
+| `domain/usecase/UnlockUltimateWeapon.kt` | Checks Power Stone balance, deducts, unlocks UW |
+| `domain/usecase/UpgradeUltimateWeapon.kt` | Cost scaling per level, max level 10 |
 | `presentation/MainActivity.kt` | Single Activity, Scaffold + NavHost + BottomNavBar (hidden during battle), permissions |
-| `presentation/navigation/Screen.kt` | 5 navigation routes (Home, Workshop, Battle, Labs, Stats) |
+| `presentation/navigation/Screen.kt` | 6 navigation routes (Home, Workshop, Battle, Labs, Stats, Weapons) |
 | `presentation/home/HomeViewModel.kt` | Combines profile + step flows into HomeUiState |
 | `presentation/battle/GameSurfaceView.kt` | SurfaceView managing game loop thread lifecycle |
 | `presentation/battle/GameLoopThread.kt` | Fixed timestep (60 UPS), accumulator, speed multiplier |

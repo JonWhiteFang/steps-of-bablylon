@@ -37,6 +37,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.whitefang.stepsofbabylon.presentation.battle.ui.BiomeTransitionOverlay
 import com.whitefang.stepsofbabylon.presentation.battle.ui.InRoundUpgradeMenu
 import com.whitefang.stepsofbabylon.presentation.battle.ui.OverdriveMenu
+import com.whitefang.stepsofbabylon.presentation.battle.ui.UltimateWeaponBar
 import com.whitefang.stepsofbabylon.presentation.battle.ui.PauseOverlay
 import com.whitefang.stepsofbabylon.presentation.battle.ui.PostRoundOverlay
 
@@ -82,6 +83,13 @@ fun BattleScreen(
         if (roundActive) {
             IconButton(onClick = { viewModel.quitRound() }, modifier = Modifier.align(Alignment.TopEnd).padding(end = 8.dp, top = 72.dp)) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quit round", tint = Color.White)
+            }
+        }
+
+        // UW bar
+        if (roundActive && state.uwSlots.isNotEmpty()) {
+            Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 72.dp)) {
+                UltimateWeaponBar(slots = state.uwSlots, onActivate = viewModel::activateUW)
             }
         }
 

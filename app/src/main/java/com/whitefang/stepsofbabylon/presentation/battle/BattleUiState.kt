@@ -14,6 +14,13 @@ data class RoundEndState(
     val tierUnlocked: Int? = null,
 )
 
+data class UWSlotInfo(
+    val typeName: String,
+    val cooldownRemaining: Float = 0f,
+    val cooldownTotal: Float = 0f,
+    val isReady: Boolean = true,
+)
+
 data class BattleUiState(
     val currentWave: Int = 1,
     val currentHp: Double = 0.0,
@@ -34,4 +41,5 @@ data class BattleUiState(
     val overdriveTimeRemaining: Float = 0f,
     val stepBalance: Long = 0,
     val showOverdriveMenu: Boolean = false,
+    val uwSlots: List<UWSlotInfo> = emptyList(),
 )

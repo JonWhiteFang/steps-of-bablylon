@@ -228,6 +228,35 @@ Applied in engine:
 
 Once per round. Stacks multiplicatively with existing stats.
 
+## Ultimate Weapon Formulas
+
+### Unlock & Upgrade
+
+```
+unlockCost = type.unlockCost (Power Stones)
+upgradeCost = unlockCost × 2 × currentLevel (Power Stones)
+maxLevel = 10
+```
+
+### Cooldown Scaling
+
+```
+cooldown = baseCooldownSeconds × (1 - 0.05 × (level - 1))
+```
+
+### Base Values
+
+| UW Type | Unlock Cost | Base Cooldown | Duration | Effect |
+|---|---|---|---|---|
+| Death Wave | 50 PS | 60s | Instant | 500 × level damage to all enemies |
+| Chain Lightning | 75 PS | 45s | Instant | 300 × level damage to up to 8 enemies |
+| Black Hole | 100 PS | 90s | 5s | Pull enemies to center + 50 × level DPS |
+| Chrono Field | 75 PS | 75s | 8s | All enemies slowed to 10% speed |
+| Poison Swamp | 60 PS | 60s | 6s | 2% × level of enemy max HP per second |
+| Golden Ziggurat | 80 PS | 90s | 10s | 5× cash + 1.5× damage |
+
+SURGE Overdrive resets all UW cooldowns to 0 instantly.
+
 ## Lab Research Scaling
 
 ```

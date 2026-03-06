@@ -354,3 +354,30 @@
 - Commands/tests run: `./run-gradle.sh testDebugUnitTest` — 101 tests, 0 failures. `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL.
 - Open questions / blockers: None.
 - Memory updated: STATE ✅ / RUN_LOG ✅
+
+## 2026-03-06 — Plan 15: Ultimate Weapons
+- Goal: 6 UW types with unlock/upgrade/equip, battle activation with cooldowns, visual effects, management screen.
+- Decisions made:
+  - (a) Simple geometric effects — expanding circles, lines, tints. Polish in Plan 27.
+  - (a) Sub-screen of Workshop — "Ultimate Weapons" button navigates to UW management.
+  - (a) Simple scaling — upgradeCost = unlockCost * 2 * level, cooldown -5%/level, max level 10.
+- Changes made:
+  - Updated `domain/model/UltimateWeaponType.kt` — added baseCooldownSeconds, effectDurationSeconds, upgradeCost(), cooldownAtLevel(), MAX_LEVEL
+  - Created `domain/usecase/UnlockUltimateWeapon.kt` — checks balance + not owned, deducts Power Stones
+  - Created `domain/usecase/UpgradeUltimateWeapon.kt` — cost scaling, max level 10
+  - Created `presentation/weapons/UltimateWeaponViewModel.kt` — observes weapons + wallet
+  - Created `presentation/weapons/UltimateWeaponScreen.kt` — 6 UW cards with lock/unlock/equip/upgrade
+  - Created `presentation/battle/ui/UltimateWeaponBar.kt` — row of 3 UW activation buttons
+  - Updated `GameEngine.kt` — UW state management, 6 effect implementations, visual rendering, SURGE wired
+  - Updated `BattleUiState.kt` — added UWSlotInfo, uwSlots
+  - Updated `BattleViewModel.kt` — injects UltimateWeaponRepository, loads equipped, polls UW state
+  - Updated `BattleScreen.kt` — shows UltimateWeaponBar
+  - Updated `Screen.kt` — added Weapons route
+  - Updated `MainActivity.kt` — added Weapons composable route
+  - Updated `WorkshopScreen.kt` — added "Ultimate Weapons" navigation button
+  - Created `test/fakes/FakeUltimateWeaponRepository.kt`
+  - Created `test/.../UnlockUltimateWeaponTest.kt` — 3 tests
+  - Created `test/.../UpgradeUltimateWeaponTest.kt` — 4 tests
+- Commands/tests run: `./run-gradle.sh testDebugUnitTest` — 108 tests, 0 failures. `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL.
+- Open questions / blockers: None.
+- Memory updated: STATE ✅ / RUN_LOG ✅

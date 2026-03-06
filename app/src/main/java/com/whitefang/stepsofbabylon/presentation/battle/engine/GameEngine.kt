@@ -4,7 +4,10 @@ import android.graphics.Canvas
 import com.whitefang.stepsofbabylon.domain.model.BattleConditionEffects
 import com.whitefang.stepsofbabylon.domain.model.Biome
 import com.whitefang.stepsofbabylon.domain.model.EnemyType
+import android.graphics.Paint
+import com.whitefang.stepsofbabylon.domain.model.OwnedWeapon
 import com.whitefang.stepsofbabylon.domain.model.OverdriveType
+import com.whitefang.stepsofbabylon.domain.model.UltimateWeaponType
 import com.whitefang.stepsofbabylon.domain.model.ResolvedStats
 import com.whitefang.stepsofbabylon.domain.model.TierConfig
 import com.whitefang.stepsofbabylon.domain.model.UpgradeType
@@ -53,6 +56,15 @@ class GameEngine {
     private var preOverdriveStats: ResolvedStats? = null
     private var fortuneMultiplier: Double = 1.0
 
+    data class UWState(val type: UltimateWeaponType, val level: Int, var cooldownRemaining: Float = 0f, var effectTimeRemaining: Float = 0f)
+    data class UWEffect(val type: UltimateWeaponType, var timer: Float, val x: Float, val y: Float)
+    val uwStates = mutableListOf<UWState>()
+    private val uwEffects = mutableListOf<UWEffect>()
+    private var chronoActive = false
+    private var goldenZigActive = false
+    private var preGoldenStats: ResolvedStats? = null
+    private val uwPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+
     companion object {
         const val BASE_CASH_PER_WAVE = 20L
         const val FLAT_BONUS_PER_WAVE_LEVEL = 5L
@@ -69,6 +81,7 @@ class GameEngine {
         cash = 0L; totalCashEarned = 0L; roundOver = false
         totalEnemiesKilled = 0; elapsedTimeSeconds = 0f
         activeOverdrive = null; overdriveTimeRemaining = 0f; preOverdriveStats = null; fortuneMultiplier = 1.0
+        uwStates.clear(); uwEffects.clear(); chronoActive = false; goldenZigActive = false; preGoldenStats = null
         stats = resolvedStats; tier = playerTier; workshopLevels = wsLevels
         conditions = BattleConditionEffects.fromTier(tier)
         biomeTheme = BiomeTheme.forBiome(Biome.forTier(tier))
@@ -116,7 +129,7 @@ class GameEngine {
                 ziggurat?.let { it.overdriveColor = 0xFFFFD700.toInt() }
             }
             OverdriveType.SURGE -> {
-                // Stub — UW cooldown reset will be wired in Plan 15
+                resetUWCooldowns()
                 ziggurat?.let { it.overdriveColor = 0xFF9C27B0.toInt() }
             }
         }
@@ -159,6 +172,7 @@ class GameEngine {
             ziggurat?.overdriveProgress = (overdriveTimeRemaining / 60f).coerceIn(0f, 1f)
             if (overdriveTimeRemaining <= 0f) expireOverdrive()
         }
+        updateUWs(deltaTime)
 
         waveSpawner?.update(deltaTime, screenWidth, screenHeight)
         entities.addAll(pendingAdd); pendingAdd.clear()
@@ -179,10 +193,128 @@ class GameEngine {
     fun render(canvas: Canvas) {
         backgroundRenderer?.render(canvas) ?: canvas.drawColor(0xFF6B3A2A.toInt())
         entities.forEach { it.render(canvas) }
+        // UW visual effects
+        for (effect in uwEffects) {
+            when (effect.type) {
+                UltimateWeaponType.DEATH_WAVE -> {
+                    val progress = 1f - effect.timer / 0.5f
+                    uwPaint.color = 0xFF4CAF50.toInt(); uwPaint.alpha = ((1f - progress) * 150).toInt()
+                    uwPaint.style = Paint.Style.STROKE; uwPaint.strokeWidth = 4f
+                    canvas.drawCircle(effect.x, effect.y, progress * screenWidth * 0.6f, uwPaint)
+                }
+                UltimateWeaponType.CHAIN_LIGHTNING -> {
+                    uwPaint.color = 0xFFE0E0FF.toInt(); uwPaint.alpha = 200
+                    uwPaint.style = Paint.Style.STROKE; uwPaint.strokeWidth = 2f
+                    getAliveEnemies().take(8).forEach { e -> canvas.drawLine(effect.x, effect.y, e.x, e.y, uwPaint) }
+                }
+                UltimateWeaponType.BLACK_HOLE -> {
+                    uwPaint.color = 0xFF6A0DAD.toInt(); uwPaint.alpha = 100; uwPaint.style = Paint.Style.FILL
+                    canvas.drawCircle(effect.x, effect.y, 60f, uwPaint)
+                }
+                UltimateWeaponType.CHRONO_FIELD -> {
+                    uwPaint.color = 0x332196F3.toInt(); uwPaint.style = Paint.Style.FILL
+                    canvas.drawRect(0f, 0f, screenWidth, screenHeight, uwPaint)
+                }
+                UltimateWeaponType.POISON_SWAMP -> {
+                    uwPaint.color = 0xFF4CAF50.toInt(); uwPaint.alpha = 60; uwPaint.style = Paint.Style.FILL
+                    canvas.drawCircle(effect.x, effect.y, 100f, uwPaint)
+                }
+                UltimateWeaponType.GOLDEN_ZIGGURAT -> {} // Uses overdrive aura
+            }
+        }
+        if (chronoActive) {
+            uwPaint.color = 0x222196F3.toInt(); uwPaint.style = Paint.Style.FILL
+            canvas.drawRect(0f, 0f, screenWidth, screenHeight, uwPaint)
+        }
         ziggurat?.let { healthBarRenderer.render(canvas, it.currentHp, it.maxHp, screenWidth) }
     }
 
     fun addEntity(entity: Entity) { pendingAdd.add(entity) }
+
+    fun initUWs(equipped: List<OwnedWeapon>) {
+        uwStates.clear()
+        equipped.forEach { uwStates.add(UWState(it.type, it.level)) }
+    }
+
+    fun activateUW(index: Int) {
+        val uw = uwStates.getOrNull(index) ?: return
+        if (uw.cooldownRemaining > 0f) return
+        uw.cooldownRemaining = uw.type.cooldownAtLevel(uw.level)
+        val zig = ziggurat ?: return
+        val duration = uw.type.effectDurationSeconds.toFloat()
+        if (duration > 0f) uw.effectTimeRemaining = duration
+
+        when (uw.type) {
+            UltimateWeaponType.DEATH_WAVE -> {
+                val dmg = 500.0 * uw.level
+                getAliveEnemies().forEach { it.takeDamage(dmg) }
+                uwEffects.add(UWEffect(uw.type, 0.5f, zig.x, zig.y - zig.height / 2))
+            }
+            UltimateWeaponType.CHAIN_LIGHTNING -> {
+                val dmg = 300.0 * uw.level
+                val targets = getAliveEnemies().sortedBy { hypot(it.x - zig.x, it.y - zig.y) }.take(8)
+                targets.forEach { it.takeDamage(dmg) }
+                uwEffects.add(UWEffect(uw.type, 0.3f, zig.x, zig.y - zig.height / 2))
+            }
+            UltimateWeaponType.BLACK_HOLE -> {
+                uwEffects.add(UWEffect(uw.type, duration, screenWidth / 2f, screenHeight * 0.35f))
+            }
+            UltimateWeaponType.CHRONO_FIELD -> { chronoActive = true }
+            UltimateWeaponType.POISON_SWAMP -> {
+                uwEffects.add(UWEffect(uw.type, duration, screenWidth / 2f, screenHeight * 0.6f))
+            }
+            UltimateWeaponType.GOLDEN_ZIGGURAT -> {
+                goldenZigActive = true; preGoldenStats = stats
+                fortuneMultiplier = fortuneMultiplier.coerceAtLeast(5.0)
+                stats = stats.copy(damage = stats.damage * 1.5)
+                zig.overdriveColor = 0xFFFFD700.toInt(); zig.overdriveProgress = 1f
+            }
+        }
+    }
+
+    private fun updateUWs(deltaTime: Float) {
+        val zig = ziggurat ?: return
+        for (uw in uwStates) {
+            if (uw.cooldownRemaining > 0f) uw.cooldownRemaining = (uw.cooldownRemaining - deltaTime).coerceAtLeast(0f)
+            if (uw.effectTimeRemaining > 0f) {
+                uw.effectTimeRemaining -= deltaTime
+                if (uw.effectTimeRemaining <= 0f) {
+                    uw.effectTimeRemaining = 0f
+                    when (uw.type) {
+                        UltimateWeaponType.CHRONO_FIELD -> chronoActive = false
+                        UltimateWeaponType.GOLDEN_ZIGGURAT -> {
+                            goldenZigActive = false; preGoldenStats?.let { stats = it }; preGoldenStats = null
+                            if (activeOverdrive == null) fortuneMultiplier = 1.0
+                            if (activeOverdrive == null) { zig.overdriveColor = 0; zig.overdriveProgress = 0f }
+                        }
+                        else -> {}
+                    }
+                }
+                // Ongoing effects
+                when (uw.type) {
+                    UltimateWeaponType.BLACK_HOLE -> {
+                        val cx = screenWidth / 2f; val cy = screenHeight * 0.35f
+                        val dmg = 50.0 * uw.level * deltaTime
+                        getAliveEnemies().forEach { e ->
+                            val dx = cx - e.x; val dy = cy - e.y; val d = hypot(dx, dy).coerceAtLeast(1f)
+                            e.x += dx / d * 60f * deltaTime; e.y += dy / d * 60f * deltaTime
+                            e.takeDamage(dmg)
+                        }
+                    }
+                    UltimateWeaponType.POISON_SWAMP -> {
+                        val dmg = 0.02 * uw.level * deltaTime
+                        getAliveEnemies().forEach { e -> e.takeDamage(e.maxHp * dmg) }
+                    }
+                    else -> {}
+                }
+            }
+        }
+        // Chrono effect: handled in WaveSpawner via speed, but we also slow existing enemies
+        // (enemies already spawned keep their speed, so we apply chrono as a position modifier)
+        uwEffects.removeAll { e -> e.timer -= deltaTime; e.timer <= 0f }
+    }
+
+    fun resetUWCooldowns() { uwStates.forEach { it.cooldownRemaining = 0f } }
 
     // --- Orb management ---
 

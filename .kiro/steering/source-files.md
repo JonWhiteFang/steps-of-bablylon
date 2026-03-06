@@ -118,6 +118,8 @@ domain/usecase/CalculateDefense.kt              # Damage reduction (cap 75%) + f
 domain/usecase/UpdateBestWave.kt                # Compares wave to stored best, persists if new record
 domain/usecase/CheckTierUnlock.kt               # Checks wave milestones for tier unlock eligibility
 domain/usecase/ActivateOverdrive.kt              # Validates overdrive activation (balance + once-per-round)
+domain/usecase/UnlockUltimateWeapon.kt           # Checks Power Stone balance, deducts, unlocks UW
+domain/usecase/UpgradeUltimateWeapon.kt          # Cost scaling per level, max level 10
 ```
 
 ## Presentation Layer
@@ -125,7 +127,7 @@ domain/usecase/ActivateOverdrive.kt              # Validates overdrive activatio
 ```
 presentation/MainActivity.kt                      # Single Activity, Scaffold + NavHost + BottomNavBar, permissions
 presentation/HealthConnectPermissionActivity.kt    # Privacy policy stub for Health Connect
-presentation/navigation/Screen.kt                 # Sealed class: 5 routes (Home, Workshop, Battle, Labs, Stats)
+presentation/navigation/Screen.kt                 # Sealed class: 6 routes (Home, Workshop, Battle, Labs, Stats, Weapons)
 presentation/navigation/BottomNavBar.kt            # Bottom navigation bar with 5 items
 presentation/home/HomeViewModel.kt                 # @HiltViewModel: combines profile + step flows → HomeUiState
 presentation/home/HomeUiState.kt                   # UI state: steps, balance, tier, biome, bestWave
@@ -156,10 +158,13 @@ presentation/battle/ui/PostRoundOverlay.kt         # Post-round summary: wave, k
 presentation/battle/ui/PauseOverlay.kt             # Pause overlay: Resume + Quit Round buttons
 presentation/battle/ui/BiomeTransitionOverlay.kt   # Full-screen biome reveal overlay with step count
 presentation/battle/ui/OverdriveMenu.kt            # Overdrive type selection (4 options, cost, affordability)
+presentation/battle/ui/UltimateWeaponBar.kt        # UW activation buttons (up to 3, cooldown overlay)
 presentation/battle/biome/BiomeTheme.kt            # 5 biome color palettes (sky, ground, ziggurat, enemy, particles)
 presentation/battle/biome/BackgroundRenderer.kt    # Gradient sky + ambient particle system per biome
 presentation/ui/theme/Color.kt                     # Compose color definitions
 presentation/ui/theme/Theme.kt                     # Compose theme setup (Material3)
+presentation/weapons/UltimateWeaponViewModel.kt    # @HiltViewModel: UW unlock/upgrade/equip state
+presentation/weapons/UltimateWeaponScreen.kt       # UW management: 6 cards with lock/unlock/equip/upgrade
 ```
 
 ## Service Layer
@@ -179,6 +184,7 @@ All paths relative to `app/src/test/java/com/whitefang/stepsofbabylon/`.
 ```
 fakes/FakePlayerRepository.kt                    # In-memory StateFlow-backed fake for PlayerRepository
 fakes/FakeWorkshopRepository.kt                  # In-memory StateFlow-backed fake for WorkshopRepository
+fakes/FakeUltimateWeaponRepository.kt            # In-memory StateFlow-backed fake for UltimateWeaponRepository
 domain/usecase/CalculateUpgradeCostTest.kt        # Cost formula: baseCost × scaling^level, all 23 types
 domain/usecase/CanAffordUpgradeTest.kt            # Affordability checks against wallet
 domain/usecase/QuickInvestTest.kt                 # Cheapest affordable upgrade recommendation
@@ -186,6 +192,8 @@ domain/usecase/PurchaseUpgradeTest.kt             # Purchase flow with fake repo
 domain/usecase/UpdateBestWaveTest.kt              # Best wave tracking, new record detection
 domain/usecase/CheckTierUnlockTest.kt             # Tier unlock logic against wave milestones
 domain/usecase/ActivateOverdriveTest.kt           # Overdrive activation validation
+domain/usecase/UnlockUltimateWeaponTest.kt        # UW unlock with Power Stones
+domain/usecase/UpgradeUltimateWeaponTest.kt       # UW upgrade cost scaling, max level
 domain/usecase/ResolveStatsTest.kt                # Multiplicative stacking, all stat caps
 domain/usecase/CalculateDamageTest.kt             # Crit/no-crit with injectable Random, damage/meter bonus
 domain/usecase/CalculateDefenseTest.kt            # Percent reduction, flat block, floor at 0
