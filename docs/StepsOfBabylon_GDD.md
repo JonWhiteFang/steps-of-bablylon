@@ -42,15 +42,15 @@ Steps of Babylon's gameplay operates on two interlocking loops: the **Walk Loop*
 
 ### 2.1 The Walk Loop (Real World)
 
-The Walk Loop runs continuously in the background via Android's step counter sensors and Google Fit API integration.
+The Walk Loop runs continuously in the background via Android's step counter sensors and Health Connect integration.
 
 1. Player walks throughout their day with Steps of Babylon installed.
-2. Steps are counted in real-time via Android's `TYPE_STEP_COUNTER` sensor (with Google Fit as fallback).
+2. Steps are counted in real-time via Android's `TYPE_STEP_COUNTER` sensor (with Health Connect as cross-validation).
 3. Steps accumulate as spendable currency, visible on a persistent notification and home screen widget.
 4. Player opens the app and spends accumulated steps on permanent Workshop upgrades.
 5. Upgraded ziggurat performs better in battles, motivating the player to earn more steps for the next upgrade.
 
-**Anti-cheat:** Step data is validated against Google Fit's server-side records. Sudden spikes (>500 steps/minute sustained) trigger soft validation. Shaking exploits are mitigated by requiring consistent step patterns over time windows.
+**Anti-cheat:** Step data is cross-validated against Health Connect records. Rate limiting caps at 200 steps/minute (250 burst for running). Discrepancies >20% trigger escrow. Shaking exploits are mitigated by requiring consistent step patterns over time windows.
 
 ### 2.2 The Battle Loop (In-Game)
 
@@ -293,13 +293,13 @@ Temporary per-round bonuses activated at round start. Equip up to 3 Cards. Acqui
 ### 11.1 Sensor Stack
 
 - **Primary:** Android `TYPE_STEP_COUNTER` hardware sensor (always-on, battery efficient)
-- **Secondary:** Google Fit API for cross-validation and gap-filling
+- **Secondary:** Health Connect SDK for cross-validation and gap-filling
 - **Tertiary:** `TYPE_STEP_DETECTOR` for realtime feedback (notifications, widget)
 
 ### 11.2 Background Service Architecture
 
 - Foreground Service with persistent notification showing daily step count and balance
-- WorkManager periodic sync (every 15 min) to reconcile with Google Fit
+- WorkManager periodic sync (every 15 min) to reconcile with Health Connect
 - Boot receiver to restart service after reboot
 - Battery optimization whitelist request on first launch
 
@@ -308,23 +308,23 @@ Temporary per-round bonuses activated at round start. Equip up to 3 Cards. Acqui
 | Measure | Implementation | Severity |
 |---|---|---|
 | Rate Limiting | Max 200 steps/min credited (bursts up to 250 for running) | Soft — excess discarded silently |
-| Google Fit Cross-Validation | Discrepancies >20% flagged | Medium — steps held in escrow |
+| Health Connect Cross-Validation | Discrepancies >20% flagged | Medium — steps held in escrow |
 | Accelerometer Pattern Analysis | Detects mechanical regularity (phone shakers) | Hard — suspicious steps rejected |
 | Daily Ceiling | Max 50,000 steps/day | Hard — prevents extreme exploits |
 
 ### 11.4 Activity Minute Parity (Indoor Workout Support)
 
-**Conversion:** 1 Google Fit Active Minute = 100 Step-equivalents (~brisk walk pace).
+**Conversion:** 1 Health Connect Active Minute = 100 Step-equivalents (~brisk walk pace).
 
 | Activity | Source | Conversion | Daily Cap |
 |---|---|---|---|
 | Outdoor walking/running | TYPE_STEP_COUNTER | 1:1 (native steps) | 50,000 steps |
-| Treadmill walking | TYPE_STEP_COUNTER or Google Fit | 1:1 | 50,000 steps |
-| Stationary cycling | Google Fit Active Minutes | 1 min = 100 Step-eq | 10,000 Step-eq |
-| Rowing machine | Google Fit Active Minutes | 1 min = 100 Step-eq | 10,000 Step-eq |
-| Swimming | Google Fit Active Minutes | 1 min = 120 Step-eq | 12,000 Step-eq |
-| Wheelchair propulsion | Google Fit Active Minutes | 1 min = 110 Step-eq | 11,000 Step-eq |
-| Yoga / Stretching | Google Fit Active Minutes | 1 min = 50 Step-eq | 5,000 Step-eq |
+| Treadmill walking | TYPE_STEP_COUNTER or Health Connect | 1:1 | 50,000 steps |
+| Stationary cycling | Health Connect Active Minutes | 1 min = 100 Step-eq | 10,000 Step-eq |
+| Rowing machine | Health Connect Active Minutes | 1 min = 100 Step-eq | 10,000 Step-eq |
+| Swimming | Health Connect Active Minutes | 1 min = 120 Step-eq | 12,000 Step-eq |
+| Wheelchair propulsion | Health Connect Active Minutes | 1 min = 110 Step-eq | 11,000 Step-eq |
+| Yoga / Stretching | Health Connect Active Minutes | 1 min = 50 Step-eq | 5,000 Step-eq |
 
 Double-counting prevention: Step-equivalents only credited when step sensor records <50 steps/min.
 
@@ -400,7 +400,7 @@ Assumes ~8,000 steps/day.
 | Language | Kotlin | Modern Android standard, coroutines, strong type safety |
 | Architecture | MVVM + Clean Architecture | Separation of concerns, testability |
 | Game Engine | Custom Canvas/SurfaceView renderer | Lightweight, no heavy engine needed for 2D gameplay |
-| Step Counting | Android Sensor API + Google Fit SDK | Reliable hardware-backed counting with cloud validation |
+| Step Counting | Android Sensor API + Health Connect SDK | Reliable hardware-backed counting with cross-validation |
 | Local Storage | Room Database (SQLite) | All game state stored locally. Offline-first. |
 | Background Tasks | WorkManager + Foreground Service | Reliable step counting when backgrounded |
 | UI Framework | Jetpack Compose (menus) + SurfaceView (battle) | Modern declarative UI + performant canvas rendering |
@@ -445,7 +445,7 @@ Three random daily missions refresh at midnight:
 ## 17. Accessibility & Health Considerations
 
 - **Wheelchair/mobility support:** Activity Minute Parity credits all forms of physical activity at fair rates.
-- **Indoor workout parity:** Cycling, rowing, swimming earn Step-equivalents via Google Fit Active Minutes.
+- **Indoor workout parity:** Cycling, rowing, swimming earn Step-equivalents via Health Connect Active Minutes.
 - **Rest day encouragement:** After 3+ consecutive 10k+ step days, suggests rest with a bonus Gem reward.
 - **No punishment for inactivity:** Missing days never results in penalties or FOMO mechanics.
 - **Color-blind modes:** Three alternative palettes for common color vision deficiencies.
@@ -474,9 +474,9 @@ Three random daily missions refresh at midnight:
 | Step spoofing/cheating | High | Erodes integrity | Multi-layer anti-cheat. Solo-only limits impact. |
 | Battery drain | Medium | User churn | Hardware step counter, minimize polling, low-priority notification |
 | Player hits wall | Medium | Frustration | Step Multiplier, daily missions, lateral tier progression |
-| OEM battery optimization kills service | High | Steps not counted | Whitelist prompt, WorkManager catch-up, Google Fit gap-filling |
+| OEM battery optimization kills service | High | Steps not counted | Whitelist prompt, WorkManager catch-up, Health Connect gap-filling |
 | Step cost balancing | Medium | Too easy/grindy | Playtesting with varied profiles. Server-side tuning capability. |
-| Activity Minute gaming | Medium | Inflated step-eq | Google Fit validation. Separate daily caps. Overlap deduction. |
+| Activity Minute gaming | Medium | Inflated step-eq | Health Connect validation. Separate daily caps. Overlap deduction. |
 | Supply Drop notification fatigue | Low | Players disable notifications | Conservative rates. Unclaimed inbox fallback. Customizable frequency. |
 | Overdrive trivializing difficulty | Medium | Brute-force tiers | Once-per-round limit. Meaningful costs competing with permanent upgrades. |
 

@@ -21,7 +21,7 @@ Steps of Babylon follows MVVM + Clean Architecture with three layers.
 │  data/                                  │
 │  Room Entities · DAOs ·                 │
 │  Repository Implementations ·           │
-│  Sensor / Google Fit Data Sources       │
+│  Sensor / Health Connect Data Sources   │
 └─────────────────────────────────────────┘
 ```
 
@@ -68,7 +68,8 @@ Hilt with KSP (not kapt). All modules in `di/`.
 
 - `DatabaseModule` — provides Room database and DAOs
 - `RepositoryModule` — binds repository interfaces to Room-backed implementations
-- Future modules: `SensorModule`, `GoogleFitModule`
+- `StepModule` — provides SensorManager
+- `HealthConnectModule` — Health Connect organizational module
 
 ## Naming Conventions
 

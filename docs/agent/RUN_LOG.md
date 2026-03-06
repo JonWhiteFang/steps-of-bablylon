@@ -215,3 +215,23 @@
 - Commands/tests run: `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL, zero warnings
 - Open questions / blockers: None.
 - Memory updated: STATE ✅ / RUN_LOG ✅
+
+## 2026-03-06 — Documentation Sweep
+- Goal: Full project documentation audit — find and fix stale/incorrect references.
+- Changes made:
+  - Updated `docs/StepsOfBabylon_GDD.md` — replaced all Google Fit references with Health Connect (§2.1, §11.1–§11.4, §15.1, §17, §19). Fixed anti-cheat rate limit from ">500 steps/min" to "200/min (250 burst)".
+  - Updated `docs/database-schema.md` — DailyStepRecord: `googleFitSteps` → `healthConnectSteps`, added `escrowSteps` and `escrowSyncCount` columns.
+  - Updated `docs/architecture.md` — layer diagram "Google Fit" → "Health Connect", DI section now lists actual modules (StepModule, HealthConnectModule) instead of "Future modules".
+  - Rewrote `docs/plans/plan-05-google-fit.md` — body now reflects actual Health Connect implementation with correct file paths and class names.
+  - Updated `docs/plans/plan-25-anti-cheat.md` — all Google Fit references → Health Connect, corrected package paths (`data/healthconnect/` not `data/googlefit/`).
+  - Updated `docs/plans/plan-30-release.md` — ProGuard keep rules, privacy policy, and checklist updated for Health Connect.
+  - Updated `docs/plans/master-plan.md` — Plan 10 description corrected (orbs/bounce were deferred to 10b).
+  - Updated `docs/agent/STATE.md` — removed stale "Google Fit references" known issue.
+- Remaining cosmetic issues (not fixed — completed plans, code is correct):
+  - `docs/plans/plan-02-database.md` and `plan-03-repositories.md` still reference `googleFitSteps` column name (these are historical plan docs; actual code uses `healthConnectSteps`)
+  - `docs/agent/RUN_LOG.md` references are historical records (correct to leave as-is)
+  - `docs/agent/DECISIONS/ADR-0002-health-connect.md` references are contextual (explaining the decision)
+  - `docs/agent/state.json` is an orphaned file from earlier approach (harmless)
+  - `docs/temp/` contains a reference playbook from setup (harmless)
+- Commands/tests run: N/A (documentation-only changes)
+- Memory updated: STATE ✅ / RUN_LOG ✅

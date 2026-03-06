@@ -10,7 +10,7 @@
 ## Known issues / debt
 - Notification uses placeholder system icon.
 - ActivityMinuteConverter passes empty sensorStepsPerMinute map (deferred).
-- GDD/docs still have some Google Fit references (cosmetic).
+- Plan 02/03 docs still reference `googleFitSteps` column name (cosmetic — completed plans, actual code is correct).
 
 ## Top priorities (next 5)
 1. Plan 12: Round Lifecycle & Post-Round (CRITICAL PATH)

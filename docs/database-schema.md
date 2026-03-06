@@ -70,8 +70,10 @@ Historical step data, one row per day.
 |---|---|---|
 | date | String (PK) | ISO date (yyyy-MM-dd) |
 | sensorSteps | Long | Raw TYPE_STEP_COUNTER |
-| googleFitSteps | Long | Google Fit reported |
+| healthConnectSteps | Long | Health Connect reported |
 | creditedSteps | Long | After anti-cheat validation |
+| escrowSteps | Long | Steps held pending cross-validation |
+| escrowSyncCount | Int | Number of sync attempts for escrow resolution |
 | activityMinutes | String (JSON) | Map<ActivityType, Int> |
 | stepEquivalents | Long | From Activity Minute Parity |
 

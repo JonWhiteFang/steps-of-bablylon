@@ -22,7 +22,7 @@ Update `app/build.gradle.kts`:
   - Keep Room entities and DAOs
   - Keep Hilt-generated classes
   - Keep Kotlin serialization models
-  - Keep Google Fit API classes
+  - Keep Health Connect API classes
   - Keep Google Play Billing classes
   - Keep AdMob classes
   - Keep SensorEvent callback methods
@@ -68,10 +68,10 @@ Create `docs/release/` directory with:
 ### Task 5: Privacy Policy
 
 Create `docs/release/privacy-policy.md`:
-- Data collected: step count (device sensor), Google Fit data (with consent), purchase history
+- Data collected: step count (device sensor), Health Connect data (with consent), purchase history
 - Data stored: locally on device only (Room database)
 - No server-side data collection in v1.0
-- Google Fit: OAuth scope `FITNESS_ACTIVITY_READ`, data used only for step validation
+- Health Connect: permissions `READ_STEPS` and `READ_EXERCISE`, data used only for step validation
 - AdMob: standard ad SDK data collection disclosure
 - Google Play Billing: standard purchase data
 - No personal data shared with third parties beyond ad/billing SDKs
@@ -85,7 +85,7 @@ Pre-release checklist:
 - [ ] Release APK installs and runs on API 34 device
 - [ ] Release APK installs and runs on API 36 device
 - [ ] Step counting works in background (release build)
-- [ ] Google Fit sign-in works
+- [ ] Health Connect permissions and step reading works
 - [ ] All IAPs testable via Google Play test tracks
 - [ ] Reward ads load and grant rewards
 - [ ] No ANRs or crashes in 30-minute play session
