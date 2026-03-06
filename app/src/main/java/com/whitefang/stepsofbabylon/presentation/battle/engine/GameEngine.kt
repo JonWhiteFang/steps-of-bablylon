@@ -1,6 +1,7 @@
 package com.whitefang.stepsofbabylon.presentation.battle.engine
 
 import android.graphics.Canvas
+import com.whitefang.stepsofbabylon.domain.model.BattleConditionEffects
 import com.whitefang.stepsofbabylon.domain.model.EnemyType
 import com.whitefang.stepsofbabylon.domain.model.ResolvedStats
 import com.whitefang.stepsofbabylon.domain.model.TierConfig
@@ -33,6 +34,7 @@ class GameEngine {
     var waveSpawner: WaveSpawner? = null; private set
     private var stats: ResolvedStats = ResolvedStats()
     private var tier: Int = 1
+    private var conditions: BattleConditionEffects = BattleConditionEffects()
     private var workshopLevels: Map<UpgradeType, Int> = emptyMap()
 
     @Volatile var cash: Long = 0L; private set
@@ -59,6 +61,7 @@ class GameEngine {
         cash = 0L; totalCashEarned = 0L; roundOver = false
         totalEnemiesKilled = 0; elapsedTimeSeconds = 0f
         stats = resolvedStats; tier = playerTier; workshopLevels = wsLevels
+        conditions = BattleConditionEffects.fromTier(tier)
 
         val zig = ZigguratEntity(width, height, stats, ::findNearestEnemies) { sx, sy, tx, ty ->
             pendingAdd.add(ProjectileEntity(sx, sy, tx, ty, ZigguratBaseStats.PROJECTILE_SPEED, bouncesRemaining = stats.bounceCount))
@@ -77,6 +80,7 @@ class GameEngine {
                 pendingAdd.add(EnemyProjectileEntity(sx, sy, tx, ty, damage = dmg))
             },
             onWaveComplete = ::handleWaveComplete,
+            conditions = conditions,
         )
     }
 
@@ -136,7 +140,7 @@ class GameEngine {
         val count = stats.orbCount
         if (count <= 0) return
         val radius = stats.range * 0.4f
-        val damage = stats.damage * 0.5
+        val damage = stats.damage * 0.5 * conditions.orbDamageMultiplier
         for (i in 0 until count) {
             val angle = (2.0 * PI / count * i).toFloat()
             entities.add(OrbEntity(
@@ -157,7 +161,8 @@ class GameEngine {
         if (stats.knockbackForce > 0f) {
             val dx = enemy.x - zig.x; val dy = enemy.y - zig.y
             val d = hypot(dx, dy).coerceAtLeast(1f)
-            enemy.applyKnockback(dx / d * stats.knockbackForce * 0.5f, dy / d * stats.knockbackForce * 0.5f)
+            val kb = stats.knockbackForce * 0.5f * conditions.knockbackMultiplier
+            enemy.applyKnockback(dx / d * kb, dy / d * kb)
         }
         if (stats.lifestealPercent > 0) {
             zig.currentHp = min(zig.currentHp + damage * stats.lifestealPercent, zig.maxHp)
@@ -192,7 +197,8 @@ class GameEngine {
         if (stats.knockbackForce > 0f) {
             val dx = enemy.x - zig.x; val dy = enemy.y - zig.y
             val d = hypot(dx, dy).coerceAtLeast(1f)
-            enemy.applyKnockback(dx / d * stats.knockbackForce, dy / d * stats.knockbackForce)
+            val kb = stats.knockbackForce * conditions.knockbackMultiplier
+            enemy.applyKnockback(dx / d * kb, dy / d * kb)
         }
         if (stats.lifestealPercent > 0) {
             zig.currentHp = min(zig.currentHp + result.amount * stats.lifestealPercent, zig.maxHp)
@@ -230,7 +236,7 @@ class GameEngine {
 
     private fun applyThorn(rawDamage: Double, attacker: EnemyEntity?) {
         if (attacker != null && attacker.isAlive && stats.thornPercent > 0)
-            attacker.takeDamage(rawDamage * stats.thornPercent)
+            attacker.takeDamage(rawDamage * stats.thornPercent * conditions.thornMultiplier)
     }
 
     // --- Targeting & death ---
@@ -261,7 +267,7 @@ class GameEngine {
                 val child = EnemyEntity(
                     enemyType = EnemyType.BASIC,
                     currentHp = enemy.maxHp * 0.5, maxHp = enemy.maxHp * 0.5,
-                    speed = EnemyScaler.scaleSpeed(EnemyType.SCATTER),
+                    speed = EnemyScaler.scaleSpeed(EnemyType.SCATTER) * conditions.enemySpeedMultiplier,
                     damage = enemy.damage * 0.5,
                     targetX = zig.x, targetY = zig.y,
                     onDeath = ::handleEnemyDeath,

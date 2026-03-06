@@ -83,6 +83,7 @@ domain/model/Tier.kt                  # Tier data class
 domain/model/TierConfig.kt            # Full tier table (1–10)
 domain/model/BattleCondition.kt       # 7 battle condition types
 domain/model/Biome.kt                 # 5 biomes with forTier() mapping
+domain/model/BattleConditionEffects.kt # Pre-computed battle condition modifiers from tier
 domain/model/EnemyType.kt             # 6 enemy types with multipliers
 domain/model/UltimateWeaponType.kt    # 6 UW types with unlock costs
 domain/model/UltimateWeaponLoadout.kt # UW loadout (max 3)
@@ -114,6 +115,7 @@ domain/usecase/ResolveStats.kt                  # Workshop + in-round levels →
 domain/usecase/CalculateDamage.kt               # Raw damage + crit roll + damage/meter bonus → DamageResult
 domain/usecase/CalculateDefense.kt              # Damage reduction (cap 75%) + flat block
 domain/usecase/UpdateBestWave.kt                # Compares wave to stored best, persists if new record
+domain/usecase/CheckTierUnlock.kt               # Checks wave milestones for tier unlock eligibility
 ```
 
 ## Presentation Layer
@@ -125,7 +127,8 @@ presentation/navigation/Screen.kt                 # Sealed class: 5 routes (Home
 presentation/navigation/BottomNavBar.kt            # Bottom navigation bar with 5 items
 presentation/home/HomeViewModel.kt                 # @HiltViewModel: combines profile + step flows → HomeUiState
 presentation/home/HomeUiState.kt                   # UI state: steps, balance, tier, biome, bestWave
-presentation/home/HomeScreen.kt                    # Dashboard: step card, currencies, tier/biome, battle button
+presentation/home/HomeScreen.kt                    # Dashboard: step card, currencies, tier selector, battle button
+presentation/home/TierSelector.kt                  # Horizontal tier chip row with lock/unlock states
 presentation/workshop/WorkshopViewModel.kt         # @HiltViewModel: upgrades + wallet → WorkshopUiState
 presentation/workshop/WorkshopUiState.kt           # UI state: upgrade list, balance, selected category
 presentation/workshop/WorkshopScreen.kt            # 3-tab layout, upgrade list, Quick Invest FAB
@@ -175,6 +178,7 @@ domain/usecase/CanAffordUpgradeTest.kt            # Affordability checks against
 domain/usecase/QuickInvestTest.kt                 # Cheapest affordable upgrade recommendation
 domain/usecase/PurchaseUpgradeTest.kt             # Purchase flow with fake repos
 domain/usecase/UpdateBestWaveTest.kt              # Best wave tracking, new record detection
+domain/usecase/CheckTierUnlockTest.kt             # Tier unlock logic against wave milestones
 domain/usecase/ResolveStatsTest.kt                # Multiplicative stacking, all stat caps
 domain/usecase/CalculateDamageTest.kt             # Crit/no-crit with injectable Random, damage/meter bonus
 domain/usecase/CalculateDefenseTest.kt            # Percent reduction, flat block, floor at 0
@@ -184,6 +188,7 @@ domain/model/CardLoadoutTest.kt                   # Max 3, no duplicates, add/re
 domain/model/UltimateWeaponLoadoutTest.kt         # Max 3, no duplicates, add/remove
 domain/model/UpgradeTypeTest.kt                   # 23 entries, category counts, valid configs
 domain/model/EnemyTypeTest.kt                     # 6 entries, multiplier correctness
+domain/model/BattleConditionEffectsTest.kt        # All tier condition modifiers verified
 presentation/battle/engine/EnemyScalerTest.kt     # Wave scaling, speed, cash rewards
 data/sensor/StepRateLimiterTest.kt                # Normal/burst caps, window expiry, edge cases
 ```

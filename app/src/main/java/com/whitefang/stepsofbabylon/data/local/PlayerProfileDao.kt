@@ -29,6 +29,9 @@ interface PlayerProfileDao {
     @Query("UPDATE player_profile SET currentTier = :tier WHERE id = 1")
     suspend fun updateTier(tier: Int)
 
+    @Query("UPDATE player_profile SET highestUnlockedTier = :tier WHERE id = 1")
+    suspend fun updateHighestUnlockedTier(tier: Int)
+
     @Query("UPDATE player_profile SET bestWavePerTier = :bestWavePerTier WHERE id = 1")
     suspend fun updateBestWavePerTier(bestWavePerTier: Map<Int, Int>)
 

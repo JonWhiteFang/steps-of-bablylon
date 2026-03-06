@@ -7,6 +7,7 @@ import com.whitefang.stepsofbabylon.domain.model.UpgradeType
 import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
 import com.whitefang.stepsofbabylon.domain.repository.WorkshopRepository
 import com.whitefang.stepsofbabylon.domain.usecase.CalculateUpgradeCost
+import com.whitefang.stepsofbabylon.domain.usecase.CheckTierUnlock
 import com.whitefang.stepsofbabylon.domain.usecase.ResolveStats
 import com.whitefang.stepsofbabylon.domain.usecase.UpdateBestWave
 import com.whitefang.stepsofbabylon.presentation.battle.engine.GameEngine
@@ -34,6 +35,7 @@ class BattleViewModel @Inject constructor(
     private val resolveStats = ResolveStats()
     private val calculateCost = CalculateUpgradeCost()
     private val updateBestWave = UpdateBestWave(playerRepository)
+    private val checkTierUnlock = CheckTierUnlock()
 
     var resolvedStats: ResolvedStats = ResolvedStats(); private set
     private var workshopLevels: Map<UpgradeType, Int> = emptyMap()
@@ -85,6 +87,14 @@ class BattleViewModel @Inject constructor(
 
         viewModelScope.launch {
             val result = updateBestWave(tier, wave)
+
+            // Check tier unlock
+            val profile = playerRepository.observeProfile().first()
+            val newTier = checkTierUnlock(profile.bestWavePerTier, profile.highestUnlockedTier)
+            if (newTier != null) {
+                playerRepository.updateHighestUnlockedTier(newTier)
+            }
+
             _uiState.update {
                 it.copy(
                     isPaused = false,
@@ -96,6 +106,7 @@ class BattleViewModel @Inject constructor(
                         timeSurvivedSeconds = eng.elapsedTimeSeconds,
                         isNewBestWave = result.isNewRecord,
                         previousBest = result.previousBest,
+                        tierUnlocked = newTier,
                     ),
                 )
             }

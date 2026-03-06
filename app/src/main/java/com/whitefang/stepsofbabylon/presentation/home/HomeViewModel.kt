@@ -39,9 +39,15 @@ class HomeViewModel @Inject constructor(
             gems = profile.gems,
             powerStones = profile.powerStones,
             currentTier = profile.currentTier,
+            highestUnlockedTier = profile.highestUnlockedTier,
             currentBiome = Biome.forTier(profile.currentTier),
             bestWave = profile.bestWavePerTier[profile.currentTier] ?: 0,
+            bestWavePerTier = profile.bestWavePerTier,
             isLoading = false,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
+
+    fun selectTier(tier: Int) {
+        viewModelScope.launch { playerRepository.updateTier(tier) }
+    }
 }

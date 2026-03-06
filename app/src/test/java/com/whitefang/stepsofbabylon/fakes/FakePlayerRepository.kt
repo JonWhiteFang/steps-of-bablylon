@@ -27,6 +27,7 @@ class FakePlayerRepository(
     override suspend fun addCardDust(amount: Long) {}
     override suspend fun spendCardDust(amount: Long) {}
     override suspend fun updateTier(tier: Int) { profile.update { it.copy(currentTier = tier) } }
+    override suspend fun updateHighestUnlockedTier(tier: Int) { profile.update { it.copy(highestUnlockedTier = tier) } }
     override suspend fun updateBestWave(tier: Int, wave: Int) {
         profile.update { it.copy(bestWavePerTier = it.bestWavePerTier + (tier to wave)) }
     }

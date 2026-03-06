@@ -17,6 +17,7 @@ interface PlayerRepository {
     suspend fun addCardDust(amount: Long)
     suspend fun spendCardDust(amount: Long)
     suspend fun updateTier(tier: Int)
+    suspend fun updateHighestUnlockedTier(tier: Int)
     suspend fun updateBestWave(tier: Int, wave: Int)
     suspend fun ensureProfileExists()
 }

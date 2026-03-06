@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.whitefang.stepsofbabylon.domain.model.TierConfig
 import com.whitefang.stepsofbabylon.presentation.battle.RoundEndState
 
 @Composable
@@ -52,10 +53,16 @@ fun PostRoundOverlay(
 
                 if (state.isNewBestWave) {
                     Spacer(Modifier.height(8.dp))
-                    Text("🏆 New Record!", style = MaterialTheme.typography.titleMedium, color = Color(0xFFFFD700))
+                    Text("\uD83C\uDFC6 New Record!", style = MaterialTheme.typography.titleMedium, color = Color(0xFFFFD700))
                     if (state.previousBest > 0) {
                         Text("Previous best: Wave ${state.previousBest}", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
                     }
+                }
+
+                state.tierUnlocked?.let { tier ->
+                    Spacer(Modifier.height(8.dp))
+                    Text("\uD83D\uDD13 Tier $tier Unlocked!", style = MaterialTheme.typography.titleMedium, color = Color(0xFF4CAF50))
+                    Text("${TierConfig.forTier(tier).cashMultiplier}x cash multiplier", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
                 }
 
                 Spacer(Modifier.height(16.dp))

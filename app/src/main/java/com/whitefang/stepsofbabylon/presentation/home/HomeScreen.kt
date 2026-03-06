@@ -22,7 +22,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.whitefang.stepsofbabylon.presentation.ui.theme.DeepBronze
 import com.whitefang.stepsofbabylon.presentation.ui.theme.Gold
 import com.whitefang.stepsofbabylon.presentation.ui.theme.LapisLazuli
 
@@ -38,12 +37,12 @@ fun HomeScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        // Tier / Biome header
-        Text(
-            text = "Tier ${state.currentTier} — ${state.currentBiome.name.replace('_', ' ')}",
-            style = MaterialTheme.typography.headlineSmall,
-            color = DeepBronze,
-            fontWeight = FontWeight.Bold,
+        // Tier selector
+        TierSelector(
+            currentTier = state.currentTier,
+            highestUnlockedTier = state.highestUnlockedTier,
+            bestWavePerTier = state.bestWavePerTier,
+            onSelectTier = viewModel::selectTier,
         )
 
         // Today's steps card

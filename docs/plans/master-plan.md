@@ -108,7 +108,7 @@ graph TD
 - [x] Plan 11: In-Round Upgrades & Cash Economy
 - [x] Plan 12: Round Lifecycle & Post-Round
 - [x] Domain Layer Unit Tests (80 JVM tests — use cases, models, formulas, anti-cheat)
-- [ ] Plan 13: Tier System & Progression
+- [x] Plan 13: Tier System & Progression
 - [ ] Plan 14: Step Overdrive
 - [ ] Plan 15: Ultimate Weapons
 - [ ] Plan 16: Labs System

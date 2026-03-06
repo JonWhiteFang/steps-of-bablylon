@@ -1,5 +1,6 @@
 package com.whitefang.stepsofbabylon.presentation.battle.engine
 
+import com.whitefang.stepsofbabylon.domain.model.BattleConditionEffects
 import com.whitefang.stepsofbabylon.domain.model.EnemyType
 import com.whitefang.stepsofbabylon.presentation.battle.entities.EnemyEntity
 import kotlin.math.min
@@ -15,6 +16,7 @@ class WaveSpawner(
     private val onMeleeHit: (Double) -> Unit,
     private val onEnemyFireProjectile: (Float, Float, Float, Float, Double) -> Unit,
     private val onWaveComplete: (waveNumber: Int) -> Unit = {},
+    private val conditions: BattleConditionEffects = BattleConditionEffects(),
 ) {
     var currentWave: Int = 1; private set
     var phase: WavePhase = WavePhase.SPAWNING; private set
@@ -74,7 +76,8 @@ class WaveSpawner(
         val type = pickType(currentWave, enemiesSpawned)
         val hp = EnemyScaler.scaleHealth(type, currentWave)
         val dmg = EnemyScaler.scaleDamage(type, currentWave)
-        val spd = EnemyScaler.scaleSpeed(type)
+        val spd = EnemyScaler.scaleSpeed(type) * conditions.enemySpeedMultiplier
+        val atkInterval = 1f / conditions.enemyAttackSpeedMultiplier
         val (sx, sy) = spawnPosition(screenWidth, screenHeight, type)
 
         val enemy = EnemyEntity(
@@ -83,6 +86,8 @@ class WaveSpawner(
             onDeath = onEnemyDeath,
             onMeleeHit = if (type != EnemyType.RANGED) onMeleeHit else null,
             onFireProjectile = if (type == EnemyType.RANGED) onEnemyFireProjectile else null,
+            attackInterval = atkInterval,
+            armorHits = conditions.armorHits,
         ).apply { x = sx; y = sy; initDistance() }
 
         enemiesAlive++
@@ -91,7 +96,7 @@ class WaveSpawner(
     }
 
     private fun pickType(wave: Int, index: Int): EnemyType {
-        if (wave % 10 == 0 && index == 0) return EnemyType.BOSS
+        if (wave % conditions.bossWaveInterval == 0 && index == 0) return EnemyType.BOSS
         val roll = Random.nextFloat()
         return when {
             wave <= 5 -> EnemyType.BASIC

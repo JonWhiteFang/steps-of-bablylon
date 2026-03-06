@@ -9,6 +9,7 @@ data class RoundEndState(
     val timeSurvivedSeconds: Float,
     val isNewBestWave: Boolean,
     val previousBest: Int,
+    val tierUnlocked: Int? = null,
 )
 
 data class BattleUiState(

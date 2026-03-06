@@ -275,3 +275,37 @@
 - Commands/tests run: `./run-gradle.sh testDebugUnitTest` — BUILD SUCCESSFUL, 80 tests, 0 failures
 - Open questions / blockers: None. ViewModel tests and instrumented tests deferred to Plan 29.
 - Memory updated: STATE ✅ / RUN_LOG ✅
+
+## 2026-03-06 — Plan 13: Tier System & Progression
+- Goal: Tier unlock logic, tier selector UI, battle conditions at Tier 6+, post-round tier unlock notification.
+- Decisions made:
+  - (a) Armor as hit counter — enemies block first N hits, then take full damage. Punishes fast-attack/low-damage builds.
+  - (a) Minimal tier selector — horizontal chip row on home screen, not a dedicated screen.
+  - (b) Notify only on unlock — player stays on current tier, chooses when to advance via selector.
+  - Added `highestUnlockedTier` as separate field from `currentTier` (play tier) to support tier selection.
+  - DB version bumped to 2 with destructive fallback (dev phase — proper migration before release).
+- Changes made:
+  - Created `domain/usecase/CheckTierUnlock.kt` — iterates tiers, checks wave milestones against bestWavePerTier
+  - Created `domain/model/BattleConditionEffects.kt` — pre-computes numeric modifiers from tier battle conditions
+  - Created `presentation/home/TierSelector.kt` — horizontal tier chip row with lock/unlock states, condition summary
+  - Updated `data/local/PlayerProfileEntity.kt` — added `highestUnlockedTier` column (default 1)
+  - Updated `data/local/PlayerProfileDao.kt` — added `updateHighestUnlockedTier()` query
+  - Updated `data/local/AppDatabase.kt` — bumped version to 2
+  - Updated `domain/model/PlayerProfile.kt` — added `highestUnlockedTier` field
+  - Updated `domain/repository/PlayerRepository.kt` — added `updateHighestUnlockedTier()` method
+  - Updated `data/repository/PlayerRepositoryImpl.kt` — implemented new method + entity→domain mapping
+  - Updated `presentation/battle/entities/EnemyEntity.kt` — added `armorHits` (blocks first N hits), `attackInterval` param, armor ring visual
+  - Updated `presentation/battle/engine/WaveSpawner.kt` — accepts `BattleConditionEffects`, applies speed/attack/armor/boss interval
+  - Updated `presentation/battle/engine/GameEngine.kt` — computes conditions from tier, applies orb/knockback/thorn multipliers
+  - Updated `presentation/battle/BattleUiState.kt` — added `tierUnlocked` to `RoundEndState`
+  - Updated `presentation/battle/BattleViewModel.kt` — checks tier unlock after round end, persists new highest tier
+  - Updated `presentation/battle/ui/PostRoundOverlay.kt` — shows "🔓 Tier X Unlocked!" banner with cash multiplier teaser
+  - Updated `presentation/home/HomeUiState.kt` — added `highestUnlockedTier`, `bestWavePerTier`
+  - Updated `presentation/home/HomeViewModel.kt` — loads unlock data, exposes `selectTier()`
+  - Updated `presentation/home/HomeScreen.kt` — replaced static header with TierSelector
+  - Updated `test/fakes/FakePlayerRepository.kt` — added `updateHighestUnlockedTier`
+  - Created `test/.../CheckTierUnlockTest.kt` — 7 tests for tier unlock logic
+  - Created `test/.../BattleConditionEffectsTest.kt` — 6 tests for all tier condition values
+- Commands/tests run: `./run-gradle.sh testDebugUnitTest` — BUILD SUCCESSFUL, 93 tests, 0 failures. `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL.
+- Open questions / blockers: None.
+- Memory updated: STATE ✅ / RUN_LOG ✅

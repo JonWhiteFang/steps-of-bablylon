@@ -18,10 +18,12 @@ class EnemyEntity(
     private val onDeath: (EnemyEntity) -> Unit,
     private val onMeleeHit: ((Double) -> Unit)? = null,
     private val onFireProjectile: ((Float, Float, Float, Float, Double) -> Unit)? = null,
+    private val attackInterval: Float = 1f,
+    armorHits: Int = 0,
 ) : Entity() {
 
+    var armorHits: Int = armorHits; private set
     private var attackCooldown = 0f
-    private val attackInterval = 1f
     private val meleeRange = 40f
     private var initialDist = 0f
 
@@ -61,6 +63,7 @@ class EnemyEntity(
     }
 
     fun takeDamage(amount: Double) {
+        if (armorHits > 0) { armorHits--; return }
         currentHp -= amount
         if (currentHp <= 0.0) { isAlive = false; onDeath(this) }
     }
@@ -87,6 +90,10 @@ class EnemyEntity(
             EnemyType.BOSS -> canvas.drawCircle(x, y, r, BOSS_PAINT)
             EnemyType.SCATTER -> canvas.drawCircle(x, y, r, SCATTER_PAINT)
         }
+        // Armor indicator
+        if (armorHits > 0) {
+            canvas.drawCircle(x, y, r + 3f, ARMOR_PAINT)
+        }
         // Mini HP bar
         val barW = width * 1.2f; val barH = 4f; val barY = y - r - 8f
         canvas.drawRect(x - barW / 2, barY, x + barW / 2, barY + barH, HP_BG)
@@ -102,6 +109,7 @@ class EnemyEntity(
         private val RANGED_PAINT = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF9C27B0.toInt() }
         private val BOSS_PAINT = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF4A0000.toInt() }
         private val SCATTER_PAINT = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF4CAF50.toInt() }
+        private val ARMOR_PAINT = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x5500BCD4.toInt(); style = Paint.Style.STROKE; strokeWidth = 2f }
         private val HP_BG = Paint().apply { color = 0xFF2A1A10.toInt() }
         private val HP_FILL = Paint()
         private val TRIANGLE_PATH = Path()

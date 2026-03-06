@@ -168,8 +168,9 @@ graph TD
 - [x] **Plan 10b: Advanced Combat (Orbs, Multishot, Bounce)** ✓
 - [x] **Plan 11: In-Round Upgrades & Cash Economy** ✓
 - [x] **Plan 12: Round Lifecycle & Post-Round** ✓
-- [x] **Domain Layer Unit Tests** ✓ (80 JVM tests — use cases, models, formulas, anti-cheat)
-- [ ] **Plan 13: Tier System & Progression** ← next up (critical path)
+- [x] **Domain Layer Unit Tests** ✓ (93 JVM tests — use cases, models, formulas, anti-cheat, tier system)
+- [x] **Plan 13: Tier System & Progression** ✓
+- [ ] **Plan 18: Narrative Biome Progression** ← next up (critical path)
 
 ### Parallelizable Branches (after dependencies met)
 
@@ -229,7 +230,7 @@ The battle screen uses a custom `SurfaceView` with a game loop (not Compose). Ke
 - **Run tests:** `./run-gradle.sh testDebugUnitTest`
 - **Test source:** `app/src/test/java/com/whitefang/stepsofbabylon/`
 - **Fakes:** `test/fakes/` — FakePlayerRepository, FakeWorkshopRepository (in-memory StateFlow-backed).
-- **Current coverage:** 80 JVM tests — all use cases, domain models with validation logic, EnemyScaler, StepRateLimiter.
+- **Current coverage:** 93 JVM tests — all use cases, domain models with validation logic, battle condition effects, tier unlock logic, EnemyScaler, StepRateLimiter.
 
 ## Important Notes
 

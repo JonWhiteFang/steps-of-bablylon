@@ -8,7 +8,9 @@ data class HomeUiState(
     val gems: Long = 0,
     val powerStones: Long = 0,
     val currentTier: Int = 1,
+    val highestUnlockedTier: Int = 1,
     val currentBiome: Biome = Biome.HANGING_GARDENS,
     val bestWave: Int = 0,
+    val bestWavePerTier: Map<Int, Int> = emptyMap(),
     val isLoading: Boolean = true,
 )

@@ -8,6 +8,7 @@ data class PlayerProfile(
     val powerStones: Long = 0,
     val cardDust: Long = 0,
     val currentTier: Int = 1,
+    val highestUnlockedTier: Int = 1,
     val bestWavePerTier: Map<Int, Int> = emptyMap(),
     val createdAt: Long = 0,
     val lastActiveAt: Long = 0,
