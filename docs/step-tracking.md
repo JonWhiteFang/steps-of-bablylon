@@ -6,7 +6,7 @@
 |---|---|---|
 | Primary | `TYPE_STEP_COUNTER` | Cumulative hardware step count. Battery efficient. Persists across reboots. |
 | Secondary | Health Connect SDK | Cross-validation, gap-filling, Activity Minute Parity |
-| Tertiary | `TYPE_STEP_DETECTOR` | Real-time per-step events for notification/widget updates |
+| Tertiary | `TYPE_STEP_DETECTOR` | *(Planned)* Real-time per-step events for notification/widget updates |
 
 `TYPE_STEP_COUNTER` returns a cumulative count since last reboot. Track deltas between readings to compute steps per interval.
 
@@ -44,7 +44,7 @@
 | Rate limit | 200 steps/min (250 burst for running) | Excess steps silently discarded |
 | Daily ceiling | 50,000 steps/day | Hard cap, no more steps credited |
 | Health Connect cross-validation | >20% discrepancy | Steps held in escrow until reconciled |
-| Accelerometer pattern analysis | Mechanical regularity detected | Suspicious steps rejected |
+| Accelerometer pattern analysis | *(Planned)* Mechanical regularity detected | Suspicious steps rejected |
 
 ### Rate Limiting Implementation
 

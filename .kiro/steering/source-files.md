@@ -15,7 +15,7 @@ di/HealthConnectModule.kt          # Hilt: Health Connect organizational module
 ## Data Layer — Room
 
 ```
-data/local/AppDatabase.kt         # @Database: 7 entities, 7 DAOs, version 1, exportSchema=true
+data/local/AppDatabase.kt         # @Database: 7 entities, 7 DAOs, version 2, exportSchema=true
 data/local/Converters.kt          # @TypeConverters: Map<Int,Int> and Map<String,Int> via JSON
 data/local/DatabaseKeyManager.kt  # SQLCipher passphrase via Android Keystore
 data/local/PlayerProfileEntity.kt # Player profile entity (single row, id=1)

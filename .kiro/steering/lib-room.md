@@ -64,7 +64,7 @@ class Converters {
 
 - Auto migrations: `@Database(autoMigrations = [@AutoMigration(from = 1, to = 2)])`
 - Manual migrations for complex changes (column renames, data transforms)
-- Current schema version: 1
+- Current schema version: 2
 
 ## Flow Integration
 

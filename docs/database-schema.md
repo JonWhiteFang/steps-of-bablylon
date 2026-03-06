@@ -16,7 +16,8 @@ Primary player record. One row per player (single-player game).
 | gems | Long | Premium currency |
 | powerStones | Long | UW currency |
 | cardDust | Long | Card Dust currency |
-| currentTier | Int | Active difficulty tier |
+| currentTier | Int | Selected play tier |
+| highestUnlockedTier | Int | Highest tier unlocked (default 1) |
 | bestWavePerTier | String (JSON) | Map<Int, Int> serialized |
 | createdAt | Long | Epoch millis |
 | lastActiveAt | Long | Epoch millis |
@@ -123,6 +124,8 @@ Each entity gets its own DAO:
 - Write manual migrations for complex changes (column renames, data transforms)
 - Version numbering: increment by 1 per plan that touches the schema
 - Test migrations with `MigrationTestHelper` in instrumented tests
+- Current schema version: 2
+- v1→v2: Added `highestUnlockedTier` column to `player_profile` (Plan 13). Uses `fallbackToDestructiveMigration` during development.
 
 ## Type Converters
 

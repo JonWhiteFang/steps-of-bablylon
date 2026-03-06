@@ -85,7 +85,7 @@ All in `domain/model/`:
 | `di/RepositoryModule.kt` | Hilt module: binds all 7 repository interfaces to impls |
 | `di/StepModule.kt` | Hilt module: provides SensorManager |
 | `di/HealthConnectModule.kt` | Hilt module: Health Connect organizational module |
-| `data/local/AppDatabase.kt` | Room database (7 entities, 7 DAOs, version 1) |
+| `data/local/AppDatabase.kt` | Room database (7 entities, 7 DAOs, version 2) |
 | `data/local/DatabaseKeyManager.kt` | SQLCipher passphrase via Android Keystore |
 | `data/local/Converters.kt` | TypeConverters for `Map<Int,Int>` and `Map<String,Int>` (JSON) |
 | `data/sensor/StepSensorDataSource.kt` | TYPE_STEP_COUNTER wrapper, emits deltas via callbackFlow |
@@ -99,6 +99,7 @@ All in `domain/model/`:
 | `domain/usecase/CalculateDamage.kt` | Raw damage + crit roll + damage/meter bonus |
 | `domain/usecase/CalculateDefense.kt` | Damage reduction (cap 75%) + flat block |
 | `domain/usecase/UpdateBestWave.kt` | Compares wave to stored best, persists if new record |
+| `domain/usecase/CheckTierUnlock.kt` | Checks wave milestones for tier unlock eligibility |
 | `presentation/MainActivity.kt` | Single Activity, Scaffold + NavHost + BottomNavBar (hidden during battle), permissions |
 | `presentation/navigation/Screen.kt` | 5 navigation routes (Home, Workshop, Battle, Labs, Stats) |
 | `presentation/home/HomeViewModel.kt` | Combines profile + step flows into HomeUiState |

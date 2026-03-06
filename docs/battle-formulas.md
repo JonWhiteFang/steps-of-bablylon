@@ -99,7 +99,14 @@ Reduced by Thorn Resistance battle condition at higher tiers.
 
 ## Orbs
 
-Orbiting projectiles that damage nearby enemies. Count = orbLevel (cap 6). Damage scales with orb level. Reduced by Orb Resistance battle condition.
+Orbiting projectiles that damage nearby enemies. Count = orbLevel (cap 6). Reduced by Orb Resistance battle condition.
+
+```
+orbDamage = baseDamage × 0.5 × orbDamageMultiplier
+orbKnockback = knockbackForce × 0.5 × knockbackMultiplier
+```
+
+Orbs deal half the knockback force of direct projectile hits.
 
 ## Multishot & Bounce
 
@@ -161,10 +168,54 @@ enemyDamage = baseDamage × damageMultiplier × waveScalingFactor(wave)
 | Fast | 2.0× | 0.5× | 0.7× |
 | Tank | 0.5× | 5.0× | 2.0× |
 | Ranged | 0.8× | 0.8× | 1.2× |
-| Boss | 0.3× | 20.0× | 3.0× |
+| Boss | 0.5× | 20.0× | 3.0× |
 | Scatter | 1.2× | 1.5× | 0.8× |
 
 Bosses spawn every 10 waves (every 7 at Tier 9+ with More Bosses condition).
+
+## Scatter Enemy Split
+
+When a Scatter enemy dies, it spawns 2–3 Basic children:
+
+```
+childCount = random(2, 3)
+childHp = parentMaxHp × 0.5
+childDamage = parentDamage × 0.5
+childSpeed = scatterBaseSpeed × enemySpeedMultiplier
+```
+
+## Armored Enemies (Tier 8+)
+
+Enemies spawn with an armor hit counter from the ARMORED_ENEMIES battle condition:
+
+```
+armorHits = battleConditions[ARMORED_ENEMIES] (e.g., 5 at Tier 8)
+```
+
+While `armorHits > 0`, all incoming damage is fully absorbed and the counter decrements by 1. After armor breaks, enemies take full damage normally.
+
+## Battle Condition Effect Formulas (Tier 6+)
+
+Pre-computed from `TierConfig.forTier(tier).battleConditions`:
+
+```
+enemySpeedMultiplier     = 1.0 + (ENEMY_SPEED / 100)
+enemyAttackSpeedMultiplier = 1.0 + (ENEMY_ATTACK_SPEED / 100)
+orbDamageMultiplier      = 1.0 - (ORB_RESISTANCE / 100)
+knockbackMultiplier      = 1.0 - (KNOCKBACK_RESISTANCE / 100)
+thornMultiplier          = 1.0 - (THORN_RESISTANCE / 100)
+armorHits                = ARMORED_ENEMIES value (or 0)
+bossWaveInterval         = MORE_BOSSES value (7) or default (10)
+attackInterval           = 1.0 / enemyAttackSpeedMultiplier
+```
+
+Applied in engine:
+- Enemy speed: `baseSpeed × typeMultiplier × enemySpeedMultiplier`
+- Enemy attack interval: `1.0 / enemyAttackSpeedMultiplier`
+- Orb damage: `baseDamage × 0.5 × orbDamageMultiplier`
+- Projectile knockback: `knockbackForce × knockbackMultiplier`
+- Orb knockback: `knockbackForce × 0.5 × knockbackMultiplier`
+- Thorn damage: `incomingDamage × thornPercent × thornMultiplier`
 
 ## Overdrive Effects
 

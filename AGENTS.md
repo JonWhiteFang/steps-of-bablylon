@@ -43,15 +43,23 @@ Operating rules:
 app/src/main/java/com/whitefang/stepsofbabylon/
 ├── data/           # Android-dependent layer
 │   ├── local/      # Room database, entities, DAOs
-│   └── repository/ # Repository implementations (Room-backed)
+│   ├── repository/ # Repository implementations (Room-backed)
+│   ├── sensor/     # Step sensor data source, rate limiter, daily step manager
+│   └── healthconnect/ # Health Connect client, step reader, cross-validator, gap filler
 ├── domain/         # Pure Kotlin — no Android imports
-│   ├── model/      # Currency, PlayerWallet, PlayerProfile, and all game domain models
+│   ├── model/      # Currency, PlayerWallet, PlayerProfile, BattleConditionEffects, and all game domain models
 │   ├── repository/ # Repository interfaces
-│   └── usecase/    # CalculateUpgradeCost, CanAffordUpgrade
+│   └── usecase/    # CalculateUpgradeCost, CanAffordUpgrade, ResolveStats, CalculateDamage, CalculateDefense, PurchaseUpgrade, QuickInvest, UpdateBestWave, CheckTierUnlock
 ├── presentation/   # ViewModels, Compose screens, SurfaceView battle renderer
-│   ├── home/       # HomeScreen
+│   ├── navigation/ # Screen routes, BottomNavBar
+│   ├── home/       # HomeScreen, TierSelector
+│   ├── workshop/   # WorkshopScreen, UpgradeCard
+│   ├── battle/     # BattleScreen, BattleViewModel
+│   │   ├── engine/ # GameEngine, WaveSpawner, EnemyScaler, CollisionSystem
+│   │   ├── entities/ # ZigguratEntity, EnemyEntity, ProjectileEntity, OrbEntity
+│   │   └── ui/     # InRoundUpgradeMenu, PostRoundOverlay, PauseOverlay, HealthBarRenderer
 │   └── ui/theme/   # Color, Theme
-├── di/             # Hilt modules (DatabaseModule, RepositoryModule)
+├── di/             # Hilt modules (DatabaseModule, RepositoryModule, StepModule, HealthConnectModule)
 └── service/        # Foreground step-counting service, WorkManager workers (Plan 04)
 ```
 
