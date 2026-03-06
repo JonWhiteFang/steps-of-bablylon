@@ -34,6 +34,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.whitefang.stepsofbabylon.presentation.battle.ui.BiomeTransitionOverlay
 import com.whitefang.stepsofbabylon.presentation.battle.ui.InRoundUpgradeMenu
 import com.whitefang.stepsofbabylon.presentation.battle.ui.PauseOverlay
 import com.whitefang.stepsofbabylon.presentation.battle.ui.PostRoundOverlay
@@ -144,6 +145,11 @@ fun BattleScreen(
                 onPlayAgain = { viewModel.playAgain() },
                 onReturnToWorkshop = onExitBattle,
             )
+        }
+
+        // Biome transition overlay
+        state.biomeTransition?.let { info ->
+            BiomeTransitionOverlay(info = info, onContinue = { viewModel.dismissBiomeTransition() })
         }
     }
 }

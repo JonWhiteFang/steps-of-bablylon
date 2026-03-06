@@ -2,6 +2,7 @@ package com.whitefang.stepsofbabylon.presentation.battle.engine
 
 import android.graphics.Canvas
 import com.whitefang.stepsofbabylon.domain.model.BattleConditionEffects
+import com.whitefang.stepsofbabylon.domain.model.Biome
 import com.whitefang.stepsofbabylon.domain.model.EnemyType
 import com.whitefang.stepsofbabylon.domain.model.ResolvedStats
 import com.whitefang.stepsofbabylon.domain.model.TierConfig
@@ -9,6 +10,8 @@ import com.whitefang.stepsofbabylon.domain.model.UpgradeType
 import com.whitefang.stepsofbabylon.domain.model.ZigguratBaseStats
 import com.whitefang.stepsofbabylon.domain.usecase.CalculateDamage
 import com.whitefang.stepsofbabylon.domain.usecase.CalculateDefense
+import com.whitefang.stepsofbabylon.presentation.battle.biome.BackgroundRenderer
+import com.whitefang.stepsofbabylon.presentation.battle.biome.BiomeTheme
 import com.whitefang.stepsofbabylon.presentation.battle.entities.EnemyEntity
 import com.whitefang.stepsofbabylon.presentation.battle.entities.EnemyProjectileEntity
 import com.whitefang.stepsofbabylon.presentation.battle.entities.OrbEntity
@@ -36,14 +39,14 @@ class GameEngine {
     private var tier: Int = 1
     private var conditions: BattleConditionEffects = BattleConditionEffects()
     private var workshopLevels: Map<UpgradeType, Int> = emptyMap()
+    private var backgroundRenderer: BackgroundRenderer? = null
+    private var biomeTheme: BiomeTheme = BiomeTheme.forBiome(Biome.HANGING_GARDENS)
 
     @Volatile var cash: Long = 0L; private set
     @Volatile var totalCashEarned: Long = 0L; private set
     @Volatile var roundOver: Boolean = false
     @Volatile var totalEnemiesKilled: Int = 0; private set
     @Volatile var elapsedTimeSeconds: Float = 0f; private set
-
-    private val bgColor = 0xFF6B3A2A.toInt()
 
     companion object {
         const val BASE_CASH_PER_WAVE = 20L
@@ -62,8 +65,10 @@ class GameEngine {
         totalEnemiesKilled = 0; elapsedTimeSeconds = 0f
         stats = resolvedStats; tier = playerTier; workshopLevels = wsLevels
         conditions = BattleConditionEffects.fromTier(tier)
+        biomeTheme = BiomeTheme.forBiome(Biome.forTier(tier))
+        backgroundRenderer = BackgroundRenderer(width, height, biomeTheme)
 
-        val zig = ZigguratEntity(width, height, stats, ::findNearestEnemies) { sx, sy, tx, ty ->
+        val zig = ZigguratEntity(width, height, stats, ::findNearestEnemies, layerColors = biomeTheme.zigguratColors) { sx, sy, tx, ty ->
             pendingAdd.add(ProjectileEntity(sx, sy, tx, ty, ZigguratBaseStats.PROJECTILE_SPEED, bouncesRemaining = stats.bounceCount))
         }
         ziggurat = zig
@@ -81,6 +86,7 @@ class GameEngine {
             },
             onWaveComplete = ::handleWaveComplete,
             conditions = conditions,
+            enemyTint = biomeTheme.enemyTint,
         )
     }
 
@@ -108,6 +114,7 @@ class GameEngine {
         if (roundOver) return
         val zig = ziggurat ?: return
         elapsedTimeSeconds += deltaTime
+        backgroundRenderer?.update(deltaTime)
 
         waveSpawner?.update(deltaTime, screenWidth, screenHeight)
         entities.addAll(pendingAdd); pendingAdd.clear()
@@ -126,7 +133,7 @@ class GameEngine {
     }
 
     fun render(canvas: Canvas) {
-        canvas.drawColor(bgColor)
+        backgroundRenderer?.render(canvas) ?: canvas.drawColor(0xFF6B3A2A.toInt())
         entities.forEach { it.render(canvas) }
         ziggurat?.let { healthBarRenderer.render(canvas, it.currentHp, it.maxHp, screenWidth) }
     }

@@ -1,6 +1,7 @@
 package com.whitefang.stepsofbabylon.presentation.battle
 
 import com.whitefang.stepsofbabylon.domain.model.UpgradeType
+import com.whitefang.stepsofbabylon.presentation.battle.ui.BiomeTransitionInfo
 
 data class RoundEndState(
     val waveReached: Int,
@@ -26,4 +27,5 @@ data class BattleUiState(
     val inRoundLevels: Map<UpgradeType, Int> = emptyMap(),
     val lastPurchaseFree: Boolean = false,
     val roundEndState: RoundEndState? = null,
+    val biomeTransition: BiomeTransitionInfo? = null,
 )

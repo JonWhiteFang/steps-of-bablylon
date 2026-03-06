@@ -1,6 +1,8 @@
 package com.whitefang.stepsofbabylon.presentation.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,10 +20,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.whitefang.stepsofbabylon.presentation.battle.biome.BiomeTheme
 import com.whitefang.stepsofbabylon.presentation.ui.theme.Gold
 import com.whitefang.stepsofbabylon.presentation.ui.theme.LapisLazuli
 
@@ -31,59 +36,48 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val theme = BiomeTheme.forBiome(state.currentBiome)
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    Box(
+        Modifier.fillMaxSize().background(
+            Brush.verticalGradient(listOf(Color(theme.skyColorTop).copy(alpha = 0.3f), Color(theme.skyColorBottom).copy(alpha = 0.15f)))
+        )
     ) {
-        // Tier selector
-        TierSelector(
-            currentTier = state.currentTier,
-            highestUnlockedTier = state.highestUnlockedTier,
-            bestWavePerTier = state.bestWavePerTier,
-            onSelectTier = viewModel::selectTier,
-        )
-
-        // Today's steps card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = LapisLazuli.copy(alpha = 0.1f)),
+        Column(
+            modifier = Modifier.fillMaxSize().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Today", style = MaterialTheme.typography.labelLarge, color = LapisLazuli)
-                Text(
-                    text = "${state.todaySteps} steps",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = LapisLazuli,
-                )
+            TierSelector(
+                currentTier = state.currentTier,
+                highestUnlockedTier = state.highestUnlockedTier,
+                bestWavePerTier = state.bestWavePerTier,
+                onSelectTier = viewModel::selectTier,
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = LapisLazuli.copy(alpha = 0.1f)),
+            ) {
+                Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Today", style = MaterialTheme.typography.labelLarge, color = LapisLazuli)
+                    Text("${state.todaySteps} steps", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = LapisLazuli)
+                }
             }
-        }
 
-        // Currency row
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            CurrencyItem("Steps", state.stepBalance)
-            CurrencyItem("Gems", state.gems)
-            CurrencyItem("Power Stones", state.powerStones)
-        }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                CurrencyItem("Steps", state.stepBalance)
+                CurrencyItem("Gems", state.gems)
+                CurrencyItem("Power Stones", state.powerStones)
+            }
 
-        // Best wave
-        Text(
-            text = "Best Wave: ${state.bestWave}",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
+            Text("Best Wave: ${state.bestWave}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
 
-        Spacer(Modifier.weight(1f))
+            Spacer(Modifier.weight(1f))
 
-        // Battle button
-        Button(
-            onClick = onBattleClick,
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Gold),
-        ) {
-            Text("BATTLE", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Button(onClick = onBattleClick, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = Gold)) {
+                Text("BATTLE", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

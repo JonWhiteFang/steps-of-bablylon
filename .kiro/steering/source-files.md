@@ -63,6 +63,7 @@ data/healthconnect/StepCrossValidator.kt           # Cross-validation, escrow sy
 data/healthconnect/StepGapFiller.kt                # Recovers missed steps from HC when service killed
 data/healthconnect/ExerciseSessionReader.kt        # Reads exercise sessions for Activity Minute Parity
 data/healthconnect/ActivityMinuteConverter.kt      # Converts exercise minutes to step-equivalents with caps
+data/BiomePreferences.kt                          # SharedPreferences wrapper for first-seen biome tracking
 ```
 
 ## Domain Layer — Models
@@ -152,6 +153,9 @@ presentation/battle/ui/HealthBarRenderer.kt        # HP bar: green→yellow→re
 presentation/battle/ui/InRoundUpgradeMenu.kt      # In-round upgrade menu: 3 tabs, purchase with Cash
 presentation/battle/ui/PostRoundOverlay.kt         # Post-round summary: wave, kills, cash, time, new record banner
 presentation/battle/ui/PauseOverlay.kt             # Pause overlay: Resume + Quit Round buttons
+presentation/battle/ui/BiomeTransitionOverlay.kt   # Full-screen biome reveal overlay with step count
+presentation/battle/biome/BiomeTheme.kt            # 5 biome color palettes (sky, ground, ziggurat, enemy, particles)
+presentation/battle/biome/BackgroundRenderer.kt    # Gradient sky + ambient particle system per biome
 presentation/ui/theme/Color.kt                     # Compose color definitions
 presentation/ui/theme/Theme.kt                     # Compose theme setup (Material3)
 ```
@@ -190,5 +194,6 @@ domain/model/UpgradeTypeTest.kt                   # 23 entries, category counts,
 domain/model/EnemyTypeTest.kt                     # 6 entries, multiplier correctness
 domain/model/BattleConditionEffectsTest.kt        # All tier condition modifiers verified
 presentation/battle/engine/EnemyScalerTest.kt     # Wave scaling, speed, cash rewards
+presentation/battle/biome/BiomeThemeTest.kt       # All 5 biome palettes, ziggurat colors, particles
 data/sensor/StepRateLimiterTest.kt                # Normal/burst caps, window expiry, edge cases
 ```

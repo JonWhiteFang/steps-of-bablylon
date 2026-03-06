@@ -17,6 +17,7 @@ class WaveSpawner(
     private val onEnemyFireProjectile: (Float, Float, Float, Float, Double) -> Unit,
     private val onWaveComplete: (waveNumber: Int) -> Unit = {},
     private val conditions: BattleConditionEffects = BattleConditionEffects(),
+    private val enemyTint: Int = 0,
 ) {
     var currentWave: Int = 1; private set
     var phase: WavePhase = WavePhase.SPAWNING; private set
@@ -88,6 +89,7 @@ class WaveSpawner(
             onFireProjectile = if (type == EnemyType.RANGED) onEnemyFireProjectile else null,
             attackInterval = atkInterval,
             armorHits = conditions.armorHits,
+            enemyTint = enemyTint,
         ).apply { x = sx; y = sy; initDistance() }
 
         enemiesAlive++

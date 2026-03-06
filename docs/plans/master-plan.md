@@ -113,7 +113,7 @@ graph TD
 - [ ] Plan 15: Ultimate Weapons
 - [ ] Plan 16: Labs System
 - [ ] Plan 17: Cards System
-- [ ] Plan 18: Narrative Biome Progression
+- [x] Plan 18: Narrative Biome Progression
 - [ ] Plan 19: Walking Encounters & Supply Drops
 - [ ] Plan 20: Power Stone & Gem Economy
 - [ ] Plan 21: Milestones & Daily Missions

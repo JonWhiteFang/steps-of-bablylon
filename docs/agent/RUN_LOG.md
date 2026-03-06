@@ -309,3 +309,29 @@
 - Commands/tests run: `./run-gradle.sh testDebugUnitTest` — BUILD SUCCESSFUL, 93 tests, 0 failures. `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL.
 - Open questions / blockers: None.
 - Memory updated: STATE ✅ / RUN_LOG ✅
+
+## 2026-03-06 — Plan 18: Narrative Biome Progression
+- Goal: 5 biome visual identities, ambient particles, biome transition overlay, home screen theming.
+- Decisions made:
+  - (a) Simple overlay for biome transition — styled Compose screen, animation deferred to Plan 27.
+  - (a) Simple particles — lightweight spawn-drift-recycle, 30-50 per biome, no physics.
+  - (a) Derive biome unlock from highestUnlockedTier — no DB change, first-seen via SharedPreferences.
+  - Enemy tinting via 30% color blend with base type color (not color filter).
+  - Ziggurat colors passed as constructor parameter, paints built dynamically.
+- Changes made:
+  - Created `presentation/battle/biome/BiomeTheme.kt` — 5 biome palettes (sky, ground, ziggurat, enemy tint, particles)
+  - Created `presentation/battle/biome/BackgroundRenderer.kt` — gradient sky + ambient particle system
+  - Created `presentation/battle/ui/BiomeTransitionOverlay.kt` — full-screen biome reveal with step count
+  - Created `data/BiomePreferences.kt` — SharedPreferences wrapper for first-seen tracking
+  - Updated `presentation/battle/engine/GameEngine.kt` — creates BackgroundRenderer, passes biome colors/tint
+  - Updated `presentation/battle/entities/ZigguratEntity.kt` — accepts layerColors parameter
+  - Updated `presentation/battle/entities/EnemyEntity.kt` — accepts enemyTint, blends with base color
+  - Updated `presentation/battle/engine/WaveSpawner.kt` — accepts and passes enemyTint
+  - Updated `presentation/battle/BattleUiState.kt` — added biomeTransition field
+  - Updated `presentation/battle/BattleViewModel.kt` — injects BiomePreferences, checks first-seen, dismissBiomeTransition()
+  - Updated `presentation/battle/BattleScreen.kt` — shows BiomeTransitionOverlay
+  - Updated `presentation/home/HomeScreen.kt` — biome gradient background
+  - Created `test/.../BiomeThemeTest.kt` — 4 tests
+- Commands/tests run: `./run-gradle.sh testDebugUnitTest` — 97 tests, 0 failures. `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL.
+- Open questions / blockers: None.
+- Memory updated: STATE ✅ / RUN_LOG ✅

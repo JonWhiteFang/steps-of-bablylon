@@ -11,6 +11,7 @@ class ZigguratEntity(
     private val screenHeight: Float,
     val stats: ResolvedStats,
     private val findNearestEnemies: (Int) -> List<EnemyEntity>,
+    layerColors: List<Int> = DEFAULT_COLORS,
     private val onFireProjectile: (startX: Float, startY: Float, targetX: Float, targetY: Float) -> Unit,
 ) : Entity() {
 
@@ -26,10 +27,7 @@ class ZigguratEntity(
     private val baseWidth: Float = screenWidth * 0.35f
     private val layerHeight: Float = totalHeight / layerCount
 
-    private val layerPaints = arrayOf(
-        paint(0xFF8B7355.toInt()), paint(0xFF9C8565.toInt()),
-        paint(0xFFC2B280.toInt()), paint(0xFFCDBFA0.toInt()), paint(0xFFD4A843.toInt()),
-    )
+    private val layerPaints = layerColors.map { Paint(Paint.ANTI_ALIAS_FLAG).apply { color = it } }.toTypedArray()
     private val originPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFD700.toInt() }
 
     init {
@@ -42,15 +40,12 @@ class ZigguratEntity(
 
     override fun update(deltaTime: Float) {
         currentHp = min(currentHp + stats.healthRegen * deltaTime, maxHp)
-
         attackCooldown -= deltaTime
         if (attackCooldown <= 0f) {
             val targets = findNearestEnemies(stats.multishotTargets)
             if (targets.isNotEmpty()) {
                 attackCooldown = attackInterval
-                for (target in targets) {
-                    onFireProjectile(originX, originY, target.x, target.y)
-                }
+                for (target in targets) onFireProjectile(originX, originY, target.x, target.y)
             } else {
                 attackCooldown = 0f
             }
@@ -67,5 +62,7 @@ class ZigguratEntity(
         canvas.drawCircle(originX, originY, 6f, originPaint)
     }
 
-    private fun paint(color: Int) = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
+    companion object {
+        val DEFAULT_COLORS = listOf(0xFF8B7355.toInt(), 0xFF9C8565.toInt(), 0xFFC2B280.toInt(), 0xFFCDBFA0.toInt(), 0xFFD4A843.toInt())
+    }
 }
