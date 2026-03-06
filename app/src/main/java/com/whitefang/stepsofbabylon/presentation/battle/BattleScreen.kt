@@ -36,6 +36,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.whitefang.stepsofbabylon.presentation.battle.ui.BiomeTransitionOverlay
 import com.whitefang.stepsofbabylon.presentation.battle.ui.InRoundUpgradeMenu
+import com.whitefang.stepsofbabylon.presentation.battle.ui.OverdriveMenu
 import com.whitefang.stepsofbabylon.presentation.battle.ui.PauseOverlay
 import com.whitefang.stepsofbabylon.presentation.battle.ui.PostRoundOverlay
 
@@ -57,7 +58,6 @@ fun BattleScreen(
         if (!state.isLoading) surfaceView.configure(viewModel.resolvedStats, viewModel.tier, emptyMap())
     }
 
-    // Auto-pause on background
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE) viewModel.pause()
@@ -69,21 +69,23 @@ fun BattleScreen(
     Box(Modifier.fillMaxSize()) {
         AndroidView(factory = { surfaceView }, modifier = Modifier.fillMaxSize())
 
-        // Top-left: wave info + cash
+        // Top-left: wave info + cash + overdrive status
         Column(Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 80.dp)) {
             Text("Wave ${state.currentWave} · ${state.enemyCount} enemies", color = Color.White, style = MaterialTheme.typography.titleMedium)
             Text(state.wavePhase.lowercase().replaceFirstChar { it.uppercase() }, color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
             Text("$${state.cash}", color = Color(0xFFD4A843), style = MaterialTheme.typography.titleSmall)
+            state.activeOverdriveType?.let { type ->
+                Text("⚡ ${type.name} ${state.overdriveTimeRemaining.toInt()}s", color = Color(0xFFFF9800), style = MaterialTheme.typography.labelMedium)
+            }
         }
 
-        // Top-right: exit (quit round)
         if (roundActive) {
             IconButton(onClick = { viewModel.quitRound() }, modifier = Modifier.align(Alignment.TopEnd).padding(end = 8.dp, top = 72.dp)) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quit round", tint = Color.White)
             }
         }
 
-        // Bottom: speed controls + pause + upgrade toggle (hidden when round over)
+        // Bottom controls
         if (roundActive) {
             Row(
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp)
@@ -96,60 +98,52 @@ fun BattleScreen(
                     if (state.speedMultiplier == speed) {
                         Button(onClick = {}) { Text("${speed.toInt()}x") }
                     } else {
-                        FilledTonalButton(
-                            onClick = { viewModel.setSpeed(speed) },
+                        FilledTonalButton(onClick = { viewModel.setSpeed(speed) },
                             colors = ButtonDefaults.filledTonalButtonColors(containerColor = Color.White.copy(alpha = 0.2f)),
                         ) { Text("${speed.toInt()}x", color = Color.White) }
                     }
                 }
-                FilledTonalButton(
-                    onClick = { viewModel.togglePause() },
+                FilledTonalButton(onClick = { viewModel.togglePause() },
                     colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = if (state.isPaused) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.2f),
-                    ),
+                        containerColor = if (state.isPaused) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.2f)),
                 ) { Text(if (state.isPaused) "▶" else "⏸", color = Color.White) }
 
-                FilledTonalButton(
-                    onClick = { viewModel.toggleUpgradeMenu() },
+                FilledTonalButton(onClick = { viewModel.toggleUpgradeMenu() },
                     colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = if (state.showUpgradeMenu) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.2f),
-                    ),
+                        containerColor = if (state.showUpgradeMenu) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.2f)),
                 ) { Text("⬆", color = Color.White) }
+
+                // Overdrive button
+                FilledTonalButton(
+                    onClick = { viewModel.toggleOverdriveMenu() },
+                    enabled = !state.overdriveUsed,
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = if (state.showOverdriveMenu) Color(0xFFFF9800) else Color.White.copy(alpha = 0.2f),
+                        disabledContainerColor = Color.White.copy(alpha = 0.05f)),
+                ) { Text("⚡", color = if (state.overdriveUsed) Color.Gray else Color.White) }
             }
         }
 
-        // Upgrade menu overlay
+        // Upgrade menu
         if (state.showUpgradeMenu && roundActive) {
             Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 72.dp)) {
-                InRoundUpgradeMenu(
-                    cash = state.cash,
-                    inRoundLevels = state.inRoundLevels,
-                    onPurchase = viewModel::purchaseInRoundUpgrade,
-                    onDismiss = viewModel::toggleUpgradeMenu,
-                )
+                InRoundUpgradeMenu(cash = state.cash, inRoundLevels = state.inRoundLevels,
+                    onPurchase = viewModel::purchaseInRoundUpgrade, onDismiss = viewModel::toggleUpgradeMenu)
             }
         }
 
-        // Pause overlay
+        // Overdrive menu
+        if (state.showOverdriveMenu && roundActive) {
+            Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 72.dp)) {
+                OverdriveMenu(stepBalance = state.stepBalance, onSelect = viewModel::activateOverdrive, onDismiss = viewModel::toggleOverdriveMenu)
+            }
+        }
+
         if (state.isPaused && roundActive) {
-            PauseOverlay(
-                onResume = { viewModel.togglePause() },
-                onQuitRound = { viewModel.quitRound() },
-            )
+            PauseOverlay(onResume = { viewModel.togglePause() }, onQuitRound = { viewModel.quitRound() })
         }
 
-        // Post-round overlay
-        state.roundEndState?.let { endState ->
-            PostRoundOverlay(
-                state = endState,
-                onPlayAgain = { viewModel.playAgain() },
-                onReturnToWorkshop = onExitBattle,
-            )
-        }
-
-        // Biome transition overlay
-        state.biomeTransition?.let { info ->
-            BiomeTransitionOverlay(info = info, onContinue = { viewModel.dismissBiomeTransition() })
-        }
+        state.roundEndState?.let { PostRoundOverlay(state = it, onPlayAgain = { viewModel.playAgain() }, onReturnToWorkshop = onExitBattle) }
+        state.biomeTransition?.let { BiomeTransitionOverlay(info = it, onContinue = { viewModel.dismissBiomeTransition() }) }
     }
 }

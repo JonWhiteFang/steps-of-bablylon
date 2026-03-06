@@ -4,10 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.whitefang.stepsofbabylon.data.BiomePreferences
 import com.whitefang.stepsofbabylon.domain.model.Biome
+import com.whitefang.stepsofbabylon.domain.model.OverdriveType
 import com.whitefang.stepsofbabylon.domain.model.ResolvedStats
 import com.whitefang.stepsofbabylon.domain.model.UpgradeType
 import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
 import com.whitefang.stepsofbabylon.domain.repository.WorkshopRepository
+import com.whitefang.stepsofbabylon.domain.usecase.ActivateOverdrive
 import com.whitefang.stepsofbabylon.domain.usecase.CalculateUpgradeCost
 import com.whitefang.stepsofbabylon.domain.usecase.CheckTierUnlock
 import com.whitefang.stepsofbabylon.domain.usecase.ResolveStats
@@ -40,6 +42,7 @@ class BattleViewModel @Inject constructor(
     private val calculateCost = CalculateUpgradeCost()
     private val updateBestWave = UpdateBestWave(playerRepository)
     private val checkTierUnlock = CheckTierUnlock()
+    private val activateOverdriveUseCase = ActivateOverdrive()
 
     var resolvedStats: ResolvedStats = ResolvedStats(); private set
     private var workshopLevels: Map<UpgradeType, Int> = emptyMap()
@@ -57,12 +60,11 @@ class BattleViewModel @Inject constructor(
             resolvedStats = resolveStats(workshopLevels)
 
             val biome = Biome.forTier(tier)
-            val transition = if (!biomePreferences.hasSeenBiome(biome)) {
-                BiomeTransitionInfo(biome, profile.totalStepsEarned)
-            } else null
+            val transition = if (!biomePreferences.hasSeenBiome(biome)) BiomeTransitionInfo(biome, profile.totalStepsEarned) else null
 
             _uiState.update {
-                it.copy(maxHp = resolvedStats.maxHealth, currentHp = resolvedStats.maxHealth, isLoading = false, biomeTransition = transition)
+                it.copy(maxHp = resolvedStats.maxHealth, currentHp = resolvedStats.maxHealth, isLoading = false,
+                    biomeTransition = transition, stepBalance = profile.stepBalance)
             }
         }
     }
@@ -74,10 +76,8 @@ class BattleViewModel @Inject constructor(
     }
 
     fun startPollingEngine(engine: GameEngine, surfaceView: GameSurfaceView) {
-        this.engine = engine
-        this.surfaceView = surfaceView
-        engine.setStats(resolvedStats)
-        roundEnded = false
+        this.engine = engine; this.surfaceView = surfaceView
+        engine.setStats(resolvedStats); roundEnded = false
         viewModelScope.launch {
             while (true) {
                 delay(200)
@@ -88,9 +88,10 @@ class BattleViewModel @Inject constructor(
                     it.copy(
                         currentWave = spawner?.currentWave ?: 1,
                         currentHp = zig.currentHp, maxHp = zig.maxHp,
-                        cash = eng.cash,
-                        enemyCount = spawner?.enemiesAlive ?: 0,
+                        cash = eng.cash, enemyCount = spawner?.enemiesAlive ?: 0,
                         wavePhase = spawner?.phase?.name ?: "",
+                        activeOverdriveType = eng.activeOverdrive,
+                        overdriveTimeRemaining = eng.overdriveTimeRemaining,
                     )
                 }
                 if (eng.roundOver && !roundEnded) { endRound(); break }
@@ -99,26 +100,17 @@ class BattleViewModel @Inject constructor(
     }
 
     private fun endRound() {
-        if (roundEnded) return
-        roundEnded = true
-        val eng = engine ?: return
-        val wave = eng.waveSpawner?.currentWave ?: 1
-
+        if (roundEnded) return; roundEnded = true
+        val eng = engine ?: return; val wave = eng.waveSpawner?.currentWave ?: 1
         viewModelScope.launch {
             val result = updateBestWave(tier, wave)
             val profile = playerRepository.observeProfile().first()
             val newTier = checkTierUnlock(profile.bestWavePerTier, profile.highestUnlockedTier)
             if (newTier != null) playerRepository.updateHighestUnlockedTier(newTier)
-
             _uiState.update {
-                it.copy(
-                    isPaused = false, showUpgradeMenu = false,
-                    roundEndState = RoundEndState(
-                        waveReached = wave, enemiesKilled = eng.totalEnemiesKilled,
-                        totalCashEarned = eng.totalCashEarned, timeSurvivedSeconds = eng.elapsedTimeSeconds,
-                        isNewBestWave = result.isNewRecord, previousBest = result.previousBest, tierUnlocked = newTier,
-                    ),
-                )
+                it.copy(isPaused = false, showUpgradeMenu = false, showOverdriveMenu = false,
+                    roundEndState = RoundEndState(wave, eng.totalEnemiesKilled, eng.totalCashEarned,
+                        eng.elapsedTimeSeconds, result.isNewRecord, result.previousBest, newTier))
             }
         }
     }
@@ -128,10 +120,22 @@ class BattleViewModel @Inject constructor(
     fun playAgain() {
         roundEnded = false; inRoundLevels.clear()
         resolvedStats = resolveStats(workshopLevels)
-        _uiState.update { BattleUiState(maxHp = resolvedStats.maxHealth, currentHp = resolvedStats.maxHealth, speedMultiplier = it.speedMultiplier, isLoading = false) }
+        _uiState.update { BattleUiState(maxHp = resolvedStats.maxHealth, currentHp = resolvedStats.maxHealth,
+            speedMultiplier = it.speedMultiplier, isLoading = false, stepBalance = it.stepBalance) }
         surfaceView?.configure(resolvedStats, tier, emptyMap())
         val eng = engine ?: return; val sv = surfaceView ?: return
         startPollingEngine(eng, sv)
+    }
+
+    fun activateOverdrive(type: OverdriveType) {
+        val state = _uiState.value
+        val result = activateOverdriveUseCase(type, state.stepBalance, state.overdriveUsed)
+        if (result !is ActivateOverdrive.Result.Success) return
+        viewModelScope.launch {
+            playerRepository.spendSteps(type.stepCost)
+            engine?.activateOverdrive(type, resolvedStats)
+            _uiState.update { it.copy(overdriveUsed = true, showOverdriveMenu = false, stepBalance = it.stepBalance - type.stepCost) }
+        }
     }
 
     fun purchaseInRoundUpgrade(type: UpgradeType) {
@@ -150,7 +154,8 @@ class BattleViewModel @Inject constructor(
         _uiState.update { it.copy(inRoundLevels = inRoundLevels.toMap(), lastPurchaseFree = isFree) }
     }
 
-    fun toggleUpgradeMenu() { _uiState.update { it.copy(showUpgradeMenu = !it.showUpgradeMenu) } }
+    fun toggleUpgradeMenu() { _uiState.update { it.copy(showUpgradeMenu = !it.showUpgradeMenu, showOverdriveMenu = false) } }
+    fun toggleOverdriveMenu() { _uiState.update { it.copy(showOverdriveMenu = !it.showOverdriveMenu, showUpgradeMenu = false) } }
     fun setSpeed(multiplier: Float) { _uiState.update { it.copy(speedMultiplier = multiplier) } }
     fun togglePause() { _uiState.update { it.copy(isPaused = !it.isPaused) } }
     fun pause() { _uiState.update { it.copy(isPaused = true) } }

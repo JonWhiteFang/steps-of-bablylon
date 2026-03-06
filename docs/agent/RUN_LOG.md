@@ -335,3 +335,22 @@
 - Commands/tests run: `./run-gradle.sh testDebugUnitTest` — 97 tests, 0 failures. `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL.
 - Open questions / blockers: None.
 - Memory updated: STATE ✅ / RUN_LOG ✅
+
+## 2026-03-06 — Plan 14: Step Overdrive
+- Goal: Mid-battle mechanic to sacrifice Steps for 60s combat buff, once per round.
+- Decisions made:
+  - (a) Stub SURGE — shows in UI, deducts cost, but UW cooldown reset is no-op until Plan 15.
+  - (a) Skip free charges — deferred to Plan 19 (Walking Encounters).
+  - (a) Engine-side aura — pulsing circle + timer bar rendered on Canvas, respects game speed.
+- Changes made:
+  - Created `domain/usecase/ActivateOverdrive.kt` — sealed Result, checks balance + once-per-round
+  - Created `presentation/battle/ui/OverdriveMenu.kt` — 4-option selection with cost/affordability
+  - Created `test/.../ActivateOverdriveTest.kt` — 4 tests
+  - Updated `GameEngine.kt` — overdrive state (timer, fortune multiplier, stat modification), activateOverdrive(), expireOverdrive()
+  - Updated `ZigguratEntity.kt` — pulsing aura circle + timer bar, overdriveColor/overdriveProgress fields
+  - Updated `BattleUiState.kt` — added overdriveUsed, activeOverdriveType, overdriveTimeRemaining, stepBalance, showOverdriveMenu
+  - Updated `BattleViewModel.kt` — activateOverdrive(), toggleOverdriveMenu(), polls engine overdrive state
+  - Updated `BattleScreen.kt` — ⚡ button in control bar, OverdriveMenu overlay, active overdrive HUD indicator
+- Commands/tests run: `./run-gradle.sh testDebugUnitTest` — 101 tests, 0 failures. `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL.
+- Open questions / blockers: None.
+- Memory updated: STATE ✅ / RUN_LOG ✅

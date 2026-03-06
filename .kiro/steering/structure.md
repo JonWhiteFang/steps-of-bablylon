@@ -21,7 +21,7 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 │   │   ├── engine/     # GameEngine, Entity, WaveSpawner, EnemyScaler, CollisionSystem
 │   │   ├── entities/   # ZigguratEntity, ProjectileEntity, EnemyEntity, EnemyProjectileEntity, OrbEntity
 │   │   ├── biome/      # BiomeTheme, BackgroundRenderer (gradient sky + ambient particles)
-│   │   └── ui/         # HealthBarRenderer, InRoundUpgradeMenu, PostRoundOverlay, PauseOverlay, BiomeTransitionOverlay
+│   │   └── ui/         # HealthBarRenderer, InRoundUpgradeMenu, PostRoundOverlay, PauseOverlay, BiomeTransitionOverlay, OverdriveMenu
 │   └── ui/theme/       # Compose theme, colors (Material3)
 ├── di/                 # Hilt modules (DatabaseModule, RepositoryModule, StepModule, HealthConnectModule)
 └── service/            # Foreground step-counting service, WorkManager workers, boot receiver
@@ -103,6 +103,7 @@ All in `domain/model/`:
 | `domain/usecase/CalculateDefense.kt` | Damage reduction (cap 75%) + flat block |
 | `domain/usecase/UpdateBestWave.kt` | Compares wave to stored best, persists if new record |
 | `domain/usecase/CheckTierUnlock.kt` | Checks wave milestones for tier unlock eligibility |
+| `domain/usecase/ActivateOverdrive.kt` | Validates overdrive activation (balance + once-per-round) |
 | `presentation/MainActivity.kt` | Single Activity, Scaffold + NavHost + BottomNavBar (hidden during battle), permissions |
 | `presentation/navigation/Screen.kt` | 5 navigation routes (Home, Workshop, Battle, Labs, Stats) |
 | `presentation/home/HomeViewModel.kt` | Combines profile + step flows into HomeUiState |

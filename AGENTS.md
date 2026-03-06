@@ -49,7 +49,7 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 ├── domain/         # Pure Kotlin — no Android imports
 │   ├── model/      # Currency, PlayerWallet, PlayerProfile, BattleConditionEffects, and all game domain models
 │   ├── repository/ # Repository interfaces
-│   └── usecase/    # CalculateUpgradeCost, CanAffordUpgrade, ResolveStats, CalculateDamage, CalculateDefense, PurchaseUpgrade, QuickInvest, UpdateBestWave, CheckTierUnlock
+│   └── usecase/    # CalculateUpgradeCost, CanAffordUpgrade, ResolveStats, CalculateDamage, CalculateDefense, PurchaseUpgrade, QuickInvest, UpdateBestWave, CheckTierUnlock, ActivateOverdrive
 ├── presentation/   # ViewModels, Compose screens, SurfaceView battle renderer
 │   ├── navigation/ # Screen routes, BottomNavBar
 │   ├── home/       # HomeScreen, TierSelector
@@ -58,7 +58,7 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 │   │   ├── engine/ # GameEngine, WaveSpawner, EnemyScaler, CollisionSystem
 │   │   ├── entities/ # ZigguratEntity, EnemyEntity, ProjectileEntity, OrbEntity
 │   │   ├── biome/  # BiomeTheme, BackgroundRenderer
-│   │   └── ui/     # InRoundUpgradeMenu, PostRoundOverlay, PauseOverlay, HealthBarRenderer, BiomeTransitionOverlay
+│   │   └── ui/     # InRoundUpgradeMenu, PostRoundOverlay, PauseOverlay, HealthBarRenderer, BiomeTransitionOverlay, OverdriveMenu
 │   └── ui/theme/   # Color, Theme
 ├── di/             # Hilt modules (DatabaseModule, RepositoryModule, StepModule, HealthConnectModule)
 └── service/        # Foreground step-counting service, WorkManager workers (Plan 04)
@@ -180,6 +180,7 @@ graph TD
 - [x] **Domain Layer Unit Tests** ✓ (93 JVM tests — use cases, models, formulas, anti-cheat, tier system)
 - [x] **Plan 13: Tier System & Progression** ✓
 - [x] **Plan 18: Narrative Biome Progression** ✓
+- [x] **Plan 14: Step Overdrive** ✓
 - [ ] **Plan 27: Polish & Visual Effects** ← next on critical path
 
 ### Parallelizable Branches (after dependencies met)
@@ -240,7 +241,7 @@ The battle screen uses a custom `SurfaceView` with a game loop (not Compose). Ke
 - **Run tests:** `./run-gradle.sh testDebugUnitTest`
 - **Test source:** `app/src/test/java/com/whitefang/stepsofbabylon/`
 - **Fakes:** `test/fakes/` — FakePlayerRepository, FakeWorkshopRepository (in-memory StateFlow-backed).
-- **Current coverage:** 97 JVM tests — all use cases, domain models with validation logic, battle condition effects, tier unlock logic, biome themes, EnemyScaler, StepRateLimiter.
+- **Current coverage:** 101 JVM tests — all use cases, domain models with validation logic, battle condition effects, tier unlock logic, biome themes, EnemyScaler, StepRateLimiter.
 
 ## Important Notes
 

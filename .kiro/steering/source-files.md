@@ -117,6 +117,7 @@ domain/usecase/CalculateDamage.kt               # Raw damage + crit roll + damag
 domain/usecase/CalculateDefense.kt              # Damage reduction (cap 75%) + flat block
 domain/usecase/UpdateBestWave.kt                # Compares wave to stored best, persists if new record
 domain/usecase/CheckTierUnlock.kt               # Checks wave milestones for tier unlock eligibility
+domain/usecase/ActivateOverdrive.kt              # Validates overdrive activation (balance + once-per-round)
 ```
 
 ## Presentation Layer
@@ -154,6 +155,7 @@ presentation/battle/ui/InRoundUpgradeMenu.kt      # In-round upgrade menu: 3 tab
 presentation/battle/ui/PostRoundOverlay.kt         # Post-round summary: wave, kills, cash, time, new record banner
 presentation/battle/ui/PauseOverlay.kt             # Pause overlay: Resume + Quit Round buttons
 presentation/battle/ui/BiomeTransitionOverlay.kt   # Full-screen biome reveal overlay with step count
+presentation/battle/ui/OverdriveMenu.kt            # Overdrive type selection (4 options, cost, affordability)
 presentation/battle/biome/BiomeTheme.kt            # 5 biome color palettes (sky, ground, ziggurat, enemy, particles)
 presentation/battle/biome/BackgroundRenderer.kt    # Gradient sky + ambient particle system per biome
 presentation/ui/theme/Color.kt                     # Compose color definitions
@@ -183,6 +185,7 @@ domain/usecase/QuickInvestTest.kt                 # Cheapest affordable upgrade 
 domain/usecase/PurchaseUpgradeTest.kt             # Purchase flow with fake repos
 domain/usecase/UpdateBestWaveTest.kt              # Best wave tracking, new record detection
 domain/usecase/CheckTierUnlockTest.kt             # Tier unlock logic against wave milestones
+domain/usecase/ActivateOverdriveTest.kt           # Overdrive activation validation
 domain/usecase/ResolveStatsTest.kt                # Multiplicative stacking, all stat caps
 domain/usecase/CalculateDamageTest.kt             # Crit/no-crit with injectable Random, damage/meter bonus
 domain/usecase/CalculateDefenseTest.kt            # Percent reduction, flat block, floor at 0

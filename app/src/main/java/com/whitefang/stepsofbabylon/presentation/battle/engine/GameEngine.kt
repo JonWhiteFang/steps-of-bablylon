@@ -4,6 +4,7 @@ import android.graphics.Canvas
 import com.whitefang.stepsofbabylon.domain.model.BattleConditionEffects
 import com.whitefang.stepsofbabylon.domain.model.Biome
 import com.whitefang.stepsofbabylon.domain.model.EnemyType
+import com.whitefang.stepsofbabylon.domain.model.OverdriveType
 import com.whitefang.stepsofbabylon.domain.model.ResolvedStats
 import com.whitefang.stepsofbabylon.domain.model.TierConfig
 import com.whitefang.stepsofbabylon.domain.model.UpgradeType
@@ -47,6 +48,10 @@ class GameEngine {
     @Volatile var roundOver: Boolean = false
     @Volatile var totalEnemiesKilled: Int = 0; private set
     @Volatile var elapsedTimeSeconds: Float = 0f; private set
+    @Volatile var activeOverdrive: OverdriveType? = null; private set
+    @Volatile var overdriveTimeRemaining: Float = 0f; private set
+    private var preOverdriveStats: ResolvedStats? = null
+    private var fortuneMultiplier: Double = 1.0
 
     companion object {
         const val BASE_CASH_PER_WAVE = 20L
@@ -63,6 +68,7 @@ class GameEngine {
         entities.clear(); pendingAdd.clear()
         cash = 0L; totalCashEarned = 0L; roundOver = false
         totalEnemiesKilled = 0; elapsedTimeSeconds = 0f
+        activeOverdrive = null; overdriveTimeRemaining = 0f; preOverdriveStats = null; fortuneMultiplier = 1.0
         stats = resolvedStats; tier = playerTier; workshopLevels = wsLevels
         conditions = BattleConditionEffects.fromTier(tier)
         biomeTheme = BiomeTheme.forBiome(Biome.forTier(tier))
@@ -92,6 +98,39 @@ class GameEngine {
 
     fun setStats(resolvedStats: ResolvedStats) { stats = resolvedStats }
 
+    fun activateOverdrive(type: OverdriveType, baseStats: ResolvedStats) {
+        activeOverdrive = type
+        overdriveTimeRemaining = type.durationSeconds.toFloat()
+        preOverdriveStats = baseStats
+        when (type) {
+            OverdriveType.ASSAULT -> {
+                stats = stats.copy(damage = stats.damage * 1.5, attackSpeed = stats.attackSpeed * 2.0)
+                ziggurat?.let { it.overdriveColor = 0xFFE53935.toInt() }
+            }
+            OverdriveType.FORTRESS -> {
+                stats = stats.copy(healthRegen = stats.healthRegen * 2.0, defensePercent = min(stats.defensePercent + 0.50, 0.75))
+                ziggurat?.let { it.overdriveColor = 0xFF2196F3.toInt() }
+            }
+            OverdriveType.FORTUNE -> {
+                fortuneMultiplier = 3.0
+                ziggurat?.let { it.overdriveColor = 0xFFFFD700.toInt() }
+            }
+            OverdriveType.SURGE -> {
+                // Stub — UW cooldown reset will be wired in Plan 15
+                ziggurat?.let { it.overdriveColor = 0xFF9C27B0.toInt() }
+            }
+        }
+    }
+
+    private fun expireOverdrive() {
+        preOverdriveStats?.let { stats = it }
+        preOverdriveStats = null
+        fortuneMultiplier = 1.0
+        activeOverdrive = null
+        overdriveTimeRemaining = 0f
+        ziggurat?.let { it.overdriveColor = 0; it.overdriveProgress = 0f }
+    }
+
     fun updateZigguratStats(newStats: ResolvedStats) {
         val oldOrbCount = stats.orbCount
         stats = newStats
@@ -115,6 +154,11 @@ class GameEngine {
         val zig = ziggurat ?: return
         elapsedTimeSeconds += deltaTime
         backgroundRenderer?.update(deltaTime)
+        if (activeOverdrive != null) {
+            overdriveTimeRemaining -= deltaTime
+            ziggurat?.overdriveProgress = (overdriveTimeRemaining / 60f).coerceIn(0f, 1f)
+            if (overdriveTimeRemaining <= 0f) expireOverdrive()
+        }
 
         waveSpawner?.update(deltaTime, screenWidth, screenHeight)
         entities.addAll(pendingAdd); pendingAdd.clear()
@@ -181,7 +225,7 @@ class GameEngine {
     private fun wsLevel(type: UpgradeType): Int = workshopLevels[type] ?: 0
 
     private fun handleWaveComplete(wave: Int) {
-        val waveCash = BASE_CASH_PER_WAVE + wsLevel(UpgradeType.CASH_PER_WAVE) * FLAT_BONUS_PER_WAVE_LEVEL
+        val waveCash = ((BASE_CASH_PER_WAVE + wsLevel(UpgradeType.CASH_PER_WAVE) * FLAT_BONUS_PER_WAVE_LEVEL) * fortuneMultiplier).toLong()
         cash += waveCash
         totalCashEarned += waveCash
         val interestLevel = wsLevel(UpgradeType.INTEREST)
@@ -263,8 +307,9 @@ class GameEngine {
         val baseCash = EnemyScaler.cashReward(enemy.enemyType)
         val tierMult = TierConfig.forTier(tier).cashMultiplier
         val cashBonus = 1.0 + wsLevel(UpgradeType.CASH_BONUS) * 0.03
-        cash += (baseCash * tierMult * cashBonus).toLong()
-        totalCashEarned += (baseCash * tierMult * cashBonus).toLong()
+        val killCash = (baseCash * tierMult * cashBonus * fortuneMultiplier).toLong()
+        cash += killCash
+        totalCashEarned += killCash
         waveSpawner?.onEnemyKilled()
 
         if (enemy.enemyType == EnemyType.SCATTER) {
