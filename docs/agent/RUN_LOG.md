@@ -178,3 +178,25 @@
   - Orbs, Multishot, Bounce Shot computed in ResolvedStats but not wired to gameplay
   - In-round upgrades (Plan 11) will re-resolve stats on purchase
 - Memory updated: STATE ✅ / RUN_LOG ✅
+
+## 2026-03-06 — Plan 11: In-Round Upgrades & Cash Economy
+- Goal: Full cash economy + in-round upgrade menu with purchase flow.
+- Decisions made:
+  - (b) Cash economy + upgrade menu only; Orbs/Multishot/Bounce deferred to mini-plan 10b
+  - (a) Upgrade menu always accessible via toggle button
+  - (a) onWaveComplete callback added to WaveSpawner
+- Changes made:
+  - Updated `presentation/battle/engine/WaveSpawner.kt` — added onWaveComplete callback, fires on SPAWNING→COOLDOWN
+  - Updated `presentation/battle/engine/GameEngine.kt` — full cash formula (tier × cashBonus), wave cash + interest, spendCash(), updateZigguratStats()
+  - Updated `presentation/battle/BattleUiState.kt` — added showUpgradeMenu, inRoundLevels, lastPurchaseFree
+  - Updated `presentation/battle/BattleViewModel.kt` — purchase flow, in-round levels, re-resolve stats, free upgrade chance, tier tracking
+  - Updated `presentation/battle/GameSurfaceView.kt` — configure() accepts stats + tier + workshopLevels
+  - Created `presentation/battle/ui/InRoundUpgradeMenu.kt` — 3-tab Compose overlay, upgrade list, purchase buttons
+  - Updated `presentation/battle/BattleScreen.kt` — upgrade toggle button, InRoundUpgradeMenu overlay
+  - Created `docs/plans/plan-10b-advanced-combat.md` — mini-plan for Orbs, Multishot, Bounce Shot
+  - Updated `docs/plans/plan-11-in-round-upgrades.md` — removed deferred section
+  - Updated `docs/plans/master-plan.md` — added Plan 10b entry
+- Commands/tests run: `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL, zero warnings
+- Open questions / blockers:
+  - Orbs/Multishot/Bounce in Plan 10b (ready to implement anytime)
+- Memory updated: STATE ✅ / RUN_LOG ✅

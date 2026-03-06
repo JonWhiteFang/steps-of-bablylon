@@ -14,6 +14,7 @@ class WaveSpawner(
     private val onEnemyDeath: (EnemyEntity) -> Unit,
     private val onMeleeHit: (Double) -> Unit,
     private val onEnemyFireProjectile: (Float, Float, Float, Float, Double) -> Unit,
+    private val onWaveComplete: (waveNumber: Int) -> Unit = {},
 ) {
     var currentWave: Int = 1; private set
     var phase: WavePhase = WavePhase.SPAWNING; private set
@@ -55,6 +56,7 @@ class WaveSpawner(
                 }
                 if (phaseTimer >= SPAWN_DURATION) {
                     while (enemiesSpawned < totalToSpawn) spawnEnemy(screenWidth, screenHeight)
+                    onWaveComplete(currentWave)
                     phase = WavePhase.COOLDOWN
                     phaseTimer = 0f
                 }

@@ -20,6 +20,7 @@ See `docs/StepsOfBabylon_GDD.md` for the full game design document.
 | 08 | [Battle Renderer — Game Loop & Ziggurat](./plan-08-battle-renderer.md) | Custom SurfaceView with dedicated game loop thread, fixed timestep, ziggurat entity rendering, health bar, basic projectile system. | Plan 06 |
 | 09 | [Battle System — Enemies & Waves](./plan-09-enemies-waves.md) | Enemy entity system (Basic, Fast, Tank, Ranged, Boss, Scatter), wave spawning (26s spawn + 9s cooldown), enemy scaling per wave, collision/damage resolution. | Plan 08 |
 | 10 | [Battle System — Stats & Combat](./plan-10-stats-combat.md) | Stats resolution engine combining Workshop (permanent) × In-Round (temporary) upgrades multiplicatively. Crit system, knockback, lifesteal, orbs, bounce shot, damage/meter. | Plan 09 |
+| 10b | [Advanced Combat Mechanics](./plan-10b-advanced-combat.md) | Orbs (orbiting projectiles), Multishot (fire at N targets), Bounce Shot (projectile chaining). Stats computed in ResolvedStats, gameplay wiring. | Plan 10 |
 | 11 | [In-Round Upgrades & Cash Economy](./plan-11-in-round-upgrades.md) | Cash earned from kills/waves, in-round upgrade menu (Attack/Defense/Utility tabs), cash cost scaling per purchase, interest mechanic, free upgrade chance. | Plan 10 |
 | 12 | [Round Lifecycle & Post-Round](./plan-12-round-lifecycle.md) | Round start/end flow, wave counter, speed controls (1x/2x/4x), post-round summary screen (wave record, milestone rewards), return to Workshop. | Plan 11 |
 | 13 | [Tier System & Progression](./plan-13-tier-system.md) | Tier unlock logic (wave requirements), cash multipliers, battle conditions (Tier 6+: orb resistance, knockback resistance, armored enemies, etc.), tier persistence. | Plan 12 |
@@ -103,7 +104,8 @@ graph TD
 - [x] Plan 08: Battle Renderer — Game Loop & Ziggurat
 - [x] Plan 09: Battle System — Enemies & Waves
 - [x] Plan 10: Battle System — Stats & Combat
-- [ ] Plan 11: In-Round Upgrades & Cash Economy
+- [ ] Plan 10b: Advanced Combat Mechanics (Orbs, Multishot, Bounce Shot)
+- [x] Plan 11: In-Round Upgrades & Cash Economy
 - [ ] Plan 12: Round Lifecycle & Post-Round
 - [ ] Plan 13: Tier System & Progression
 - [ ] Plan 14: Step Overdrive
