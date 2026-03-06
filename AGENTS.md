@@ -63,6 +63,7 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 │   ├── labs/       # LabsScreen, LabsViewModel
 │   ├── cards/      # CardsScreen, CardsViewModel
 │   ├── supplies/   # UnclaimedSuppliesScreen, UnclaimedSuppliesViewModel
+│   ├── economy/    # CurrencyDashboardScreen, CurrencyDashboardViewModel
 │   └── ui/theme/   # Color, Theme
 ├── di/             # Hilt modules (DatabaseModule, RepositoryModule, StepModule, HealthConnectModule)
 └── service/        # Foreground step-counting service, WorkManager workers (Plan 04)

@@ -26,6 +26,7 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 │   ├── labs/           # LabsScreen, LabsViewModel
 │   ├── cards/          # CardsScreen, CardsViewModel
 │   ├── supplies/       # UnclaimedSuppliesScreen, UnclaimedSuppliesViewModel
+│   ├── economy/        # CurrencyDashboardScreen, CurrencyDashboardViewModel
 │   └── ui/theme/       # Compose theme, colors (Material3)
 ├── di/                 # Hilt modules (DatabaseModule, RepositoryModule, StepModule, HealthConnectModule)
 └── service/            # Foreground step-counting service, WorkManager workers, boot receiver
@@ -91,11 +92,11 @@ All in `domain/model/`:
 | File | Purpose |
 |---|---|
 | `StepsOfBabylonApp.kt` | `@HiltAndroidApp`, `Configuration.Provider` (HiltWorkerFactory) |
-| `di/DatabaseModule.kt` | Hilt module: Room DB (SQLCipher) + all 7 DAOs |
+| `di/DatabaseModule.kt` | Hilt module: Room DB (SQLCipher) + all 9 DAOs |
 | `di/RepositoryModule.kt` | Hilt module: binds all 7 repository interfaces to impls |
 | `di/StepModule.kt` | Hilt module: provides SensorManager |
 | `di/HealthConnectModule.kt` | Hilt module: Health Connect organizational module |
-| `data/local/AppDatabase.kt` | Room database (7 entities, 7 DAOs, version 3) |
+| `data/local/AppDatabase.kt` | Room database (9 entities, 9 DAOs, version 4) |
 | `data/local/DatabaseKeyManager.kt` | SQLCipher passphrase via Android Keystore |
 | `data/local/Converters.kt` | TypeConverters for `Map<Int,Int>` and `Map<String,Int>` (JSON) |
 | `data/sensor/StepSensorDataSource.kt` | TYPE_STEP_COUNTER wrapper, emits deltas via callbackFlow |

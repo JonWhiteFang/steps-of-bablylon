@@ -6,7 +6,7 @@ All paths relative to `app/src/main/java/com/whitefang/stepsofbabylon/`.
 
 ```
 StepsOfBabylonApp.kt              # @HiltAndroidApp, Configuration.Provider (HiltWorkerFactory)
-di/DatabaseModule.kt               # Hilt: Room DB (SQLCipher) + 7 DAO providers
+di/DatabaseModule.kt               # Hilt: Room DB (SQLCipher) + 9 DAO providers
 di/RepositoryModule.kt             # Hilt: 7 repository interface → impl bindings (@Singleton)
 di/StepModule.kt                   # Hilt: SensorManager provider
 di/HealthConnectModule.kt          # Hilt: Health Connect organizational module
@@ -15,7 +15,7 @@ di/HealthConnectModule.kt          # Hilt: Health Connect organizational module
 ## Data Layer — Room
 
 ```
-data/local/AppDatabase.kt         # @Database: 7 entities, 7 DAOs, version 3, exportSchema=true
+data/local/AppDatabase.kt         # @Database: 9 entities, 9 DAOs, version 4, exportSchema=true
 data/local/Converters.kt          # @TypeConverters: Map<Int,Int> and Map<String,Int> via JSON
 data/local/DatabaseKeyManager.kt  # SQLCipher passphrase via Android Keystore
 data/local/PlayerProfileEntity.kt # Player profile entity (single row, id=1)
@@ -32,6 +32,10 @@ data/local/DailyStepRecordEntity.kt # Daily step record entity (with escrow fiel
 data/local/DailyStepDao.kt        # Daily step record DAO (with escrow queries)
 data/local/WalkingEncounterEntity.kt # Walking encounter entity
 data/local/WalkingEncounterDao.kt # Walking encounter DAO
+data/local/WeeklyChallengeEntity.kt # Weekly step challenge entity
+data/local/WeeklyChallengeDao.kt   # Weekly challenge DAO
+data/local/DailyLoginEntity.kt     # Daily login tracking entity
+data/local/DailyLoginDao.kt        # Daily login DAO
 ```
 
 ## Data Layer — Repositories
@@ -136,6 +140,9 @@ domain/usecase/ApplyCardEffects.kt               # Post-process ResolvedStats wi
 domain/usecase/ManageCardLoadout.kt              # Equip/unequip cards (max 3 loadout)
 domain/usecase/GenerateSupplyDrop.kt             # Seeded random supply drop generation (4 triggers)
 domain/usecase/ClaimSupplyDrop.kt                # Credits reward to player, marks drop claimed
+domain/usecase/TrackWeeklyChallenge.kt           # Weekly step challenge PS awards (50k/75k/100k)
+domain/usecase/TrackDailyLogin.kt                # Daily login PS + Gem streak
+domain/usecase/AwardWaveMilestone.kt             # PS on new personal-best waves (1/2/5)
 ```
 
 ## Presentation Layer
@@ -190,6 +197,9 @@ presentation/cards/CardsScreen.kt                   # Cards screen: pack opening
 presentation/supplies/UnclaimedSuppliesViewModel.kt  # @HiltViewModel: claim/claimAll supply drops
 presentation/supplies/SuppliesUiState.kt             # UI state: unclaimed drops list
 presentation/supplies/UnclaimedSuppliesScreen.kt     # Inbox: drop cards, claim buttons, empty state
+presentation/economy/CurrencyDashboardViewModel.kt   # @HiltViewModel: weekly challenge, login streak, balances
+presentation/economy/EconomyUiState.kt               # UI state: weekly progress, streak, balances
+presentation/economy/CurrencyDashboardScreen.kt      # Dashboard: weekly progress bar, streak dots, PS/Gem balances
 ```
 
 ## Service Layer
@@ -239,6 +249,7 @@ domain/usecase/ApplyCardEffectsTest.kt            # All 9 card effects, level sc
 domain/usecase/ManageCardLoadoutTest.kt           # Equip/unequip, loadout full
 domain/usecase/GenerateSupplyDropTest.kt          # Drop generation: inbox cap, milestone, threshold, random triggers
 domain/usecase/ClaimSupplyDropTest.kt             # Claim flow: reward crediting, already-claimed guard
+domain/usecase/AwardWaveMilestoneTest.kt          # Wave milestone PS: 1/2/5 at wave boundaries
 domain/model/TierConfigTest.kt                    # All 10 tiers, battle conditions, invalid tier
 domain/model/BiomeTest.kt                         # All tier→biome mappings
 domain/model/CardLoadoutTest.kt                   # Max 3, no duplicates, add/remove
