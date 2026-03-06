@@ -1,10 +1,16 @@
 package com.whitefang.stepsofbabylon.data.sensor
 
+import com.whitefang.stepsofbabylon.data.local.DailyLoginDao
+import com.whitefang.stepsofbabylon.data.local.DailyStepDao
+import com.whitefang.stepsofbabylon.data.local.WeeklyChallengeDao
 import com.whitefang.stepsofbabylon.domain.model.DropGeneratorState
+import com.whitefang.stepsofbabylon.domain.model.SupplyDropTrigger
 import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
 import com.whitefang.stepsofbabylon.domain.repository.StepRepository
 import com.whitefang.stepsofbabylon.domain.repository.WalkingEncounterRepository
 import com.whitefang.stepsofbabylon.domain.usecase.GenerateSupplyDrop
+import com.whitefang.stepsofbabylon.domain.usecase.TrackDailyLogin
+import com.whitefang.stepsofbabylon.domain.usecase.TrackWeeklyChallenge
 import com.whitefang.stepsofbabylon.service.SupplyDropNotificationManager
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -12,7 +18,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Orchestrates step crediting: rate limit → daily ceiling → persist to Room → supply drop generation.
+ * Orchestrates step crediting: rate limit → daily ceiling → persist to Room → supply drops → economy rewards.
  */
 @Singleton
 class DailyStepManager @Inject constructor(
@@ -21,6 +27,9 @@ class DailyStepManager @Inject constructor(
     private val rateLimiter: StepRateLimiter,
     private val walkingEncounterRepository: WalkingEncounterRepository,
     private val supplyDropNotificationManager: SupplyDropNotificationManager,
+    private val dailyLoginDao: DailyLoginDao,
+    private val weeklyChallengeDao: WeeklyChallengeDao,
+    private val dailyStepDao: DailyStepDao,
 ) {
     companion object {
         const val DAILY_CEILING = 50_000L
@@ -35,14 +44,13 @@ class DailyStepManager @Inject constructor(
     private val generateSupplyDrop = GenerateSupplyDrop()
     private var dropState = DropGeneratorState()
 
+    private val trackDailyLogin by lazy { TrackDailyLogin(dailyLoginDao, playerRepository) }
+    private val trackWeeklyChallenge by lazy { TrackWeeklyChallenge(weeklyChallengeDao, dailyStepDao, playerRepository) }
+
     fun getDailyCredited(): Long = dailyCreditedTotal
 
     fun todayDate(): String = LocalDate.now().format(DATE_FMT)
 
-    /**
-     * Record a raw step delta from the sensor or sync worker.
-     * Applies rate limiting and daily ceiling, then persists.
-     */
     suspend fun recordSteps(rawDelta: Long, timestampMs: Long) {
         if (rawDelta <= 0) return
 
@@ -89,14 +97,16 @@ class DailyStepManager @Inject constructor(
         }
         dropState = dropState.copy(
             lastCheckSteps = dailyCreditedTotal,
-            milestoneTriggered = dropState.milestoneTriggered || (drop?.trigger == com.whitefang.stepsofbabylon.domain.model.SupplyDropTrigger.DAILY_MILESTONE),
+            milestoneTriggered = dropState.milestoneTriggered || (drop?.trigger == SupplyDropTrigger.DAILY_MILESTONE),
         )
+
+        // Economy rewards
+        try {
+            trackDailyLogin.checkAndAward(currentDate, dailyCreditedTotal)
+            trackWeeklyChallenge.checkAndAward()
+        } catch (_: Exception) { /* best-effort */ }
     }
 
-    /**
-     * Record activity minute step-equivalents (from Health Connect exercise sessions).
-     * Subject to the same daily ceiling as sensor steps.
-     */
     suspend fun recordActivityMinutes(activityMinutes: Map<String, Int>, stepEquivalents: Long) {
         if (stepEquivalents <= 0) return
 

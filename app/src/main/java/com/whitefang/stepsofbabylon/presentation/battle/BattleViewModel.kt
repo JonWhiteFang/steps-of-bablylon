@@ -13,6 +13,7 @@ import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
 import com.whitefang.stepsofbabylon.domain.repository.CardRepository
 import com.whitefang.stepsofbabylon.domain.repository.UltimateWeaponRepository
 import com.whitefang.stepsofbabylon.domain.repository.WorkshopRepository
+import com.whitefang.stepsofbabylon.domain.usecase.AwardWaveMilestone
 import com.whitefang.stepsofbabylon.domain.usecase.ActivateOverdrive
 import com.whitefang.stepsofbabylon.domain.usecase.ApplyCardEffects
 import com.whitefang.stepsofbabylon.domain.usecase.CalculateUpgradeCost
@@ -51,6 +52,7 @@ class BattleViewModel @Inject constructor(
     private val updateBestWave = UpdateBestWave(playerRepository)
     private val checkTierUnlock = CheckTierUnlock()
     private val activateOverdriveUseCase = ActivateOverdrive()
+    private val awardWaveMilestone = AwardWaveMilestone(playerRepository)
     private val applyCardEffects = ApplyCardEffects()
 
     var resolvedStats: ResolvedStats = ResolvedStats(); private set
@@ -129,13 +131,14 @@ class BattleViewModel @Inject constructor(
         val eng = engine ?: return; val wave = eng.waveSpawner?.currentWave ?: 1
         viewModelScope.launch {
             val result = updateBestWave(tier, wave)
+            val psAwarded = if (result.isNewRecord) awardWaveMilestone(wave) else 0
             val profile = playerRepository.observeProfile().first()
             val newTier = checkTierUnlock(profile.bestWavePerTier, profile.highestUnlockedTier)
             if (newTier != null) playerRepository.updateHighestUnlockedTier(newTier)
             _uiState.update {
                 it.copy(isPaused = false, showUpgradeMenu = false, showOverdriveMenu = false,
                     roundEndState = RoundEndState(wave, eng.totalEnemiesKilled, eng.totalCashEarned,
-                        eng.elapsedTimeSeconds, result.isNewRecord, result.previousBest, newTier))
+                        eng.elapsedTimeSeconds, result.isNewRecord, result.previousBest, newTier, psAwarded))
             }
         }
     }

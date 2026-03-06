@@ -2,6 +2,7 @@ package com.whitefang.stepsofbabylon.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.whitefang.stepsofbabylon.data.local.DailyLoginDao
 import com.whitefang.stepsofbabylon.domain.model.Biome
 import com.whitefang.stepsofbabylon.domain.repository.LabRepository
 import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
@@ -9,6 +10,7 @@ import com.whitefang.stepsofbabylon.domain.repository.StepRepository
 import com.whitefang.stepsofbabylon.domain.repository.WalkingEncounterRepository
 import com.whitefang.stepsofbabylon.domain.repository.WorkshopRepository
 import com.whitefang.stepsofbabylon.domain.usecase.CheckResearchCompletion
+import com.whitefang.stepsofbabylon.domain.usecase.TrackDailyLogin
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +27,7 @@ class HomeViewModel @Inject constructor(
     private val workshopRepository: WorkshopRepository,
     private val labRepository: LabRepository,
     private val walkingEncounterRepository: WalkingEncounterRepository,
+    private val dailyLoginDao: DailyLoginDao,
 ) : ViewModel() {
 
     init {
@@ -33,6 +36,11 @@ class HomeViewModel @Inject constructor(
             workshopRepository.ensureUpgradesExist()
             labRepository.ensureResearchExists()
             CheckResearchCompletion(labRepository)()
+
+            // Trigger daily login streak on app open
+            val today = LocalDate.now().toString()
+            val todaySteps = stepRepository.getDailyRecord(today)?.creditedSteps ?: 0
+            TrackDailyLogin(dailyLoginDao, playerRepository).checkAndAward(today, todaySteps)
         }
     }
 

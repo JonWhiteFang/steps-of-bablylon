@@ -33,4 +33,6 @@ object DatabaseModule {
     @Provides fun provideUltimateWeaponDao(db: AppDatabase): UltimateWeaponDao = db.ultimateWeaponDao()
     @Provides fun provideDailyStepDao(db: AppDatabase): DailyStepDao = db.dailyStepDao()
     @Provides fun provideWalkingEncounterDao(db: AppDatabase): WalkingEncounterDao = db.walkingEncounterDao()
+    @Provides fun provideWeeklyChallengeDao(db: AppDatabase): WeeklyChallengeDao = db.weeklyChallengeDao()
+    @Provides fun provideDailyLoginDao(db: AppDatabase): DailyLoginDao = db.dailyLoginDao()
 }

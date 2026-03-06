@@ -487,3 +487,35 @@ Implement Plan 19: Supply drop generation during walks, push notifications, clai
 - Custom notification icons (currently using system placeholders).
 - Supply drop notification preferences (on/off toggle — Plan 23).
 - Claim animation in UnclaimedSuppliesScreen (polish — Plan 27).
+
+## Run — 2026-03-06 — Plan 20: Power Stone & Gem Economy
+
+### Objective
+Implement premium currency earning systems: weekly step challenges, daily login rewards, and wave milestone bonuses.
+
+### What was done
+1. **Task 1 — Database**: Created `WeeklyChallengeEntity` + `WeeklyChallengeDao`, `DailyLoginEntity` + `DailyLoginDao`. Added `currentStreak`/`lastLoginDate` to `PlayerProfileEntity`/`PlayerProfile`. Added `updateStreak()` to `PlayerProfileDao`/`PlayerRepository`. Added `sumCreditedSteps()` to `DailyStepDao`. Bumped DB to version 4 (9 entities). Updated `DatabaseModule` with 2 new DAO providers. Updated `FakePlayerRepository` with streak support.
+
+2. **Task 2 — Weekly Step Challenge**: Created `TrackWeeklyChallenge` use case. Queries weekly step sum from `DailyStepDao`, awards PS at 50k (10), 75k (20 total), 100k (35 total) thresholds. Only awards delta PS for newly crossed tiers.
+
+3. **Task 3 — Daily Login & Streak**: Created `TrackDailyLogin` use case. Awards 1 PS when 1k+ steps walked (once/day). Manages 7-day Gem streak: consecutive days increment streak, missed day resets to 1, awards min(streak, 5) Gems. Streak cycles after day 7.
+
+4. **Task 4 — Wave Milestone PS**: Created `AwardWaveMilestone` use case. Awards 1 PS (base), 2 PS (wave % 10 == 0), or 5 PS (wave % 25 == 0) on new personal bests. Integrated into `BattleViewModel.endRound()`. Added `powerStonesAwarded` to `RoundEndState`. Updated `PostRoundOverlay` to display PS earned.
+
+5. **Task 5 — Currency Dashboard**: Created `Screen.Economy` route. Created `CurrencyDashboardViewModel` + `CurrencyDashboardScreen` with weekly progress bar, 3 threshold markers, login streak dots (7-day), daily PS status, and currency balances.
+
+6. **Task 6 — Integration**: Updated `DailyStepManager` with `DailyLoginDao`, `WeeklyChallengeDao`, `DailyStepDao` dependencies. Calls `TrackDailyLogin` and `TrackWeeklyChallenge` after step crediting. Updated `HomeViewModel` to trigger daily login on app open. Made currency row on `HomeScreen` tappable to navigate to economy dashboard.
+
+### Decisions
+- Streak fields on PlayerProfileEntity (no separate LoginStreakEntity) — avoids extra table/DAO/repo.
+- Long-distance Gem bonuses deferred to Plan 21 (milestones).
+- Wave milestone: 1 PS base, 2 PS at multiples of 10, 5 PS at multiples of 25.
+- TrackWeeklyChallenge/TrackDailyLogin use DAOs directly (data-layer integration, not pure domain).
+
+### Test results
+- 179 total JVM tests (170 existing + 9 new AwardWaveMilestone), all green, 0 failures.
+
+### What remains
+- TrackWeeklyChallenge and TrackDailyLogin unit tests (need DAO fakes — deferred to Plan 29).
+- Long-distance walking Gem bonuses (Plan 21).
+- Weekly challenge reset notification.

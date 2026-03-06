@@ -65,6 +65,11 @@ fun PostRoundOverlay(
                     Text("${TierConfig.forTier(tier).cashMultiplier}x cash multiplier", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
                 }
 
+                if (state.powerStonesAwarded > 0) {
+                    Spacer(Modifier.height(8.dp))
+                    Text("💎 +${state.powerStonesAwarded} Power Stones", style = MaterialTheme.typography.titleMedium, color = Color(0xFF9C27B0))
+                }
+
                 Spacer(Modifier.height(16.dp))
 
                 StatRow("Wave Reached", "${state.waveReached}")

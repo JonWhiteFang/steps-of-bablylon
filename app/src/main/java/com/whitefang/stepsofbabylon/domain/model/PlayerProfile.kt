@@ -11,6 +11,8 @@ data class PlayerProfile(
     val highestUnlockedTier: Int = 1,
     val labSlotCount: Int = 1,
     val bestWavePerTier: Map<Int, Int> = emptyMap(),
+    val currentStreak: Int = 0,
+    val lastLoginDate: String = "",
     val createdAt: Long = 0,
     val lastActiveAt: Long = 0,
 ) {

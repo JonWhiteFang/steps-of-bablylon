@@ -22,4 +22,7 @@ interface DailyStepDao {
 
     @Query("UPDATE daily_step_record SET escrowSteps = 0, escrowSyncCount = 0 WHERE date = :date")
     suspend fun clearEscrow(date: String)
+
+    @Query("SELECT COALESCE(SUM(creditedSteps), 0) FROM daily_step_record WHERE date BETWEEN :startDate AND :endDate")
+    suspend fun sumCreditedSteps(startDate: String, endDate: String): Long
 }

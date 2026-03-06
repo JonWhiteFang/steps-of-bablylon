@@ -18,6 +18,10 @@ data class PlayerProfileEntity(
     @ColumnInfo(defaultValue = "1")
     val labSlotCount: Int = 1,
     val bestWavePerTier: Map<Int, Int> = emptyMap(),
+    @ColumnInfo(defaultValue = "0")
+    val currentStreak: Int = 0,
+    @ColumnInfo(defaultValue = "")
+    val lastLoginDate: String = "",
     val createdAt: Long = System.currentTimeMillis(),
     val lastActiveAt: Long = System.currentTimeMillis(),
 )

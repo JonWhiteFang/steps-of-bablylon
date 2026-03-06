@@ -35,6 +35,7 @@ class PlayerRepositoryImpl @Inject constructor(
     override suspend fun updateTier(tier: Int) = dao.updateTier(tier)
     override suspend fun updateHighestUnlockedTier(tier: Int) = dao.updateHighestUnlockedTier(tier)
     override suspend fun updateLabSlotCount(count: Int) = dao.updateLabSlotCount(count)
+    override suspend fun updateStreak(streak: Int, date: String) = dao.updateStreak(streak, date)
 
     override suspend fun updateBestWave(tier: Int, wave: Int) {
         val entity = dao.get().first() ?: return
@@ -59,6 +60,8 @@ class PlayerRepositoryImpl @Inject constructor(
         highestUnlockedTier = highestUnlockedTier,
         labSlotCount = labSlotCount,
         bestWavePerTier = bestWavePerTier,
+        currentStreak = currentStreak,
+        lastLoginDate = lastLoginDate,
         createdAt = createdAt,
         lastActiveAt = lastActiveAt,
     )

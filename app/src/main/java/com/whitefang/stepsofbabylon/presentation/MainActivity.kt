@@ -28,6 +28,7 @@ import androidx.navigation.compose.rememberNavController
 import com.whitefang.stepsofbabylon.data.healthconnect.HealthConnectClientWrapper
 import com.whitefang.stepsofbabylon.presentation.battle.BattleScreen
 import com.whitefang.stepsofbabylon.presentation.cards.CardsScreen
+import com.whitefang.stepsofbabylon.presentation.economy.CurrencyDashboardScreen
 import com.whitefang.stepsofbabylon.presentation.home.HomeScreen
 import com.whitefang.stepsofbabylon.presentation.labs.LabsScreen
 import com.whitefang.stepsofbabylon.presentation.navigation.BottomNavBar
@@ -119,6 +120,7 @@ class MainActivity : ComponentActivity() {
                             HomeScreen(
                                 onBattleClick = { navController.navigate(Screen.Battle.route) },
                                 onSuppliesClick = { navController.navigate(Screen.Supplies.route) },
+                                onEconomyClick = { navController.navigate(Screen.Economy.route) },
                             )
                         }
                         composable(Screen.Workshop.route) {
@@ -144,6 +146,9 @@ class MainActivity : ComponentActivity() {
                         }
                         composable(Screen.Supplies.route) {
                             UnclaimedSuppliesScreen()
+                        }
+                        composable(Screen.Economy.route) {
+                            CurrencyDashboardScreen()
                         }
                     }
                 }

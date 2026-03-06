@@ -49,7 +49,7 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 ├── domain/         # Pure Kotlin — no Android imports
 │   ├── model/      # Currency, PlayerWallet, PlayerProfile, BattleConditionEffects, and all game domain models
 │   ├── repository/ # Repository interfaces
-│   └── usecase/    # CalculateUpgradeCost, CanAffordUpgrade, ResolveStats, CalculateDamage, CalculateDefense, PurchaseUpgrade, QuickInvest, UpdateBestWave, CheckTierUnlock, ActivateOverdrive, UnlockUltimateWeapon, UpgradeUltimateWeapon, CalculateResearchCost, CalculateResearchTime, StartResearch, CompleteResearch, RushResearch, UnlockLabSlot, CheckResearchCompletion, OpenCardPack, UpgradeCard, ApplyCardEffects, ManageCardLoadout, GenerateSupplyDrop, ClaimSupplyDrop
+│   └── usecase/    # CalculateUpgradeCost, CanAffordUpgrade, ResolveStats, CalculateDamage, CalculateDefense, PurchaseUpgrade, QuickInvest, UpdateBestWave, CheckTierUnlock, ActivateOverdrive, UnlockUltimateWeapon, UpgradeUltimateWeapon, CalculateResearchCost, CalculateResearchTime, StartResearch, CompleteResearch, RushResearch, UnlockLabSlot, CheckResearchCompletion, OpenCardPack, UpgradeCard, ApplyCardEffects, ManageCardLoadout, GenerateSupplyDrop, ClaimSupplyDrop, TrackWeeklyChallenge, TrackDailyLogin, AwardWaveMilestone
 ├── presentation/   # ViewModels, Compose screens, SurfaceView battle renderer
 │   ├── navigation/ # Screen routes, BottomNavBar
 │   ├── home/       # HomeScreen, TierSelector
@@ -189,6 +189,7 @@ graph TD
 - [x] **Plan 16: Labs System** ✓
 - [x] **Plan 17: Cards System** ✓
 - [x] **Plan 19: Walking Encounters & Supply Drops** ✓
+- [x] **Plan 20: Power Stone & Gem Economy** ✓
 - [ ] **Plan 27: Polish & Visual Effects** ← next on critical path
 
 ### Parallelizable Branches (after dependencies met)
@@ -200,7 +201,7 @@ graph TD
 - Monetization: Plan 26 (ready now — Plan 17 complete)
 - Stats: Plan 22 (ready now — Plan 06 complete)
 - Anti-cheat: Plan 25 (ready now — Plan 05 complete)
-- Walking features: Plans 20/21/23 (ready now — Plan 04 complete); Plan 19 complete
+- Walking features: Plan 23 (ready now — Plan 04 complete); Plans 19/20 complete
 
 ## Key Domain Concepts
 
@@ -250,7 +251,7 @@ The battle screen uses a custom `SurfaceView` with a game loop (not Compose). Ke
 - **Run tests:** `./run-gradle.sh testDebugUnitTest`
 - **Test source:** `app/src/test/java/com/whitefang/stepsofbabylon/`
 - **Fakes:** `test/fakes/` — FakePlayerRepository, FakeWorkshopRepository, FakeUltimateWeaponRepository, FakeLabRepository, FakeCardRepository (in-memory StateFlow-backed).
-- **Current coverage:** 170 JVM tests — all use cases, domain models with validation logic, battle condition effects, tier unlock logic, biome themes, EnemyScaler, StepRateLimiter, Labs research (cost/time/start/complete/rush/unlock/auto-complete), Cards (pack opening/upgrade/effects/loadout), Walking Encounters (supply drop generation/claiming).
+- **Current coverage:** 179 JVM tests — all use cases, domain models with validation logic, battle condition effects, tier unlock logic, biome themes, EnemyScaler, StepRateLimiter, Labs research (cost/time/start/complete/rush/unlock/auto-complete), Cards (pack opening/upgrade/effects/loadout), Walking Encounters (supply drop generation/claiming), Wave Milestones (PS awards).
 
 ## Important Notes
 

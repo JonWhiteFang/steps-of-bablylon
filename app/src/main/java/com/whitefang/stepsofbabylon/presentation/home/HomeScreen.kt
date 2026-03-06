@@ -1,6 +1,7 @@
 package com.whitefang.stepsofbabylon.presentation.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,6 +43,7 @@ import com.whitefang.stepsofbabylon.presentation.ui.theme.LapisLazuli
 fun HomeScreen(
     onBattleClick: () -> Unit = {},
     onSuppliesClick: () -> Unit = {},
+    onEconomyClick: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -74,7 +76,7 @@ fun HomeScreen(
                 }
             }
 
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            Row(Modifier.fillMaxWidth().clickable { onEconomyClick() }, horizontalArrangement = Arrangement.SpaceEvenly) {
                 CurrencyItem("Steps", state.stepBalance)
                 CurrencyItem("Gems", state.gems)
                 CurrencyItem("Power Stones", state.powerStones)

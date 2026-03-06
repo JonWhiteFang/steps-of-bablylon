@@ -20,5 +20,6 @@ interface PlayerRepository {
     suspend fun updateHighestUnlockedTier(tier: Int)
     suspend fun updateLabSlotCount(count: Int)
     suspend fun updateBestWave(tier: Int, wave: Int)
+    suspend fun updateStreak(streak: Int, date: String)
     suspend fun ensureProfileExists()
 }

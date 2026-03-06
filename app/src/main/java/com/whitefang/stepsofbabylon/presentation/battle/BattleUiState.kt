@@ -12,6 +12,7 @@ data class RoundEndState(
     val isNewBestWave: Boolean,
     val previousBest: Int,
     val tierUnlocked: Int? = null,
+    val powerStonesAwarded: Int = 0,
 )
 
 data class UWSlotInfo(

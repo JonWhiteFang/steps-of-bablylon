@@ -52,4 +52,7 @@ interface PlayerProfileDao {
 
     @Query("UPDATE player_profile SET labSlotCount = :count WHERE id = 1")
     suspend fun updateLabSlotCount(count: Int)
+
+    @Query("UPDATE player_profile SET currentStreak = :streak, lastLoginDate = :date WHERE id = 1")
+    suspend fun updateStreak(streak: Int, date: String)
 }
