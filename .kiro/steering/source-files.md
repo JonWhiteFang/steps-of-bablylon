@@ -72,6 +72,7 @@ data/healthconnect/StepGapFiller.kt                # Recovers missed steps from 
 data/healthconnect/ExerciseSessionReader.kt        # Reads exercise sessions for Activity Minute Parity
 data/healthconnect/ActivityMinuteConverter.kt      # Converts exercise minutes to step-equivalents with caps
 data/BiomePreferences.kt                          # SharedPreferences wrapper for first-seen biome tracking
+data/NotificationPreferences.kt                   # SharedPreferences wrapper for 4 notification toggles
 ```
 
 ## Domain Layer — Models
@@ -218,6 +219,8 @@ presentation/stats/StatsViewModel.kt                 # @HiltViewModel: walking h
 presentation/stats/StatsUiState.kt                   # UI state: bars, periods, battle/all-time stats
 presentation/stats/StatsScreen.kt                    # Stats screen: chart, today, battle, all-time sections
 presentation/stats/WalkingHistoryChart.kt            # Canvas-drawn bar chart with period toggle
+presentation/settings/NotificationSettingsViewModel.kt # @HiltViewModel: notification preference toggles
+presentation/settings/NotificationSettingsScreen.kt    # Settings screen: 4 notification toggles
 ```
 
 ## Service Layer
@@ -229,6 +232,10 @@ service/SupplyDropNotificationManager.kt # Supply drop notification channel + de
 service/BootReceiver.kt              # BOOT_COMPLETED → restart StepCounterService
 service/StepSyncWorker.kt            # @HiltWorker CoroutineWorker, 15-min periodic: sensor catch-up + HC sync
 service/StepSyncScheduler.kt         # Enqueues periodic WorkManager request
+service/SmartReminderManager.kt      # Upgrade proximity reminders (piggybacked on StepSyncWorker)
+service/MilestoneNotificationManager.kt # Wave record and step milestone notifications
+service/StepWidgetProvider.kt        # 2×2 AppWidgetProvider for home screen widget
+service/WidgetUpdateHelper.kt        # Throttled widget update helper
 ```
 
 ## Test Layer

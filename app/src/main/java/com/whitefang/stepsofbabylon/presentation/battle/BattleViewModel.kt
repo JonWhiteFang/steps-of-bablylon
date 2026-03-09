@@ -3,9 +3,9 @@ package com.whitefang.stepsofbabylon.presentation.battle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.whitefang.stepsofbabylon.data.local.DailyMissionDao
+import com.whitefang.stepsofbabylon.domain.model.Biome
 import com.whitefang.stepsofbabylon.domain.model.DailyMissionType
 import com.whitefang.stepsofbabylon.data.BiomePreferences
-import com.whitefang.stepsofbabylon.domain.model.Biome
 import com.whitefang.stepsofbabylon.domain.model.OwnedCard
 import com.whitefang.stepsofbabylon.domain.model.OwnedWeapon
 import com.whitefang.stepsofbabylon.domain.model.OverdriveType
@@ -22,6 +22,7 @@ import com.whitefang.stepsofbabylon.domain.usecase.CalculateUpgradeCost
 import com.whitefang.stepsofbabylon.domain.usecase.CheckTierUnlock
 import com.whitefang.stepsofbabylon.domain.usecase.ResolveStats
 import com.whitefang.stepsofbabylon.domain.usecase.UpdateBestWave
+import com.whitefang.stepsofbabylon.service.MilestoneNotificationManager
 import com.whitefang.stepsofbabylon.presentation.battle.engine.GameEngine
 import com.whitefang.stepsofbabylon.presentation.battle.ui.BiomeTransitionInfo
 import com.whitefang.stepsofbabylon.presentation.battle.UWSlotInfo
@@ -46,6 +47,7 @@ class BattleViewModel @Inject constructor(
     private val uwRepository: UltimateWeaponRepository,
     private val cardRepository: CardRepository,
     private val dailyMissionDao: DailyMissionDao,
+    private val milestoneNotificationManager: MilestoneNotificationManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BattleUiState())
@@ -136,6 +138,9 @@ class BattleViewModel @Inject constructor(
         viewModelScope.launch {
             val result = updateBestWave(tier, wave)
             val psAwarded = if (result.isNewRecord) awardWaveMilestone(wave) else 0
+            if (result.isNewRecord) {
+                milestoneNotificationManager.notifyNewBestWave(wave, Biome.forTier(tier).name.replace("_", " "))
+            }
             val profile = playerRepository.observeProfile().first()
             val newTier = checkTierUnlock(profile.bestWavePerTier, profile.highestUnlockedTier)
             if (newTier != null) playerRepository.updateHighestUnlockedTier(newTier)

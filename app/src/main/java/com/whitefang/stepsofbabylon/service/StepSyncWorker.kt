@@ -25,6 +25,7 @@ class StepSyncWorker @AssistedInject constructor(
     private val stepCrossValidator: StepCrossValidator,
     private val exerciseSessionReader: ExerciseSessionReader,
     private val activityMinuteConverter: ActivityMinuteConverter,
+    private val smartReminderManager: SmartReminderManager,
 ) : CoroutineWorker(appContext, params) {
 
     companion object {
@@ -51,6 +52,9 @@ class StepSyncWorker @AssistedInject constructor(
         } catch (_: Exception) {
             // HC unavailable or error — skip gracefully
         }
+
+        // Smart reminders
+        try { smartReminderManager.checkAndNotify() } catch (_: Exception) {}
 
         return Result.success()
     }

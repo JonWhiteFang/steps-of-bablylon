@@ -592,3 +592,36 @@ Build the Stats & History screen with walking history charts, battle stats, and 
 - Lifetime currency counters start from 0 (no retroactive backfill).
 - Chart tap-for-detail tooltip deferred to Plan 27 polish.
 - Pull-to-refresh deferred (data is already reactive via Flows).
+
+## Run — 2026-03-09 — Plan 23: Notifications & Widget
+
+### Objective
+Enhanced notifications, home screen widget, smart reminders, milestone alerts, and notification preferences.
+
+### Design decisions
+- Traditional AppWidgetProvider + RemoteViews (no Glance dependency).
+- Smart reminders piggyback on existing StepSyncWorker (no separate WorkManager job).
+- SharedPreferences for notification preferences (consistent with BiomePreferences pattern).
+
+### What was done
+1. **Task 1 — NotificationPreferences**: Created `data/NotificationPreferences.kt` — 4 boolean toggles (persistent, supply drops, smart reminders, milestone alerts).
+
+2. **Task 2 — Enhanced persistent notification**: Updated `StepNotificationManager` with Workshop/Battle action buttons via PendingIntents. Updated `StepCounterService` to pass actual step balance from PlayerRepository. Added preference gate. Extended `MainActivity` deep-link handling for workshop/battle/missions routes.
+
+3. **Task 3 — Home screen widget**: Created `widget_step_counter.xml` layout, `step_widget_info.xml` metadata, `StepWidgetProvider` (AppWidgetProvider with SharedPreferences-backed data), `WidgetUpdateHelper` (60s throttle). Integrated into `DailyStepManager`. Registered in AndroidManifest.
+
+4. **Task 4 — Smart reminders**: Created `SmartReminderManager` — checks prefs enabled, not sent today, lastActiveAt > 4h, finds cheapest upgrade within 10k step gap. Uses `reminders` notification channel. Integrated into `StepSyncWorker.doWork()`.
+
+5. **Task 5 — Milestone alerts**: Created `MilestoneNotificationManager` — notifyNewBestWave() and notifyMilestoneAchieved(). Uses `milestones` channel. Integrated into `BattleViewModel.endRound()` (new best wave) and `HomeViewModel.init` (achievable milestones).
+
+6. **Task 6 — Supply drop preference gate**: Updated `SupplyDropNotificationManager` to inject NotificationPreferences and skip if disabled.
+
+7. **Task 7 — Settings UI**: Created `NotificationSettingsViewModel` + `NotificationSettingsScreen` (4 Switch toggles). Added `Screen.Settings` route, wired in NavHost, added settings button on HomeScreen.
+
+### Test results
+- 206 total JVM tests, all green, 0 failures. No new tests (Android notification/widget APIs).
+
+### What remains
+- Custom notification icons (all channels use system placeholders).
+- Widget balance shows 0 (DailyStepManager doesn't query PlayerRepository for balance).
+- Widget preview image for widget picker.

@@ -1,7 +1,7 @@
 # Plan 23 — Notifications & Widget
 
-**Status:** Not Started
-**Dependencies:** Plan 04 (Step Counter Service)
+**Status:** Complete
+**Dependencies:** Plan 04 (Step Counter Service) ✓
 **Layer:** `service/` + `presentation/`
 
 ---

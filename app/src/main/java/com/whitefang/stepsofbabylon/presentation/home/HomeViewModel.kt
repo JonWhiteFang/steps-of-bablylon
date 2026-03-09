@@ -14,11 +14,13 @@ import com.whitefang.stepsofbabylon.domain.repository.WalkingEncounterRepository
 import com.whitefang.stepsofbabylon.domain.repository.WorkshopRepository
 import com.whitefang.stepsofbabylon.domain.usecase.CheckResearchCompletion
 import com.whitefang.stepsofbabylon.domain.usecase.GenerateDailyMissions
+import com.whitefang.stepsofbabylon.domain.usecase.CheckMilestones
 import com.whitefang.stepsofbabylon.domain.usecase.TrackDailyLogin
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -34,6 +36,7 @@ class HomeViewModel @Inject constructor(
     private val dailyLoginDao: DailyLoginDao,
     private val dailyMissionDao: DailyMissionDao,
     private val milestoneDao: MilestoneDao,
+    private val milestoneNotificationManager: com.whitefang.stepsofbabylon.service.MilestoneNotificationManager,
 ) : ViewModel() {
 
     init {
@@ -48,6 +51,11 @@ class HomeViewModel @Inject constructor(
             val todaySteps = stepRepository.getDailyRecord(today)?.creditedSteps ?: 0
             TrackDailyLogin(dailyLoginDao, playerRepository).checkAndAward(today, todaySteps)
             GenerateDailyMissions(dailyMissionDao)(today)
+
+            // Notify for newly achievable milestones
+            val profile = playerRepository.observeProfile().first()
+            val achievable = CheckMilestones(milestoneDao)(profile.totalStepsEarned)
+            achievable.firstOrNull()?.let { milestoneNotificationManager.notifyMilestoneAchieved(it.displayName) }
         }
     }
 

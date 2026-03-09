@@ -34,6 +34,7 @@ import com.whitefang.stepsofbabylon.presentation.labs.LabsScreen
 import com.whitefang.stepsofbabylon.presentation.missions.MissionsScreen
 import com.whitefang.stepsofbabylon.presentation.navigation.BottomNavBar
 import com.whitefang.stepsofbabylon.presentation.navigation.Screen
+import com.whitefang.stepsofbabylon.presentation.settings.NotificationSettingsScreen
 import com.whitefang.stepsofbabylon.presentation.stats.StatsScreen
 import com.whitefang.stepsofbabylon.presentation.supplies.UnclaimedSuppliesScreen
 import com.whitefang.stepsofbabylon.presentation.ui.theme.StepsOfBabylonTheme
@@ -99,9 +100,12 @@ class MainActivity : ComponentActivity() {
                         permissionLauncher.launch(needed.toTypedArray())
                     }
 
-                    // Deep-link from supply drop notification
-                    if (intent?.getStringExtra("navigate_to") == "supplies") {
-                        navController.navigate(Screen.Supplies.route)
+                    // Deep-link from notifications
+                    when (intent?.getStringExtra("navigate_to")) {
+                        "supplies" -> navController.navigate(Screen.Supplies.route)
+                        "workshop" -> navController.navigate(Screen.Workshop.route)
+                        "battle" -> navController.navigate(Screen.Battle.route)
+                        "missions" -> navController.navigate(Screen.Missions.route)
                     }
                 }
 
@@ -124,6 +128,7 @@ class MainActivity : ComponentActivity() {
                                 onSuppliesClick = { navController.navigate(Screen.Supplies.route) },
                                 onEconomyClick = { navController.navigate(Screen.Economy.route) },
                                 onMissionsClick = { navController.navigate(Screen.Missions.route) },
+                                onSettingsClick = { navController.navigate(Screen.Settings.route) },
                             )
                         }
                         composable(Screen.Workshop.route) {
@@ -155,6 +160,9 @@ class MainActivity : ComponentActivity() {
                         }
                         composable(Screen.Missions.route) {
                             MissionsScreen()
+                        }
+                        composable(Screen.Settings.route) {
+                            NotificationSettingsScreen()
                         }
                     }
                 }

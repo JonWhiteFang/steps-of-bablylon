@@ -193,6 +193,7 @@ graph TD
 - [x] **Plan 20: Power Stone & Gem Economy** ✓
 - [x] **Plan 21: Milestones & Daily Missions** ✓
 - [x] **Plan 22: Stats & History Screen** ✓
+- [x] **Plan 23: Notifications & Widget** ✓
 - [ ] **Plan 27: Polish & Visual Effects** ← next on critical path
 
 ### Parallelizable Branches (after dependencies met)

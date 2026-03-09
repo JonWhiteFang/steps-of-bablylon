@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
+import com.whitefang.stepsofbabylon.data.NotificationPreferences
 import com.whitefang.stepsofbabylon.domain.model.SupplyDrop
 import com.whitefang.stepsofbabylon.presentation.MainActivity
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -15,6 +16,7 @@ import javax.inject.Singleton
 @Singleton
 class SupplyDropNotificationManager @Inject constructor(
     @param:ApplicationContext private val context: Context,
+    private val notificationPreferences: NotificationPreferences,
 ) {
     companion object {
         const val CHANNEL_ID = "supply_drops"
@@ -32,6 +34,7 @@ class SupplyDropNotificationManager @Inject constructor(
     }
 
     fun notify(drop: SupplyDrop) {
+        if (!notificationPreferences.isSupplyDropsEnabled()) return
         val intent = Intent(context, MainActivity::class.java).apply {
             putExtra("navigate_to", "supplies")
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP

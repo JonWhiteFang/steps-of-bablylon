@@ -6,11 +6,13 @@ import android.content.pm.ServiceInfo
 import android.os.IBinder
 import com.whitefang.stepsofbabylon.data.sensor.DailyStepManager
 import com.whitefang.stepsofbabylon.data.sensor.StepSensorDataSource
+import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -20,6 +22,7 @@ class StepCounterService : Service() {
     @Inject lateinit var sensorDataSource: StepSensorDataSource
     @Inject lateinit var dailyStepManager: DailyStepManager
     @Inject lateinit var notificationManager: StepNotificationManager
+    @Inject lateinit var playerRepository: PlayerRepository
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -36,9 +39,10 @@ class StepCounterService : Service() {
             sensorDataSource.stepDeltas.collect { delta ->
                 val now = System.currentTimeMillis()
                 dailyStepManager.recordSteps(delta, now)
+                val balance = try { playerRepository.observeProfile().first().stepBalance } catch (_: Exception) { 0L }
                 notificationManager.updateNotification(
                     dailySteps = dailyStepManager.getDailyCredited(),
-                    balance = 0, // Updated via notification refresh from repo if needed
+                    balance = balance,
                 )
             }
         }

@@ -28,6 +28,7 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 │   ├── supplies/       # UnclaimedSuppliesScreen, UnclaimedSuppliesViewModel
 │   ├── economy/        # CurrencyDashboardScreen, CurrencyDashboardViewModel
 │   ├── missions/       # MissionsScreen, MissionsViewModel
+│   ├── settings/       # NotificationSettingsScreen, NotificationSettingsViewModel
 │   └── ui/theme/       # Compose theme, colors (Material3)
 ├── di/                 # Hilt modules (DatabaseModule, RepositoryModule, StepModule, HealthConnectModule)
 └── service/            # Foreground step-counting service, WorkManager workers, boot receiver

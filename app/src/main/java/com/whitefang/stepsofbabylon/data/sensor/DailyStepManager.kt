@@ -12,6 +12,7 @@ import com.whitefang.stepsofbabylon.domain.usecase.GenerateSupplyDrop
 import com.whitefang.stepsofbabylon.domain.usecase.TrackDailyLogin
 import com.whitefang.stepsofbabylon.domain.usecase.TrackWeeklyChallenge
 import com.whitefang.stepsofbabylon.service.SupplyDropNotificationManager
+import com.whitefang.stepsofbabylon.service.WidgetUpdateHelper
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -30,6 +31,7 @@ class DailyStepManager @Inject constructor(
     private val dailyLoginDao: DailyLoginDao,
     private val weeklyChallengeDao: WeeklyChallengeDao,
     private val dailyStepDao: DailyStepDao,
+    private val widgetUpdateHelper: WidgetUpdateHelper,
 ) {
     companion object {
         const val DAILY_CEILING = 50_000L
@@ -85,6 +87,9 @@ class DailyStepManager @Inject constructor(
 
         stepRepository.updateDailySteps(currentDate, dailySensorTotal, dailyCreditedTotal)
         playerRepository.addSteps(credited)
+
+        // Widget update
+        try { widgetUpdateHelper.update(dailyCreditedTotal, 0) } catch (_: Exception) {}
 
         // Supply drop generation
         val prevSteps = dropState.lastCheckSteps

@@ -45,6 +45,7 @@ fun HomeScreen(
     onSuppliesClick: () -> Unit = {},
     onEconomyClick: () -> Unit = {},
     onMissionsClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -103,6 +104,10 @@ fun HomeScreen(
                     Text("📋")
                 }
                 Text("  Missions", fontWeight = FontWeight.Bold)
+            }
+
+            OutlinedButton(onClick = onSettingsClick, modifier = Modifier.fillMaxWidth()) {
+                Text("⚙️  Settings")
             }
 
             Spacer(Modifier.weight(1f))
