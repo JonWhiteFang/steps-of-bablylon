@@ -764,3 +764,41 @@ Implement monetization layer with stub billing/ads, cosmetic store, Season Pass,
 - Replace placeholder audio with real royalty-free sound effects
 - Plan 29: Testing & QA
 - Plan 30: Release Prep
+
+---
+
+## Run: 2026-03-09 — Plan 28: Balancing & Tuning
+
+**Objective:** Validate all game constants against GDD player profiles and progression timeline.
+
+**Approach:** Test-based validation — 39 JUnit tests that compute progression math and assert GDD milestones. Conservative tuning — only adjust constants where tests reveal actual problems.
+
+**Findings:**
+- Step economy is more generous than GDD predicted in week 1 (intentional — hooks players). Settles toward GDD rates by week 4-8.
+- Enemy scaling (1.05^wave) is correct — outpaces raw Workshop DPS but is balanced by crits, multishot, orbs, cards, and in-round upgrades.
+- Tier progression timeline is within tolerance when accounting for full combat system (5x combat multiplier).
+- Cash economy supports meaningful in-round decisions. Interest at max level is 59% of kill income (borderline but requires 20 levels of investment).
+- All 9 card types are balanced with meaningful tradeoffs. No card exceeds 2.5x effective power.
+- UW cooldowns allow 2-3+ activations per 20-minute round. No UW dominates.
+- First UW unlock takes ~3 weeks (not 2) — acceptable for mid-game reward.
+- Supply drop rates produce 1-5 drops per 10k steps.
+
+**Constants changed:** None. All existing values validated as appropriate.
+
+**Created files:**
+- `app/src/test/java/com/whitefang/stepsofbabylon/balance/StepEconomyTest.kt` — 5 tests
+- `app/src/test/java/com/whitefang/stepsofbabylon/balance/CostCurveTest.kt` — 5 tests
+- `app/src/test/java/com/whitefang/stepsofbabylon/balance/EnemyScalingTest.kt` — 6 tests
+- `app/src/test/java/com/whitefang/stepsofbabylon/balance/TierProgressionTest.kt` — 5 tests
+- `app/src/test/java/com/whitefang/stepsofbabylon/balance/CashEconomyTest.kt` — 4 tests
+- `app/src/test/java/com/whitefang/stepsofbabylon/balance/CardBalanceTest.kt` — 4 tests
+- `app/src/test/java/com/whitefang/stepsofbabylon/balance/UWOverdriveBalanceTest.kt` — 5 tests
+- `app/src/test/java/com/whitefang/stepsofbabylon/balance/SupplyDropEconomyTest.kt` — 5 tests
+- `docs/balance/balance-report.md` — comprehensive balance validation report
+
+**Test results:** 283 JVM tests — all green (was 244, +39 new balance tests).
+**Build:** No compilation changes needed.
+
+**What remains:**
+- Plan 29: Testing & QA (next on critical path)
+- Plan 30: Release Prep

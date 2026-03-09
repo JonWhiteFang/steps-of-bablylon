@@ -46,6 +46,7 @@ app/src/test/java/com/whitefang/stepsofbabylon/
 │       └── biome/      # BiomeTheme tests
 │       └── effects/    # ParticlePool, ScreenShake, DeathEffect tests
 └── data/sensor/        # StepRateLimiter tests
+└── balance/            # Step economy, cost curves, enemy scaling, tier progression, cash, cards, UW, supply drops
 ```
 
 ## Layer Rules

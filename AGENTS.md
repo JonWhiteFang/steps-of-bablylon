@@ -201,7 +201,8 @@ graph TD
 - [x] **Plan 25: Anti-Cheat & Validation** ✓
 - [x] **Plan 26: Monetization & Ads** ✓ (stub implementation — real SDK integration deferred)
 - [x] **Plan 27: Polish & Visual Effects** ✓
-- [ ] **Plan 28: Balancing & Tuning** ← next on critical path
+- [x] **Plan 28: Balancing & Tuning** ✓
+- [ ] **Plan 29: Testing & QA** ← next on critical path
 
 ### Parallelizable Branches (after dependencies met)
 
@@ -211,6 +212,7 @@ graph TD
 - Cards: Plan 17 (complete)
 - Monetization: Plan 26 (complete — stub implementation)
 - Polish: Plan 27 (complete)
+- Balancing: Plan 28 (complete)
 - Stats: Plan 22 (ready now — Plan 06 complete)
 - Anti-cheat: Plan 25 (complete)
 - Walking features: Plan 23 (ready now — Plan 04 complete); Plans 19/20 complete
@@ -263,7 +265,7 @@ The battle screen uses a custom `SurfaceView` with a game loop (not Compose). Ke
 - **Run tests:** `./run-gradle.sh testDebugUnitTest`
 - **Test source:** `app/src/test/java/com/whitefang/stepsofbabylon/`
 - **Fakes:** `test/fakes/` — FakePlayerRepository, FakeWorkshopRepository, FakeUltimateWeaponRepository, FakeLabRepository, FakeCardRepository, FakeWalkingEncounterRepository, FakeMilestoneDao, FakeDailyMissionDao (in-memory StateFlow-backed).
-- **Current coverage:** 244 JVM tests — all use cases, domain models with validation logic, battle condition effects, tier unlock logic, biome themes, EnemyScaler, StepRateLimiter, StepVelocityAnalyzer, StepCrossValidator, ActivityMinuteValidator, Labs research (cost/time/start/complete/rush/unlock/auto-complete), Cards (pack opening/upgrade/effects/loadout), Walking Encounters (supply drop generation/claiming), Wave Milestones (PS awards), Milestones (check/claim), Daily Missions (generation/types), ParticlePool (acquire/release/recycle/expire), ScreenShake (trigger/decay/override), DeathEffect (particle counts per enemy type).
+- **Current coverage:** 283 JVM tests — all use cases, domain models with validation logic, battle condition effects, tier unlock logic, biome themes, EnemyScaler, StepRateLimiter, StepVelocityAnalyzer, StepCrossValidator, ActivityMinuteValidator, Labs research (cost/time/start/complete/rush/unlock/auto-complete), Cards (pack opening/upgrade/effects/loadout), Walking Encounters (supply drop generation/claiming), Wave Milestones (PS awards), Milestones (check/claim), Daily Missions (generation/types), ParticlePool (acquire/release/recycle/expire), ScreenShake (trigger/decay/override), DeathEffect (particle counts per enemy type), Balance validation (step economy, cost curves, enemy scaling, tier progression, cash economy, card balance, UW/overdrive balance, supply drop economy).
 
 ## Important Notes
 

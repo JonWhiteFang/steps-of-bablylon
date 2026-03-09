@@ -335,4 +335,12 @@ data/healthconnect/ActivityMinuteValidatorTest.kt # Duration/type/micro-session 
 presentation/battle/effects/ParticlePoolTest.kt   # Acquire/release/recycle/expire/clear/reset
 presentation/battle/effects/ScreenShakeTest.kt    # Trigger/decay/override/reset/offset
 presentation/battle/effects/DeathEffectTest.kt    # Particle counts per enemy type (6 types)
+balance/StepEconomyTest.kt                        # Step economy vs 5 GDD player profiles (multi-week)
+balance/CostCurveTest.kt                          # Workshop cost curve validation (standard/premium/ROI)
+balance/EnemyScalingTest.kt                       # Enemy HP/damage scaling difficulty ramp
+balance/TierProgressionTest.kt                    # Tier unlock timeline vs GDD §14
+balance/CashEconomyTest.kt                        # In-round cash flow and interest balance
+balance/CardBalanceTest.kt                        # Card tradeoffs and power levels
+balance/UWOverdriveBalanceTest.kt                 # UW cooldowns, damage, overdrive costs
+balance/SupplyDropEconomyTest.kt                  # Drop rates and premium currency income
 ```

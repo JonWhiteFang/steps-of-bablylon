@@ -1,6 +1,6 @@
 # Plan 28 — Balancing & Tuning
 
-**Status:** Not Started
+**Status:** Complete
 **Dependencies:** Plan 27 (Polish & Visual Effects)
 **Layer:** `domain/` — tuning constants and formulas
 
