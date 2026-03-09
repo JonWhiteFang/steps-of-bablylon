@@ -26,8 +26,8 @@
 1. Plan 27: Polish & VFX (CRITICAL PATH — depends on Plan 18 ✓)
 2. Plan 25: Anti-cheat hardening (unblocked)
 3. Plan 26: Monetization & Ads (unblocked — depends on Plan 17 ✓)
-4. Plan 24: Accessibility (unblocked)
-5. Plan 28: Balancing & Tuning (after Plan 27)
+4. Plan 28: Balancing & Tuning (after Plan 27)
+5. Plan 29: Testing & QA (after Plan 28)
 
 ## Next actions (explicit order)
 1. Plan 27 (Polish & VFX) — all gameplay systems in place, polish everything in one pass.
@@ -36,8 +36,8 @@
 ## Parallelizable branches (after dependencies met)
 - Plan 27 is ready (depends on Plan 18 ✓). CRITICAL PATH. Unlocks Plan 28.
 - Plan 26 is ready (depends on Plan 17 ✓). Monetization.
-- Plan 24 is ready (depends on Plan 18 ✓). Accessibility.
 - Plan 25 is ready (depends on Plan 05 ✓). Anti-cheat.
+- Plan 24: DEFERRED to post-v1.0.
 
 ## Do-not-touch / fragile zones
 - `domain/model/` — stable.

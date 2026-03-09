@@ -121,7 +121,7 @@ Development follows a 30-plan master plan. See `docs/plans/master-plan.md` for t
 | 21 | Milestones & Daily Missions | Walking milestones, 3 daily missions, midnight refresh. | Plan 20 |
 | 22 | Stats & History Screen | Walking history charts, battle stats, all-time stats. | Plan 06 |
 | 23 | Notifications & Widget | Persistent notification, home widget (2x2), smart reminders. | Plan 04 |
-| 24 | Accessibility | TalkBack, audio cues, color-blind modes, adjustable text. | Plan 18 |
+| 24 | Accessibility *(deferred)* | TalkBack, audio cues, color-blind modes, adjustable text. | Plan 18 |
 | 25 | Anti-Cheat & Validation | Rate limiting, daily ceiling, Health Connect cross-validation. | Plan 05 |
 | 26 | Monetization & Ads | Reward ads, ad removal IAP, Gem packs, Season Pass, cosmetics. | Plan 17 |
 | 27 | Polish & Visual Effects | Projectile/UW/Overdrive effects, death anims, sound integration. | Plan 18 |
@@ -264,5 +264,5 @@ The battle screen uses a custom `SurfaceView` with a game loop (not Compose). Ke
 
 - This is a solo-experience game — no multiplayer, no server backend required for v1.0.
 - All monetization is cosmetic or convenience. Steps are never purchasable with real money.
-- Accessibility is a priority: TalkBack support, color-blind modes, Activity Minute Parity for non-ambulatory users.
+- Accessibility is a priority for post-v1.0: TalkBack support, color-blind modes, Activity Minute Parity for non-ambulatory users (already implemented in Plan 05).
 - **Gradle in non-TTY environments:** Gradle buffers output when stdout isn't a terminal (e.g., Kiro CLI, CI). Use `./run-gradle.sh <task>` instead of `./gradlew <task>` to avoid hanging. The script is gitignored — see `README.md` for how to recreate it.

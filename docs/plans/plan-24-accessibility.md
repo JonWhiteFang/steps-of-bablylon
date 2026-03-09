@@ -1,6 +1,6 @@
 # Plan 24 — Accessibility
 
-**Status:** Not Started
+**Status:** Deferred (post-v1.0)
 **Dependencies:** Plan 18 (Narrative Biome Progression)
 **Layer:** `presentation/` — cross-cutting
 
