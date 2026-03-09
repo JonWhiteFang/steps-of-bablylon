@@ -1,7 +1,7 @@
 # Plan 21 — Milestones & Daily Missions
 
-**Status:** Not Started
-**Dependencies:** Plan 20 (Power Stone & Gem Economy)
+**Status:** Complete
+**Dependencies:** Plan 20 (Power Stone & Gem Economy) ✓
 **Layer:** `domain/usecase/` + `data/local/` + `presentation/`
 
 ---

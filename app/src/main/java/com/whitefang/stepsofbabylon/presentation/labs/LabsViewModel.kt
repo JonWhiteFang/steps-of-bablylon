@@ -2,7 +2,9 @@ package com.whitefang.stepsofbabylon.presentation.labs
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.whitefang.stepsofbabylon.data.local.DailyMissionDao
 import com.whitefang.stepsofbabylon.domain.model.ActiveResearch
+import com.whitefang.stepsofbabylon.domain.model.DailyMissionType
 import com.whitefang.stepsofbabylon.domain.model.ResearchType
 import com.whitefang.stepsofbabylon.domain.repository.LabRepository
 import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
@@ -20,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import javax.inject.Inject
 import kotlin.math.max
 
@@ -27,6 +30,7 @@ import kotlin.math.max
 class LabsViewModel @Inject constructor(
     private val labRepository: LabRepository,
     private val playerRepository: PlayerRepository,
+    private val dailyMissionDao: DailyMissionDao,
 ) : ViewModel() {
 
     private val calculateCost = CalculateResearchCost()
@@ -42,6 +46,7 @@ class LabsViewModel @Inject constructor(
         viewModelScope.launch {
             labRepository.ensureResearchExists()
             checkCompletion()
+            updateResearchMission()
         }
         viewModelScope.launch {
             while (true) {
@@ -104,6 +109,7 @@ class LabsViewModel @Inject constructor(
             val activeList = labRepository.observeActiveResearch().stateIn(viewModelScope).value
             val active = activeList.find { it.type == type } ?: return@launch
             rushResearch(type, active, profile.toWallet())
+            updateResearchMission()
         }
     }
 
@@ -112,5 +118,14 @@ class LabsViewModel @Inject constructor(
             val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
             unlockLabSlot(profile.labSlotCount, profile.gems)
         }
+    }
+
+    private suspend fun updateResearchMission() {
+        try {
+            val today = LocalDate.now().toString()
+            val missions = dailyMissionDao.getByDateOnce(today)
+            val m = missions.find { it.missionType == DailyMissionType.COMPLETE_RESEARCH.name && !it.claimed && !it.completed }
+            if (m != null) dailyMissionDao.updateProgress(m.id, 1, true)
+        } catch (_: Exception) { /* best-effort */ }
     }
 }

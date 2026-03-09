@@ -35,4 +35,6 @@ object DatabaseModule {
     @Provides fun provideWalkingEncounterDao(db: AppDatabase): WalkingEncounterDao = db.walkingEncounterDao()
     @Provides fun provideWeeklyChallengeDao(db: AppDatabase): WeeklyChallengeDao = db.weeklyChallengeDao()
     @Provides fun provideDailyLoginDao(db: AppDatabase): DailyLoginDao = db.dailyLoginDao()
+    @Provides fun provideMilestoneDao(db: AppDatabase): MilestoneDao = db.milestoneDao()
+    @Provides fun provideDailyMissionDao(db: AppDatabase): DailyMissionDao = db.dailyMissionDao()
 }

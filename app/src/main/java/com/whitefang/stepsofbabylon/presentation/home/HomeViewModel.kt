@@ -3,13 +3,17 @@ package com.whitefang.stepsofbabylon.presentation.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.whitefang.stepsofbabylon.data.local.DailyLoginDao
+import com.whitefang.stepsofbabylon.data.local.DailyMissionDao
+import com.whitefang.stepsofbabylon.data.local.MilestoneDao
 import com.whitefang.stepsofbabylon.domain.model.Biome
+import com.whitefang.stepsofbabylon.domain.model.Milestone
 import com.whitefang.stepsofbabylon.domain.repository.LabRepository
 import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
 import com.whitefang.stepsofbabylon.domain.repository.StepRepository
 import com.whitefang.stepsofbabylon.domain.repository.WalkingEncounterRepository
 import com.whitefang.stepsofbabylon.domain.repository.WorkshopRepository
 import com.whitefang.stepsofbabylon.domain.usecase.CheckResearchCompletion
+import com.whitefang.stepsofbabylon.domain.usecase.GenerateDailyMissions
 import com.whitefang.stepsofbabylon.domain.usecase.TrackDailyLogin
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -28,6 +32,8 @@ class HomeViewModel @Inject constructor(
     private val labRepository: LabRepository,
     private val walkingEncounterRepository: WalkingEncounterRepository,
     private val dailyLoginDao: DailyLoginDao,
+    private val dailyMissionDao: DailyMissionDao,
+    private val milestoneDao: MilestoneDao,
 ) : ViewModel() {
 
     init {
@@ -41,6 +47,7 @@ class HomeViewModel @Inject constructor(
             val today = LocalDate.now().toString()
             val todaySteps = stepRepository.getDailyRecord(today)?.creditedSteps ?: 0
             TrackDailyLogin(dailyLoginDao, playerRepository).checkAndAward(today, todaySteps)
+            GenerateDailyMissions(dailyMissionDao)(today)
         }
     }
 
@@ -48,7 +55,11 @@ class HomeViewModel @Inject constructor(
         playerRepository.observeProfile(),
         stepRepository.observeTodayRecord(LocalDate.now().toString()),
         walkingEncounterRepository.countUnclaimed(),
-    ) { profile, stepSummary, unclaimedCount ->
+        dailyMissionDao.countClaimable(LocalDate.now().toString()),
+        milestoneDao.getAll(),
+    ) { profile, stepSummary, unclaimedCount, claimableMissions, milestoneEntities ->
+        val claimedIds = milestoneEntities.filter { it.claimed }.map { it.milestoneId }.toSet()
+        val achievableMilestones = Milestone.entries.count { it.requiredSteps <= profile.totalStepsEarned && it.name !in claimedIds }
         HomeUiState(
             todaySteps = stepSummary?.creditedSteps ?: 0,
             stepBalance = profile.stepBalance,
@@ -60,6 +71,7 @@ class HomeViewModel @Inject constructor(
             bestWave = profile.bestWavePerTier[profile.currentTier] ?: 0,
             bestWavePerTier = profile.bestWavePerTier,
             unclaimedDropCount = unclaimedCount,
+            claimableMissionCount = claimableMissions + achievableMilestones,
             isLoading = false,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())

@@ -116,7 +116,7 @@ graph TD
 - [x] Plan 18: Narrative Biome Progression
 - [x] Plan 19: Walking Encounters & Supply Drops
 - [x] Plan 20: Power Stone & Gem Economy
-- [ ] Plan 21: Milestones & Daily Missions
+- [x] Plan 21: Milestones & Daily Missions
 - [ ] Plan 22: Stats & History Screen
 - [ ] Plan 23: Notifications & Widget
 - [ ] Plan 24: Accessibility

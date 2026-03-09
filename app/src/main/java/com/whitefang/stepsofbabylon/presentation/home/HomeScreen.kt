@@ -44,6 +44,7 @@ fun HomeScreen(
     onBattleClick: () -> Unit = {},
     onSuppliesClick: () -> Unit = {},
     onEconomyClick: () -> Unit = {},
+    onMissionsClick: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -91,6 +92,17 @@ fun HomeScreen(
                     }
                     Text("  Unclaimed Supplies", fontWeight = FontWeight.Bold)
                 }
+            }
+
+            OutlinedButton(onClick = onMissionsClick, modifier = Modifier.fillMaxWidth()) {
+                if (state.claimableMissionCount > 0) {
+                    BadgedBox(badge = { Badge { Text("${state.claimableMissionCount}") } }) {
+                        Text("📋")
+                    }
+                } else {
+                    Text("📋")
+                }
+                Text("  Missions", fontWeight = FontWeight.Bold)
             }
 
             Spacer(Modifier.weight(1f))

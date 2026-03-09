@@ -519,3 +519,46 @@ Implement premium currency earning systems: weekly step challenges, daily login 
 - TrackWeeklyChallenge and TrackDailyLogin unit tests (need DAO fakes — deferred to Plan 29).
 - Long-distance walking Gem bonuses (Plan 21).
 - Weekly challenge reset notification.
+
+## Run — 2026-03-09 — Plan 21: Milestones & Daily Missions
+
+### Objective
+Implement lifetime walking milestones and daily missions with progress tracking and claim rewards.
+
+### Design decisions
+- Card Pack milestone rewards → equivalent Gems (Tutorial=50, Rare=150, Epic=500). Keeps OpenCardPack untouched.
+- Cosmetic milestone rewards → stored as claimed but no-op visually until cosmetics system exists.
+- Walking mission progress → DAO query approach (steps already tracked).
+- Battle mission progress → accumulated in BattleViewModel.endRound().
+- Workshop/Lab mission progress → updated at call sites.
+- DB version 5 with destructive fallback (still in dev).
+
+### What was done
+1. **Task 1 — Domain models**: Created `MilestoneReward` (sealed class: Gems/PowerStones/Cosmetic), `Milestone` (6 entries matching GDD §16.1 with card pack→Gem equivalents), `DailyMissionType` (6 entries: 2 walking, 2 battle, 2 upgrade), `MissionCategory` enum.
+
+2. **Task 2 — Milestone DB layer**: Created `MilestoneEntity` + `MilestoneDao`. Updated `AppDatabase` (version 5, 11 entities). Updated `DatabaseModule` with 2 new DAO providers.
+
+3. **Task 3 — Mission DB layer**: Created `DailyMissionEntity` + `DailyMissionDao` (with `countClaimable` Flow query).
+
+4. **Task 4 — Use cases**: Created `CheckMilestones` (queries DAO, filters by threshold + unclaimed) and `ClaimMilestone` (credits Gems/PS, marks claimed, cosmetics no-op).
+
+5. **Task 5 — GenerateDailyMissions**: Date-seeded Random, 1 per category, idempotent (skips if missions exist for today).
+
+6. **Task 6 — Progress hooks**: 
+   - `BattleViewModel.endRound()` → updates REACH_WAVE and KILL_ENEMIES missions.
+   - `WorkshopViewModel.purchase()` → updates SPEND_WORKSHOP_STEPS mission.
+   - `LabsViewModel` → updates COMPLETE_RESEARCH mission after rush/completion.
+
+7. **Task 7 — Missions screen**: Created `MissionsUiState`, `MissionsViewModel` (combines missions + milestones + profile + tick), `MissionsScreen` (daily missions with progress bars + claim buttons, milestones with progress + claim, midnight countdown).
+
+8. **Task 8 — Home integration**: Added `Screen.Missions` route, `claimableMissionCount` to `HomeUiState`, missions badge button on `HomeScreen`, `GenerateDailyMissions` call in `HomeViewModel.init`, 5-flow `combine()` with milestone/mission counts.
+
+### Test results
+- 206 total JVM tests (179 existing + 27 new), all green, 0 failures.
+- New: MilestoneTest (6), DailyMissionTypeTest (7), CheckMilestonesTest (4), ClaimMilestoneTest (4), GenerateDailyMissionsTest (6).
+- New fakes: FakeMilestoneDao, FakeDailyMissionDao.
+
+### What remains
+- Milestone cosmetic rewards are no-op (needs cosmetics system — Plan 26/27).
+- Walking mission auto-progress runs once on MissionsScreen open (not continuously from DailyStepManager) — sufficient since steps flow updates the ViewModel.
+- Daily mission notification on completion (deferred to Plan 23).

@@ -2,6 +2,8 @@ package com.whitefang.stepsofbabylon.presentation.workshop
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.whitefang.stepsofbabylon.data.local.DailyMissionDao
+import com.whitefang.stepsofbabylon.domain.model.DailyMissionType
 import com.whitefang.stepsofbabylon.domain.model.UpgradeCategory
 import com.whitefang.stepsofbabylon.domain.model.UpgradeType
 import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
@@ -16,12 +18,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import javax.inject.Inject
 
 @HiltViewModel
 class WorkshopViewModel @Inject constructor(
     private val workshopRepository: WorkshopRepository,
     private val playerRepository: PlayerRepository,
+    private val dailyMissionDao: DailyMissionDao,
 ) : ViewModel() {
 
     private val calculateCost = CalculateUpgradeCost()
@@ -66,7 +70,19 @@ class WorkshopViewModel @Inject constructor(
         viewModelScope.launch {
             val level = allUpgrades[type] ?: 0
             val wallet = playerRepository.observeWallet().stateIn(viewModelScope).value
-            purchaseUpgrade(type, level, wallet)
+            val cost = calculateCost(type, level)
+            val success = purchaseUpgrade(type, level, wallet)
+            if (success) {
+                try {
+                    val today = LocalDate.now().toString()
+                    val missions = dailyMissionDao.getByDateOnce(today)
+                    val m = missions.find { it.missionType == DailyMissionType.SPEND_5000_WORKSHOP.name && !it.claimed && !it.completed }
+                    if (m != null) {
+                        val newProgress = m.progress + cost.toInt()
+                        dailyMissionDao.updateProgress(m.id, newProgress, newProgress >= m.target)
+                    }
+                } catch (_: Exception) { /* best-effort */ }
+            }
         }
     }
 

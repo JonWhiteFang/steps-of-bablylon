@@ -15,8 +15,10 @@ import androidx.room.TypeConverters
         WalkingEncounterEntity::class,
         WeeklyChallengeEntity::class,
         DailyLoginEntity::class,
+        MilestoneEntity::class,
+        DailyMissionEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -30,4 +32,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun walkingEncounterDao(): WalkingEncounterDao
     abstract fun weeklyChallengeDao(): WeeklyChallengeDao
     abstract fun dailyLoginDao(): DailyLoginDao
+    abstract fun milestoneDao(): MilestoneDao
+    abstract fun dailyMissionDao(): DailyMissionDao
 }

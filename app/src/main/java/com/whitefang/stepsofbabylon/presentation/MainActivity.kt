@@ -31,6 +31,7 @@ import com.whitefang.stepsofbabylon.presentation.cards.CardsScreen
 import com.whitefang.stepsofbabylon.presentation.economy.CurrencyDashboardScreen
 import com.whitefang.stepsofbabylon.presentation.home.HomeScreen
 import com.whitefang.stepsofbabylon.presentation.labs.LabsScreen
+import com.whitefang.stepsofbabylon.presentation.missions.MissionsScreen
 import com.whitefang.stepsofbabylon.presentation.navigation.BottomNavBar
 import com.whitefang.stepsofbabylon.presentation.navigation.Screen
 import com.whitefang.stepsofbabylon.presentation.supplies.UnclaimedSuppliesScreen
@@ -121,6 +122,7 @@ class MainActivity : ComponentActivity() {
                                 onBattleClick = { navController.navigate(Screen.Battle.route) },
                                 onSuppliesClick = { navController.navigate(Screen.Supplies.route) },
                                 onEconomyClick = { navController.navigate(Screen.Economy.route) },
+                                onMissionsClick = { navController.navigate(Screen.Missions.route) },
                             )
                         }
                         composable(Screen.Workshop.route) {
@@ -149,6 +151,9 @@ class MainActivity : ComponentActivity() {
                         }
                         composable(Screen.Economy.route) {
                             CurrencyDashboardScreen()
+                        }
+                        composable(Screen.Missions.route) {
+                            MissionsScreen()
                         }
                     }
                 }

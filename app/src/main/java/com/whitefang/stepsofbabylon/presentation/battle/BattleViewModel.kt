@@ -2,6 +2,8 @@ package com.whitefang.stepsofbabylon.presentation.battle
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.whitefang.stepsofbabylon.data.local.DailyMissionDao
+import com.whitefang.stepsofbabylon.domain.model.DailyMissionType
 import com.whitefang.stepsofbabylon.data.BiomePreferences
 import com.whitefang.stepsofbabylon.domain.model.Biome
 import com.whitefang.stepsofbabylon.domain.model.OwnedCard
@@ -34,6 +36,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.math.min
 import kotlin.random.Random
+import java.time.LocalDate
 
 @HiltViewModel
 class BattleViewModel @Inject constructor(
@@ -42,6 +45,7 @@ class BattleViewModel @Inject constructor(
     private val biomePreferences: BiomePreferences,
     private val uwRepository: UltimateWeaponRepository,
     private val cardRepository: CardRepository,
+    private val dailyMissionDao: DailyMissionDao,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BattleUiState())
@@ -140,6 +144,24 @@ class BattleViewModel @Inject constructor(
                     roundEndState = RoundEndState(wave, eng.totalEnemiesKilled, eng.totalCashEarned,
                         eng.elapsedTimeSeconds, result.isNewRecord, result.previousBest, newTier, psAwarded))
             }
+            // Update daily mission progress for battle missions
+            try {
+                val today = LocalDate.now().toString()
+                val missions = dailyMissionDao.getByDateOnce(today)
+                for (m in missions) {
+                    if (m.claimed || m.completed) continue
+                    when (m.missionType) {
+                        DailyMissionType.REACH_WAVE_30.name -> {
+                            val newProgress = maxOf(m.progress, wave)
+                            dailyMissionDao.updateProgress(m.id, newProgress, newProgress >= m.target)
+                        }
+                        DailyMissionType.KILL_500_ENEMIES.name -> {
+                            val newProgress = m.progress + eng.totalEnemiesKilled
+                            dailyMissionDao.updateProgress(m.id, newProgress, newProgress >= m.target)
+                        }
+                    }
+                }
+            } catch (_: Exception) { /* best-effort */ }
         }
     }
 

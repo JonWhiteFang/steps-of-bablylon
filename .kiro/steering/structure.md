@@ -27,12 +27,13 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 │   ├── cards/          # CardsScreen, CardsViewModel
 │   ├── supplies/       # UnclaimedSuppliesScreen, UnclaimedSuppliesViewModel
 │   ├── economy/        # CurrencyDashboardScreen, CurrencyDashboardViewModel
+│   ├── missions/       # MissionsScreen, MissionsViewModel
 │   └── ui/theme/       # Compose theme, colors (Material3)
 ├── di/                 # Hilt modules (DatabaseModule, RepositoryModule, StepModule, HealthConnectModule)
 └── service/            # Foreground step-counting service, WorkManager workers, boot receiver
 
 app/src/test/java/com/whitefang/stepsofbabylon/
-├── fakes/              # In-memory fake repositories (FakePlayerRepository, FakeWorkshopRepository, FakeUltimateWeaponRepository, FakeLabRepository, FakeCardRepository, FakeWalkingEncounterRepository)
+├── fakes/              # In-memory fake repositories (FakePlayerRepository, FakeWorkshopRepository, FakeUltimateWeaponRepository, FakeLabRepository, FakeCardRepository, FakeWalkingEncounterRepository, FakeMilestoneDao, FakeDailyMissionDao)
 ├── domain/
 │   ├── model/          # Domain model invariant tests (TierConfig, Biome, Loadouts, UpgradeType, EnemyType)
 │   └── usecase/        # Use case tests (cost, damage, defense, stats, purchase, best wave)
@@ -86,6 +87,10 @@ All in `domain/model/`:
 - `SupplyDropTrigger` — 4 trigger types with notification messages
 - `SupplyDropReward` — 4 reward types (Steps, Gems, Power Stones, Card Dust)
 - `DropGeneratorState` — generator state tracking
+- `Milestone` — 6 walking milestones with step thresholds and rewards
+- `MilestoneReward` — sealed class: Gems, PowerStones, Cosmetic
+- `DailyMissionType` — 6 daily mission types (walking/battle/upgrade)
+- `MissionCategory` — mission categories: WALKING, BATTLE, UPGRADE
 
 ## Key Files
 
@@ -96,7 +101,7 @@ All in `domain/model/`:
 | `di/RepositoryModule.kt` | Hilt module: binds all 7 repository interfaces to impls |
 | `di/StepModule.kt` | Hilt module: provides SensorManager |
 | `di/HealthConnectModule.kt` | Hilt module: Health Connect organizational module |
-| `data/local/AppDatabase.kt` | Room database (9 entities, 9 DAOs, version 4) |
+| `data/local/AppDatabase.kt` | Room database (11 entities, 11 DAOs, version 5) |
 | `data/local/DatabaseKeyManager.kt` | SQLCipher passphrase via Android Keystore |
 | `data/local/Converters.kt` | TypeConverters for `Map<Int,Int>` and `Map<String,Int>` (JSON) |
 | `data/sensor/StepSensorDataSource.kt` | TYPE_STEP_COUNTER wrapper, emits deltas via callbackFlow |

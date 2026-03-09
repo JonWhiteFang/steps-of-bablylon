@@ -191,6 +191,7 @@ graph TD
 - [x] **Plan 17: Cards System** ✓
 - [x] **Plan 19: Walking Encounters & Supply Drops** ✓
 - [x] **Plan 20: Power Stone & Gem Economy** ✓
+- [x] **Plan 21: Milestones & Daily Missions** ✓
 - [ ] **Plan 27: Polish & Visual Effects** ← next on critical path
 
 ### Parallelizable Branches (after dependencies met)
@@ -252,7 +253,7 @@ The battle screen uses a custom `SurfaceView` with a game loop (not Compose). Ke
 - **Run tests:** `./run-gradle.sh testDebugUnitTest`
 - **Test source:** `app/src/test/java/com/whitefang/stepsofbabylon/`
 - **Fakes:** `test/fakes/` — FakePlayerRepository, FakeWorkshopRepository, FakeUltimateWeaponRepository, FakeLabRepository, FakeCardRepository (in-memory StateFlow-backed).
-- **Current coverage:** 179 JVM tests — all use cases, domain models with validation logic, battle condition effects, tier unlock logic, biome themes, EnemyScaler, StepRateLimiter, Labs research (cost/time/start/complete/rush/unlock/auto-complete), Cards (pack opening/upgrade/effects/loadout), Walking Encounters (supply drop generation/claiming), Wave Milestones (PS awards).
+- **Current coverage:** 206 JVM tests — all use cases, domain models with validation logic, battle condition effects, tier unlock logic, biome themes, EnemyScaler, StepRateLimiter, Labs research (cost/time/start/complete/rush/unlock/auto-complete), Cards (pack opening/upgrade/effects/loadout), Walking Encounters (supply drop generation/claiming), Wave Milestones (PS awards), Milestones (check/claim), Daily Missions (generation/types).
 
 ## Important Notes
 

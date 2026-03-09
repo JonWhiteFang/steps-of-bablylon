@@ -36,6 +36,10 @@ data/local/WeeklyChallengeEntity.kt # Weekly step challenge entity
 data/local/WeeklyChallengeDao.kt   # Weekly challenge DAO
 data/local/DailyLoginEntity.kt     # Daily login tracking entity
 data/local/DailyLoginDao.kt        # Daily login DAO
+data/local/MilestoneEntity.kt      # Milestone claim state entity
+data/local/MilestoneDao.kt         # Milestone DAO
+data/local/DailyMissionEntity.kt   # Daily mission entity
+data/local/DailyMissionDao.kt      # Daily mission DAO
 ```
 
 ## Data Layer — Repositories
@@ -84,6 +88,10 @@ domain/model/SupplyDrop.kt              # Walking encounter supply drop
 domain/model/SupplyDropTrigger.kt        # 4 trigger types with notification messages
 domain/model/SupplyDropReward.kt         # 4 reward types (Steps, Gems, Power Stones, Card Dust)
 domain/model/DropGeneratorState.kt       # Generator state tracking (lastCheckSteps, milestoneTriggered)
+domain/model/Milestone.kt               # 6 walking milestones with step thresholds and rewards
+domain/model/MilestoneReward.kt          # Sealed class: Gems, PowerStones, Cosmetic
+domain/model/DailyMissionType.kt         # 6 daily mission types (walking/battle/upgrade)
+domain/model/MissionCategory.kt          # Mission categories: WALKING, BATTLE, UPGRADE (in DailyMissionType.kt)
 domain/model/UpgradeType.kt           # 23 Workshop upgrade types with configs
 domain/model/UpgradeCategory.kt       # Attack, Defense, Utility categories
 domain/model/UpgradeConfig.kt         # Upgrade configuration (baseCost, scaling, maxLevel)
@@ -143,6 +151,9 @@ domain/usecase/ClaimSupplyDrop.kt                # Credits reward to player, mar
 domain/usecase/TrackWeeklyChallenge.kt           # Weekly step challenge PS awards (50k/75k/100k)
 domain/usecase/TrackDailyLogin.kt                # Daily login PS + Gem streak
 domain/usecase/AwardWaveMilestone.kt             # PS on new personal-best waves (1/2/5)
+domain/usecase/CheckMilestones.kt                # Detect newly achievable walking milestones
+domain/usecase/ClaimMilestone.kt                 # Credit milestone rewards (Gems, PS, cosmetics)
+domain/usecase/GenerateDailyMissions.kt          # Generate 3 daily missions (date-seeded random)
 ```
 
 ## Presentation Layer
@@ -200,6 +211,9 @@ presentation/supplies/UnclaimedSuppliesScreen.kt     # Inbox: drop cards, claim 
 presentation/economy/CurrencyDashboardViewModel.kt   # @HiltViewModel: weekly challenge, login streak, balances
 presentation/economy/EconomyUiState.kt               # UI state: weekly progress, streak, balances
 presentation/economy/CurrencyDashboardScreen.kt      # Dashboard: weekly progress bar, streak dots, PS/Gem balances
+presentation/missions/MissionsViewModel.kt           # @HiltViewModel: milestones + daily missions + claim flow
+presentation/missions/MissionsUiState.kt             # UI state: missions list, milestones list, midnight countdown
+presentation/missions/MissionsScreen.kt              # Missions screen: daily missions + walking milestones + claim
 ```
 
 ## Service Layer
@@ -250,6 +264,11 @@ domain/usecase/ManageCardLoadoutTest.kt           # Equip/unequip, loadout full
 domain/usecase/GenerateSupplyDropTest.kt          # Drop generation: inbox cap, milestone, threshold, random triggers
 domain/usecase/ClaimSupplyDropTest.kt             # Claim flow: reward crediting, already-claimed guard
 domain/usecase/AwardWaveMilestoneTest.kt          # Wave milestone PS: 1/2/5 at wave boundaries
+domain/usecase/CheckMilestonesTest.kt             # Milestone detection: threshold, claimed exclusion
+domain/usecase/ClaimMilestoneTest.kt              # Claim flow: reward crediting, idempotent guard
+domain/usecase/GenerateDailyMissionsTest.kt       # Mission generation: deterministic, one per category
+domain/model/MilestoneTest.kt                     # 6 milestones: thresholds, rewards, sorting
+domain/model/DailyMissionTypeTest.kt              # 6 mission types: targets, rewards, categories
 domain/model/TierConfigTest.kt                    # All 10 tiers, battle conditions, invalid tier
 domain/model/BiomeTest.kt                         # All tier→biome mappings
 domain/model/CardLoadoutTest.kt                   # Max 3, no duplicates, add/remove
