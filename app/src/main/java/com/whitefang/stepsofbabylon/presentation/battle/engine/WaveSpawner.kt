@@ -23,7 +23,7 @@ class WaveSpawner(
     var phase: WavePhase = WavePhase.SPAWNING; private set
     var enemiesAlive: Int = 0; private set
 
-    private var phaseTimer = 0f
+    var phaseTimer = 0f; private set
     private var spawnTimer = 0f
     private var enemiesSpawned = 0
     private var totalToSpawn = 0

@@ -221,6 +221,7 @@ class BattleViewModel @Inject constructor(
         inRoundLevels[type] = currentLevel + 1
         resolvedStats = resolveStats(workshopLevels, inRoundLevels)
         eng.updateZigguratStats(resolvedStats)
+        eng.soundManager?.play(com.whitefang.stepsofbabylon.presentation.audio.SoundEffect.UPGRADE_PURCHASE)
         _uiState.update { it.copy(inRoundLevels = inRoundLevels.toMap(), lastPurchaseFree = isFree) }
     }
 

@@ -122,7 +122,8 @@ graph TD
 - [ ] Plan 24: Accessibility *(deferred — post-v1.0)*
 - [x] Plan 25: Anti-Cheat & Validation
 - [x] Plan 26: Monetization & Ads (stub implementation — real SDK integration deferred)
-- [ ] Plan 27: Polish & Visual Effects
+- [x] Plan 27: Polish & Visual Effects
+- [ ] Plan 28: Balancing & Tuning
 - [ ] Plan 28: Balancing & Tuning
 - [ ] Plan 29: Testing & QA
 - [ ] Plan 30: Release Prep

@@ -1,5 +1,6 @@
 package com.whitefang.stepsofbabylon.presentation.home
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -75,7 +76,7 @@ fun HomeScreen(
             ) {
                 Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Today", style = MaterialTheme.typography.labelLarge, color = LapisLazuli)
-                    Text("${state.todaySteps} steps", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = LapisLazuli)
+                    Text("${state.todaySteps} steps", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = LapisLazuli, modifier = Modifier.animateContentSize())
                 }
             }
 

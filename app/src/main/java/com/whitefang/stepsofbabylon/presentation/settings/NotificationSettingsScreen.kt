@@ -22,6 +22,10 @@ fun NotificationSettingsScreen(viewModel: NotificationSettingsViewModel = hiltVi
         ToggleRow("Supply Drops", "Notifications for walking rewards", state.supplyDrops, viewModel::setSupplyDrops)
         ToggleRow("Smart Reminders", "Upgrade proximity reminders", state.smartReminders, viewModel::setSmartReminders)
         ToggleRow("Milestone Alerts", "Wave records and step milestones", state.milestoneAlerts, viewModel::setMilestoneAlerts)
+        Spacer(Modifier.height(16.dp))
+        Text("Sound", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(8.dp))
+        ToggleRow("Mute Sound Effects", "Silence all in-game sounds", state.soundMuted, viewModel::setSoundMuted)
     }
 }
 

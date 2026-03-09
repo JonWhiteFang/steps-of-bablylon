@@ -4,7 +4,6 @@ import android.graphics.Canvas
 import com.whitefang.stepsofbabylon.domain.model.BattleConditionEffects
 import com.whitefang.stepsofbabylon.domain.model.Biome
 import com.whitefang.stepsofbabylon.domain.model.EnemyType
-import android.graphics.Paint
 import com.whitefang.stepsofbabylon.domain.model.OwnedWeapon
 import com.whitefang.stepsofbabylon.domain.model.OverdriveType
 import com.whitefang.stepsofbabylon.domain.model.UltimateWeaponType
@@ -14,8 +13,18 @@ import com.whitefang.stepsofbabylon.domain.model.UpgradeType
 import com.whitefang.stepsofbabylon.domain.model.ZigguratBaseStats
 import com.whitefang.stepsofbabylon.domain.usecase.CalculateDamage
 import com.whitefang.stepsofbabylon.domain.usecase.CalculateDefense
+import com.whitefang.stepsofbabylon.presentation.audio.SoundEffect
+import com.whitefang.stepsofbabylon.presentation.audio.SoundManager
 import com.whitefang.stepsofbabylon.presentation.battle.biome.BackgroundRenderer
 import com.whitefang.stepsofbabylon.presentation.battle.biome.BiomeTheme
+import com.whitefang.stepsofbabylon.presentation.battle.effects.DeathEffect
+import com.whitefang.stepsofbabylon.presentation.battle.effects.EffectEngine
+import com.whitefang.stepsofbabylon.presentation.battle.effects.FloatingText
+import com.whitefang.stepsofbabylon.presentation.battle.effects.OverdriveAuraEffect
+import com.whitefang.stepsofbabylon.presentation.battle.effects.ProjectileTrailEffect
+import com.whitefang.stepsofbabylon.presentation.battle.effects.UWVisualEffect
+import com.whitefang.stepsofbabylon.presentation.battle.effects.WaveAnnouncement
+import com.whitefang.stepsofbabylon.presentation.battle.effects.WaveCooldownText
 import com.whitefang.stepsofbabylon.presentation.battle.entities.EnemyEntity
 import com.whitefang.stepsofbabylon.presentation.battle.entities.EnemyProjectileEntity
 import com.whitefang.stepsofbabylon.presentation.battle.entities.OrbEntity
@@ -46,6 +55,14 @@ class GameEngine {
     private var backgroundRenderer: BackgroundRenderer? = null
     private var biomeTheme: BiomeTheme = BiomeTheme.forBiome(Biome.HANGING_GARDENS)
 
+    // Effects
+    var effectEngine: EffectEngine? = null; private set
+    var soundManager: SoundManager? = null
+    private var reducedMotion: Boolean = false
+    private var cooldownText: WaveCooldownText? = null
+    private var overdriveAuraEffect: OverdriveAuraEffect? = null
+    private var lastWave: Int = 0
+
     @Volatile var cash: Long = 0L; private set
     @Volatile var totalCashEarned: Long = 0L; private set
     @Volatile var roundOver: Boolean = false
@@ -60,13 +77,10 @@ class GameEngine {
     private var fortuneMultiplier: Double = 1.0
 
     data class UWState(val type: UltimateWeaponType, val level: Int, var cooldownRemaining: Float = 0f, var effectTimeRemaining: Float = 0f)
-    data class UWEffect(val type: UltimateWeaponType, var timer: Float, val x: Float, val y: Float)
     val uwStates = mutableListOf<UWState>()
-    private val uwEffects = mutableListOf<UWEffect>()
     private var chronoActive = false
     private var goldenZigActive = false
     private var preGoldenStats: ResolvedStats? = null
-    private val uwPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     companion object {
         const val BASE_CASH_PER_WAVE = 20L
@@ -78,6 +92,7 @@ class GameEngine {
         resolvedStats: ResolvedStats = ResolvedStats(),
         playerTier: Int = 1,
         wsLevels: Map<UpgradeType, Int> = emptyMap(),
+        isReducedMotion: Boolean = false,
     ) {
         screenWidth = width; screenHeight = height
         entities.clear(); pendingAdd.clear()
@@ -85,14 +100,22 @@ class GameEngine {
         totalEnemiesKilled = 0; elapsedTimeSeconds = 0f
         activeOverdrive = null; overdriveTimeRemaining = 0f; preOverdriveStats = null; fortuneMultiplier = 1.0
         secondWindUsed = false
-        uwStates.clear(); uwEffects.clear(); chronoActive = false; goldenZigActive = false; preGoldenStats = null
+        uwStates.clear(); chronoActive = false; goldenZigActive = false; preGoldenStats = null
         stats = resolvedStats; tier = playerTier; workshopLevels = wsLevels
+        reducedMotion = isReducedMotion
         conditions = BattleConditionEffects.fromTier(tier)
         biomeTheme = BiomeTheme.forBiome(Biome.forTier(tier))
         backgroundRenderer = BackgroundRenderer(width, height, biomeTheme)
 
+        // Initialize effect engine
+        val fx = EffectEngine(reducedMotion)
+        effectEngine = fx
+        overdriveAuraEffect = null
+        lastWave = 0
+
         val zig = ZigguratEntity(width, height, stats, ::findNearestEnemies, layerColors = biomeTheme.zigguratColors) { sx, sy, tx, ty ->
             pendingAdd.add(ProjectileEntity(sx, sy, tx, ty, ZigguratBaseStats.PROJECTILE_SPEED, bouncesRemaining = stats.bounceCount))
+            soundManager?.play(SoundEffect.SHOOT)
         }
         ziggurat = zig
         entities.add(zig)
@@ -111,6 +134,9 @@ class GameEngine {
             conditions = conditions,
             enemyTint = biomeTheme.enemyTint,
         )
+
+        // Initial wave announcement
+        triggerWaveAnnouncement(1)
     }
 
     fun setStats(resolvedStats: ResolvedStats) { stats = resolvedStats }
@@ -137,6 +163,13 @@ class GameEngine {
                 ziggurat?.let { it.overdriveColor = 0xFF9C27B0.toInt() }
             }
         }
+        // Spawn overdrive aura effect
+        val fx = effectEngine ?: return
+        val zig = ziggurat ?: return
+        overdriveAuraEffect?.let {} // Remove old if any — it auto-finishes when progress hits 0
+        val aura = OverdriveAuraEffect(fx.pool, type, { zig.x }, { zig.centerY }, { ziggurat?.overdriveProgress ?: 0f }, reducedMotion)
+        overdriveAuraEffect = aura
+        fx.addEffect(aura)
     }
 
     private fun expireOverdrive() {
@@ -146,6 +179,7 @@ class GameEngine {
         activeOverdrive = null
         overdriveTimeRemaining = 0f
         ziggurat?.let { it.overdriveColor = 0; it.overdriveProgress = 0f }
+        overdriveAuraEffect = null
     }
 
     fun updateZigguratStats(newStats: ResolvedStats) {
@@ -171,6 +205,8 @@ class GameEngine {
         val zig = ziggurat ?: return
         elapsedTimeSeconds += deltaTime
         backgroundRenderer?.update(deltaTime)
+        effectEngine?.update(deltaTime)
+
         if (activeOverdrive != null) {
             overdriveTimeRemaining -= deltaTime
             ziggurat?.overdriveProgress = (overdriveTimeRemaining / 60f).coerceIn(0f, 1f)
@@ -178,9 +214,28 @@ class GameEngine {
         }
         updateUWs(deltaTime)
 
+        // Check for new wave to trigger announcement
+        val currentWave = waveSpawner?.currentWave ?: 1
+        if (currentWave != lastWave) {
+            lastWave = currentWave
+            triggerWaveAnnouncement(currentWave)
+        }
+
         waveSpawner?.update(deltaTime, screenWidth, screenHeight)
         entities.addAll(pendingAdd); pendingAdd.clear()
         entities.forEach { it.update(deltaTime) }
+
+        // Spawn projectile trails
+        if (!reducedMotion) {
+            val fx = effectEngine
+            if (fx != null) {
+                for (e in entities) {
+                    if (e is ProjectileEntity && e.isAlive) {
+                        ProjectileTrailEffect.spawn(fx.pool, e.x, e.y, biomeTheme.particleColor)
+                    }
+                }
+            }
+        }
 
         CollisionSystem.checkCollisions(
             entities, zig.x, zig.y, zig.width,
@@ -191,45 +246,32 @@ class GameEngine {
             },
         )
         entities.removeAll { !it.isAlive }
-        if (zig.currentHp <= 0.0) roundOver = true
+        if (zig.currentHp <= 0.0) {
+            roundOver = true
+            soundManager?.play(SoundEffect.ROUND_END)
+        }
     }
 
     fun render(canvas: Canvas) {
         backgroundRenderer?.render(canvas) ?: canvas.drawColor(0xFF6B3A2A.toInt())
+
+        val fx = effectEngine
+        // Screen shake
+        if (fx != null && !reducedMotion) fx.screenShake.apply(canvas)
+
         entities.forEach { it.render(canvas) }
-        // UW visual effects
-        for (effect in uwEffects) {
-            when (effect.type) {
-                UltimateWeaponType.DEATH_WAVE -> {
-                    val progress = 1f - effect.timer / 0.5f
-                    uwPaint.color = 0xFF4CAF50.toInt(); uwPaint.alpha = ((1f - progress) * 150).toInt()
-                    uwPaint.style = Paint.Style.STROKE; uwPaint.strokeWidth = 4f
-                    canvas.drawCircle(effect.x, effect.y, progress * screenWidth * 0.6f, uwPaint)
-                }
-                UltimateWeaponType.CHAIN_LIGHTNING -> {
-                    uwPaint.color = 0xFFE0E0FF.toInt(); uwPaint.alpha = 200
-                    uwPaint.style = Paint.Style.STROKE; uwPaint.strokeWidth = 2f
-                    getAliveEnemies().take(8).forEach { e -> canvas.drawLine(effect.x, effect.y, e.x, e.y, uwPaint) }
-                }
-                UltimateWeaponType.BLACK_HOLE -> {
-                    uwPaint.color = 0xFF6A0DAD.toInt(); uwPaint.alpha = 100; uwPaint.style = Paint.Style.FILL
-                    canvas.drawCircle(effect.x, effect.y, 60f, uwPaint)
-                }
-                UltimateWeaponType.CHRONO_FIELD -> {
-                    uwPaint.color = 0x332196F3.toInt(); uwPaint.style = Paint.Style.FILL
-                    canvas.drawRect(0f, 0f, screenWidth, screenHeight, uwPaint)
-                }
-                UltimateWeaponType.POISON_SWAMP -> {
-                    uwPaint.color = 0xFF4CAF50.toInt(); uwPaint.alpha = 60; uwPaint.style = Paint.Style.FILL
-                    canvas.drawCircle(effect.x, effect.y, 100f, uwPaint)
-                }
-                UltimateWeaponType.GOLDEN_ZIGGURAT -> {} // Uses overdrive aura
-            }
-        }
+
+        // Render effects (particles, floating text, UW visuals, auras, announcements)
+        fx?.render(canvas)
+
+        // Chrono field overlay
         if (chronoActive) {
-            uwPaint.color = 0x222196F3.toInt(); uwPaint.style = Paint.Style.FILL
-            canvas.drawRect(0f, 0f, screenWidth, screenHeight, uwPaint)
+            val p = android.graphics.Paint().apply { color = 0x222196F3.toInt(); style = android.graphics.Paint.Style.FILL }
+            canvas.drawRect(0f, 0f, screenWidth, screenHeight, p)
         }
+
+        if (fx != null && !reducedMotion) fx.screenShake.restore(canvas)
+
         ziggurat?.let { healthBarRenderer.render(canvas, it.currentHp, it.maxHp, screenWidth) }
     }
 
@@ -248,25 +290,39 @@ class GameEngine {
         val duration = uw.type.effectDurationSeconds.toFloat()
         if (duration > 0f) uw.effectTimeRemaining = duration
 
+        soundManager?.play(SoundEffect.UW_ACTIVATE)
+
+        // Spawn particle-based UW visual effect
+        val fx = effectEngine
+        if (fx != null) {
+            val effectDuration = if (duration > 0f) duration else 0.5f
+            val cx: Float; val cy: Float
+            when (uw.type) {
+                UltimateWeaponType.BLACK_HOLE -> { cx = screenWidth / 2f; cy = screenHeight * 0.35f }
+                UltimateWeaponType.POISON_SWAMP -> { cx = screenWidth / 2f; cy = screenHeight * 0.6f }
+                else -> { cx = zig.x; cy = zig.originY }
+            }
+            fx.addEffect(UWVisualEffect(uw.type, fx.pool, cx, cy, screenWidth, screenHeight, effectDuration, reducedMotion))
+        }
+
+        // Screen shake for Death Wave
+        if (uw.type == UltimateWeaponType.DEATH_WAVE && !reducedMotion) {
+            fx?.screenShake?.trigger(12f, 0.4f)
+        }
+
         when (uw.type) {
             UltimateWeaponType.DEATH_WAVE -> {
                 val dmg = 500.0 * uw.level
                 getAliveEnemies().forEach { it.takeDamage(dmg) }
-                uwEffects.add(UWEffect(uw.type, 0.5f, zig.x, zig.y - zig.height / 2))
             }
             UltimateWeaponType.CHAIN_LIGHTNING -> {
                 val dmg = 300.0 * uw.level
                 val targets = getAliveEnemies().sortedBy { hypot(it.x - zig.x, it.y - zig.y) }.take(8)
                 targets.forEach { it.takeDamage(dmg) }
-                uwEffects.add(UWEffect(uw.type, 0.3f, zig.x, zig.y - zig.height / 2))
             }
-            UltimateWeaponType.BLACK_HOLE -> {
-                uwEffects.add(UWEffect(uw.type, duration, screenWidth / 2f, screenHeight * 0.35f))
-            }
+            UltimateWeaponType.BLACK_HOLE -> {} // Ongoing effect in updateUWs
             UltimateWeaponType.CHRONO_FIELD -> { chronoActive = true }
-            UltimateWeaponType.POISON_SWAMP -> {
-                uwEffects.add(UWEffect(uw.type, duration, screenWidth / 2f, screenHeight * 0.6f))
-            }
+            UltimateWeaponType.POISON_SWAMP -> {} // Ongoing effect in updateUWs
             UltimateWeaponType.GOLDEN_ZIGGURAT -> {
                 goldenZigActive = true; preGoldenStats = stats
                 fortuneMultiplier = fortuneMultiplier.coerceAtLeast(5.0)
@@ -313,12 +369,30 @@ class GameEngine {
                 }
             }
         }
-        // Chrono effect: handled in WaveSpawner via speed, but we also slow existing enemies
-        // (enemies already spawned keep their speed, so we apply chrono as a position modifier)
-        uwEffects.removeAll { e -> e.timer -= deltaTime; e.timer <= 0f }
     }
 
     fun resetUWCooldowns() { uwStates.forEach { it.cooldownRemaining = 0f } }
+
+    // --- Wave announcements ---
+
+    private fun triggerWaveAnnouncement(wave: Int) {
+        val fx = effectEngine ?: return
+        val isBoss = wave % conditions.bossWaveInterval == 0 && wave > 0
+        fx.addEffect(WaveAnnouncement(wave, isBoss, screenWidth, screenHeight, reducedMotion))
+        soundManager?.play(SoundEffect.WAVE_START)
+
+        // Add cooldown text for next wave
+        cooldownText = null // Old one auto-finishes
+        val spawner = waveSpawner
+        if (spawner != null) {
+            val ct = WaveCooldownText(screenWidth) {
+                if (spawner.phase == WavePhase.COOLDOWN) WaveSpawner.COOLDOWN_DURATION - (spawner.phaseTimer)
+                else 0f
+            }
+            cooldownText = ct
+            fx.addEffect(ct)
+        }
+    }
 
     // --- Orb management ---
 
@@ -381,6 +455,8 @@ class GameEngine {
         proj.hitEnemies.add(enemy)
         proj.isAlive = false
 
+        soundManager?.play(SoundEffect.HIT)
+
         if (stats.knockbackForce > 0f) {
             val dx = enemy.x - zig.x; val dy = enemy.y - zig.y
             val d = hypot(dx, dy).coerceAtLeast(1f)
@@ -422,7 +498,13 @@ class GameEngine {
             zig.currentHp = zig.maxHp * secondWindHpPercent
             applyThorn(rawDamage, attacker); return
         }
+        val prevHpRatio = zig.currentHp / zig.maxHp
         zig.currentHp = (zig.currentHp - mitigated).coerceAtLeast(0.0)
+        val newHpRatio = zig.currentHp / zig.maxHp
+        // Screen shake when HP drops below 25%
+        if (prevHpRatio > 0.25 && newHpRatio <= 0.25 && !reducedMotion) {
+            effectEngine?.screenShake?.trigger(5f, 0.2f)
+        }
         applyThorn(rawDamage, attacker)
     }
 
@@ -452,6 +534,19 @@ class GameEngine {
         cash += killCash
         totalCashEarned += killCash
         waveSpawner?.onEnemyKilled()
+
+        soundManager?.play(SoundEffect.ENEMY_DEATH)
+
+        // Death effect particles + floating cash text
+        val fx = effectEngine
+        if (fx != null) {
+            if (!reducedMotion) DeathEffect.spawn(fx.pool, enemy.x, enemy.y, enemy.enemyType)
+            fx.addEffect(FloatingText(enemy.x, enemy.y, "+$killCash"))
+            // Boss death screen shake
+            if (enemy.enemyType == EnemyType.BOSS && !reducedMotion) {
+                fx.screenShake.trigger(8f, 0.3f)
+            }
+        }
 
         if (enemy.enemyType == EnemyType.SCATTER) {
             val zig = ziggurat ?: return

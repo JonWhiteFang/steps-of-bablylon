@@ -2,6 +2,7 @@ package com.whitefang.stepsofbabylon.presentation.settings
 
 import androidx.lifecycle.ViewModel
 import com.whitefang.stepsofbabylon.data.NotificationPreferences
+import com.whitefang.stepsofbabylon.data.SoundPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,11 +15,13 @@ data class NotificationSettingsState(
     val supplyDrops: Boolean = true,
     val smartReminders: Boolean = true,
     val milestoneAlerts: Boolean = true,
+    val soundMuted: Boolean = false,
 )
 
 @HiltViewModel
 class NotificationSettingsViewModel @Inject constructor(
     private val prefs: NotificationPreferences,
+    private val soundPrefs: SoundPreferences,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(NotificationSettingsState(
@@ -26,6 +29,7 @@ class NotificationSettingsViewModel @Inject constructor(
         supplyDrops = prefs.isSupplyDropsEnabled(),
         smartReminders = prefs.isSmartRemindersEnabled(),
         milestoneAlerts = prefs.isMilestoneAlertsEnabled(),
+        soundMuted = soundPrefs.isMuted(),
     ))
     val state: StateFlow<NotificationSettingsState> = _state.asStateFlow()
 
@@ -33,4 +37,5 @@ class NotificationSettingsViewModel @Inject constructor(
     fun setSupplyDrops(enabled: Boolean) { prefs.setSupplyDropsEnabled(enabled); _state.update { it.copy(supplyDrops = enabled) } }
     fun setSmartReminders(enabled: Boolean) { prefs.setSmartRemindersEnabled(enabled); _state.update { it.copy(smartReminders = enabled) } }
     fun setMilestoneAlerts(enabled: Boolean) { prefs.setMilestoneAlertsEnabled(enabled); _state.update { it.copy(milestoneAlerts = enabled) } }
+    fun setSoundMuted(muted: Boolean) { soundPrefs.setMuted(muted); _state.update { it.copy(soundMuted = muted) } }
 }

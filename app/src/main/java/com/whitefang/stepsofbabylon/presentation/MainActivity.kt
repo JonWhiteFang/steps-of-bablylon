@@ -4,11 +4,18 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -16,6 +23,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -118,10 +126,20 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 ) { innerPadding ->
+                    val reducedMotion = remember {
+                        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+                    }
+                    val enterAnim = if (reducedMotion) fadeIn(snap()) else fadeIn(tween(200)) + slideInHorizontally(tween(200)) { it / 4 }
+                    val exitAnim = if (reducedMotion) fadeOut(snap()) else fadeOut(tween(200)) + slideOutHorizontally(tween(200)) { -it / 4 }
+
                     NavHost(
                         navController = navController,
                         startDestination = Screen.Home.route,
                         modifier = Modifier.padding(innerPadding),
+                        enterTransition = { enterAnim },
+                        exitTransition = { exitAnim },
+                        popEnterTransition = { if (reducedMotion) fadeIn(snap()) else fadeIn(tween(200)) + slideInHorizontally(tween(200)) { -it / 4 } },
+                        popExitTransition = { if (reducedMotion) fadeOut(snap()) else fadeOut(tween(200)) + slideOutHorizontally(tween(200)) { it / 4 } },
                     ) {
                         composable(Screen.Home.route) {
                             HomeScreen(

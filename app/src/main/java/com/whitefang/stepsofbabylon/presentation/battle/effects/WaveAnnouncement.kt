@@ -1,0 +1,58 @@
+package com.whitefang.stepsofbabylon.presentation.battle.effects
+
+import android.graphics.Canvas
+import android.graphics.Paint
+
+class WaveAnnouncement(
+    private val wave: Int,
+    private val isBossWave: Boolean,
+    private val screenWidth: Float,
+    private val screenHeight: Float,
+    private val reducedMotion: Boolean = false,
+) : Effect {
+    private var age = 0f
+    private val holdDuration = 1f
+    private val fadeDuration = 0.5f
+    private val totalDuration = holdDuration + fadeDuration
+    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFFFFFFFF.toInt(); textSize = 64f; textAlign = Paint.Align.CENTER; isFakeBoldText = true
+    }
+    private val bossTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFFF44336.toInt(); textSize = 48f; textAlign = Paint.Align.CENTER; isFakeBoldText = true
+    }
+
+    override val isFinished: Boolean get() = age >= totalDuration
+
+    override fun update(dt: Float) { age += dt }
+
+    override fun render(canvas: Canvas) {
+        val alpha = if (age < holdDuration) 255 else ((1f - (age - holdDuration) / fadeDuration) * 255).toInt().coerceIn(0, 255)
+        val yOffset = if (reducedMotion || age > 0.15f) 0f else (1f - age / 0.15f) * -40f // Slide in from top
+
+        textPaint.alpha = alpha
+        val baseY = screenHeight * 0.3f + yOffset
+        if (isBossWave) {
+            bossTextPaint.alpha = alpha
+            canvas.drawText("⚠ BOSS INCOMING", screenWidth / 2f, baseY - 50f, bossTextPaint)
+        }
+        canvas.drawText("Wave $wave", screenWidth / 2f, baseY, textPaint)
+    }
+}
+
+class WaveCooldownText(
+    private val screenWidth: Float,
+    private val getTimeRemaining: () -> Float,
+) : Effect {
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xAAFFFFFF.toInt(); textSize = 28f; textAlign = Paint.Align.CENTER
+    }
+
+    override val isFinished: Boolean get() = getTimeRemaining() <= 0f
+
+    override fun update(dt: Float) {}
+
+    override fun render(canvas: Canvas) {
+        val t = getTimeRemaining()
+        if (t > 0f) canvas.drawText("Next Wave: ${t.toInt()}s", screenWidth / 2f, 60f, paint)
+    }
+}

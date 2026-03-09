@@ -1,6 +1,6 @@
 # Plan 27 — Polish & Visual Effects
 
-**Status:** Not Started
+**Status:** Complete
 **Dependencies:** Plan 18 (Narrative Biome Progression)
 **Layer:** `presentation/battle/` + `presentation/`
 

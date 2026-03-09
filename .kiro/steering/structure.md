@@ -20,6 +20,7 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 │   ├── battle/         # Battle renderer (SurfaceView, game loop, entities)
 │   │   ├── engine/     # GameEngine, Entity, WaveSpawner, EnemyScaler, CollisionSystem
 │   │   ├── entities/   # ZigguratEntity, ProjectileEntity, EnemyEntity, EnemyProjectileEntity, OrbEntity
+│   │   ├── effects/   # ParticlePool, EffectEngine, ScreenShake, DeathEffect, UWVisualEffect, OverdriveAuraEffect, WaveAnnouncement, FloatingText, ProjectileTrailEffect, ReducedMotionCheck
 │   │   ├── biome/      # BiomeTheme, BackgroundRenderer (gradient sky + ambient particles)
 │   │   └── ui/         # HealthBarRenderer, InRoundUpgradeMenu, PostRoundOverlay, PauseOverlay, BiomeTransitionOverlay, OverdriveMenu, UltimateWeaponBar
 │   ├── weapons/        # UltimateWeaponScreen, UltimateWeaponViewModel
@@ -29,6 +30,7 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 │   ├── economy/        # CurrencyDashboardScreen, CurrencyDashboardViewModel
 │   ├── missions/       # MissionsScreen, MissionsViewModel
 │   ├── settings/       # NotificationSettingsScreen, NotificationSettingsViewModel
+│   ├── audio/          # SoundManager (SoundPool wrapper, 7 effects, volume/mute)
 │   └── ui/theme/       # Compose theme, colors (Material3)
 ├── di/                 # Hilt modules (DatabaseModule, RepositoryModule, StepModule, HealthConnectModule)
 └── service/            # Foreground step-counting service, WorkManager workers, boot receiver
@@ -42,6 +44,7 @@ app/src/test/java/com/whitefang/stepsofbabylon/
 │   └── battle/
 │       ├── engine/     # EnemyScaler tests
 │       └── biome/      # BiomeTheme tests
+│       └── effects/    # ParticlePool, ScreenShake, DeathEffect tests
 └── data/sensor/        # StepRateLimiter tests
 ```
 

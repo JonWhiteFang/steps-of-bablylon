@@ -710,3 +710,57 @@ Implement monetization layer with stub billing/ads, cosmetic store, Season Pass,
 - Play Console product configuration and test tracks.
 - Ad mediation for fill rate optimization.
 - ADR for stub billing decision (documented in plan-26-monetization.md instead).
+
+---
+
+## Run: 2026-03-09 — Plan 27: Polish & Visual Effects
+
+**Objective:** Add visual polish and audio to the battle renderer and UI.
+
+**Decisions:**
+- (a) Pooled particle system (200 pre-allocated) over lightweight ad-hoc allocation — avoids GC pressure during combat.
+- (a) Minimal sound set (~7 reusable sounds) over full per-type set — sufficient for v1.0, easy to expand later.
+- (a) Floating cash text on Canvas (game thread) over Compose overlay — same coordinate space, no latency.
+- (a) System ANIMATOR_DURATION_SCALE for reduced motion — no in-app toggle needed.
+- (a) Placeholder WAV files as sine wave tones — real audio assets to be sourced separately.
+
+**Created files:**
+- `presentation/battle/effects/ParticlePool.kt` — Particle class + ParticlePool (200 capacity, acquire/release/recycle)
+- `presentation/battle/effects/ReducedMotionCheck.kt` — Reads system ANIMATOR_DURATION_SCALE
+- `presentation/battle/effects/EffectEngine.kt` — Effect interface + EffectEngine (manages effects, owns pool + screen shake)
+- `presentation/battle/effects/ScreenShake.kt` — Canvas translate oscillation with decay
+- `presentation/battle/effects/ProjectileTrailEffect.kt` — Spawns fading trail particles at projectile positions
+- `presentation/battle/effects/DeathEffect.kt` — Per-enemy-type death burst (6 types, 6-20 particles each)
+- `presentation/battle/effects/FloatingText.kt` — "+X" cash text that drifts up and fades
+- `presentation/battle/effects/UWVisualEffect.kt` — 6 particle-based UW spectacles (replaces old geometric rendering)
+- `presentation/battle/effects/OverdriveAuraEffect.kt` — 4 overdrive aura particle emitters
+- `presentation/battle/effects/WaveAnnouncement.kt` — Wave number + boss warning text overlay + cooldown countdown
+- `presentation/audio/SoundManager.kt` — SoundPool wrapper, 7 sound effects, volume/mute, shoot throttling
+- `data/SoundPreferences.kt` — SharedPreferences for sound mute/volume
+- `res/raw/sfx_*.ogg` — 7 placeholder WAV audio files (sine wave tones)
+
+**Created tests:**
+- `presentation/battle/effects/ParticlePoolTest.kt` — 9 tests (acquire, release, recycle, expire, clear, reset)
+- `presentation/battle/effects/ScreenShakeTest.kt` — 6 tests (trigger, decay, override, reset, offset)
+- `presentation/battle/effects/DeathEffectTest.kt` — 7 tests (particle count per enemy type)
+
+**Modified files:**
+- `presentation/battle/engine/GameEngine.kt` — Full rewrite: integrated EffectEngine, removed old UW rendering (uwEffects list, uwPaint, inline render code), added all trigger points (trail, death, floating text, UW spectacle, overdrive aura, wave announcement, screen shake, sound), added reducedMotion parameter to init()
+- `presentation/battle/engine/WaveSpawner.kt` — Made phaseTimer publicly readable (for cooldown text)
+- `presentation/battle/entities/ZigguratEntity.kt` — Removed old aura circle rendering (auraPulse, auraPaint), added centerY property, kept overdrive timer bar
+- `presentation/battle/GameSurfaceView.kt` — Added SoundManager init, reduced motion check, passes isReducedMotion to engine.init()
+- `presentation/battle/BattleViewModel.kt` — Added upgrade purchase sound trigger
+- `presentation/settings/NotificationSettingsViewModel.kt` — Added SoundPreferences injection, soundMuted state
+- `presentation/settings/NotificationSettingsScreen.kt` — Added Sound section with mute toggle
+- `presentation/workshop/UpgradeCard.kt` — Added purchase pulse animation (1.05x scale, 100ms, reduced motion aware)
+- `presentation/home/HomeScreen.kt` — Added animateContentSize() to step counter
+- `presentation/MainActivity.kt` — Added screen transition animations (fadeIn + slideInHorizontally, reduced motion aware)
+
+**Test results:** 244 JVM tests — all green (was 222, +22 new).
+**Build:** assembleDebug successful, 2 minor warnings (redundant conversion, hiltViewModel deprecation).
+
+**What remains:**
+- Plan 28: Balancing & Tuning (next on critical path)
+- Replace placeholder audio with real royalty-free sound effects
+- Plan 29: Testing & QA
+- Plan 30: Release Prep

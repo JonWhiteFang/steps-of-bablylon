@@ -86,6 +86,7 @@ data/healthconnect/ActivityMinuteConverter.kt      # Converts exercise minutes t
 data/healthconnect/ActivityMinuteValidator.kt      # Filters suspicious exercise sessions (duration/type/micro caps)
 data/BiomePreferences.kt                          # SharedPreferences wrapper for first-seen biome tracking
 data/NotificationPreferences.kt                   # SharedPreferences wrapper for 4 notification toggles
+data/SoundPreferences.kt                          # SharedPreferences wrapper for sound mute/volume
 data/anticheat/AntiCheatPreferences.kt            # SharedPreferences wrapper for anti-cheat counters + CV offense tracking
 ```
 
@@ -209,6 +210,17 @@ presentation/battle/entities/ProjectileEntity.kt   # Moves toward target, self-d
 presentation/battle/entities/EnemyEntity.kt        # 6 enemy types, movement, melee/ranged attack, mini HP bar
 presentation/battle/entities/EnemyProjectileEntity.kt # Ranged enemy projectiles targeting ziggurat
 presentation/battle/entities/OrbEntity.kt          # Orbiting projectiles circling ziggurat, per-enemy hit cooldown
+presentation/battle/effects/ParticlePool.kt        # Pre-allocated particle pool (200 capacity), acquire/release/recycle
+presentation/battle/effects/EffectEngine.kt        # Manages active effects, owns ParticlePool + ScreenShake
+presentation/battle/effects/ScreenShake.kt         # Canvas translate oscillation with decaying amplitude
+presentation/battle/effects/ReducedMotionCheck.kt  # System ANIMATOR_DURATION_SCALE reader
+presentation/battle/effects/ProjectileTrailEffect.kt # Fading biome-colored trail particles behind projectiles
+presentation/battle/effects/DeathEffect.kt         # Per-enemy-type death burst (6 types, 6-20 particles)
+presentation/battle/effects/FloatingText.kt        # "+X Cash" rising text that fades
+presentation/battle/effects/UWVisualEffect.kt      # 6 particle-based UW activation spectacles
+presentation/battle/effects/OverdriveAuraEffect.kt # 4 overdrive aura particle emitters
+presentation/battle/effects/WaveAnnouncement.kt    # Wave number slide-in + boss warning + cooldown countdown
+presentation/audio/SoundManager.kt                 # SoundPool wrapper, 7 effects, volume/mute, shoot throttling
 presentation/battle/ui/HealthBarRenderer.kt        # HP bar: green→yellow→red gradient, numeric text
 presentation/battle/ui/InRoundUpgradeMenu.kt      # In-round upgrade menu: 3 tabs, purchase with Cash
 presentation/battle/ui/PostRoundOverlay.kt         # Post-round summary: wave, kills, cash, time, new record banner
@@ -320,4 +332,7 @@ data/sensor/StepRateLimiterTest.kt                # Normal/burst caps, window ex
 data/sensor/StepVelocityAnalyzerTest.kt           # Natural/constant/jump patterns, window eviction
 data/healthconnect/StepCrossValidatorTest.kt      # Graduated response levels, offense tracking, escrow
 data/healthconnect/ActivityMinuteValidatorTest.kt # Duration/type/micro-session filtering
+presentation/battle/effects/ParticlePoolTest.kt   # Acquire/release/recycle/expire/clear/reset
+presentation/battle/effects/ScreenShakeTest.kt    # Trigger/decay/override/reset/offset
+presentation/battle/effects/DeathEffectTest.kt    # Particle counts per enemy type (6 types)
 ```
