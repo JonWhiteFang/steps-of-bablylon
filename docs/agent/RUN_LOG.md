@@ -625,3 +625,40 @@ Enhanced notifications, home screen widget, smart reminders, milestone alerts, a
 - Custom notification icons (all channels use system placeholders).
 - Widget balance shows 0 (DailyStepManager doesn't query PlayerRepository for balance).
 - Widget preview image for widget picker.
+
+## Run — 2026-03-09 — Plan 25: Anti-Cheat & Validation
+
+### Objective
+Harden anti-cheat beyond basic rate limiting + daily ceiling + HC escrow. Add velocity analysis, graduated cross-validation, activity minute gaming prevention, and per-minute overlap deduction.
+
+### Design decisions
+- No accelerometer sensor — step velocity analysis detects shakers via statistical patterns (zero battery cost).
+- No Room entity for logging — SharedPreferences counters + Logcat (no DB migration needed).
+- Cross-validation offense count in SharedPreferences (survives DB wipes, matches existing prefs pattern).
+- Added mockito-kotlin 5.4.0 as test dependency for mocking Android classes in JVM tests.
+- Enabled `unitTests.isReturnDefaultValues = true` in build.gradle.kts for android.util.Log in tests.
+
+### What was done
+1. **Task 1 — AntiCheatPreferences**: Created `data/anticheat/AntiCheatPreferences.kt` — SharedPreferences wrapper with daily counters (rate rejected, velocity penalized, activity minutes rejected), cross-validation offense tracking (count + last date), and 7-day offense decay.
+
+2. **Task 2 — StepVelocityAnalyzer**: Created `data/sensor/StepVelocityAnalyzer.kt` — rolling 15-min window, two heuristics: instant jump detection (idle→spike in last 3 pairs) and constant rate detection (CV < 0.05 over 10-min window). Returns penalty multiplier (1.0/0.5/0.0).
+
+3. **Task 3 — DailyStepManager wiring**: Added `StepVelocityAnalyzer` and `AntiCheatPreferences` as constructor dependencies. Pipeline: rate limit → velocity analysis → ceiling → persist. Logs rate-rejected and velocity-penalized steps. Added `stepsPerMinute` map for overlap deduction. Resets on day rollover.
+
+4. **Task 4 — Enhanced StepCrossValidator**: Rewrote with graduated response based on offense count: Level 0 (escrow, 3 syncs), Level 1 (escrow, 2 syncs), Level 2 (cap at HC value), Level 3 (cap at HC minus 10%). Records offenses on discrepancy, decays on reconciliation.
+
+5. **Task 5 — ActivityMinuteValidator**: Created `data/healthconnect/ActivityMinuteValidator.kt` — filters sessions: discards <2min micro-sessions, truncates >4hr sessions to 240min, rejects sessions beyond 5 distinct activity types per day.
+
+6. **Task 6 — StepSyncWorker wiring**: Added `ActivityMinuteValidator` to constructor. Sessions filtered through validator before conversion. Passes `dailyStepManager.getSensorStepsPerMinute()` instead of `emptyMap()`.
+
+7. **Task 7 — Per-minute overlap deduction**: Added `stepsPerMinute` accumulator to `DailyStepManager` (epoch-minute → credited steps). Capped at 1440 entries. Exposed via `getSensorStepsPerMinute()`. `ActivityMinuteConverter` now receives real per-minute data for double-counting prevention.
+
+### Test results
+- 222 total JVM tests (206 existing + 16 new), all green, 0 failures.
+- New: StepVelocityAnalyzerTest (6), ActivityMinuteValidatorTest (5), StepCrossValidatorTest (5).
+- Build: assembleDebug successful.
+
+### What remains
+- StepCrossValidator Level 2/3 could also adjust `creditedSteps` in Room (currently only escrows excess).
+- AntiCheatPreferences counters not surfaced in any UI (debug screen could be added).
+- Step burst trigger for supply drops still deferred.

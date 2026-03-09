@@ -66,4 +66,4 @@ service/
 
 ## Known Limitations
 
-- `StepSyncWorker` passes empty `sensorStepsPerMinute` map to `ActivityMinuteConverter` (full per-minute tracking deferred)
+- `StepSyncWorker` passes `dailyStepManager.getSensorStepsPerMinute()` to `ActivityMinuteConverter` (per-minute tracking implemented in Plan 25)

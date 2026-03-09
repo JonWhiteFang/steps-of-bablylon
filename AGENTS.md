@@ -197,6 +197,7 @@ graph TD
 - [x] **Plan 21: Milestones & Daily Missions** ✓
 - [x] **Plan 22: Stats & History Screen** ✓
 - [x] **Plan 23: Notifications & Widget** ✓
+- [x] **Plan 25: Anti-Cheat & Validation** ✓
 - [ ] **Plan 27: Polish & Visual Effects** ← next on critical path
 
 ### Parallelizable Branches (after dependencies met)
@@ -207,7 +208,7 @@ graph TD
 - Cards: Plan 17 (complete)
 - Monetization: Plan 26 (ready now — Plan 17 complete)
 - Stats: Plan 22 (ready now — Plan 06 complete)
-- Anti-cheat: Plan 25 (ready now — Plan 05 complete)
+- Anti-cheat: Plan 25 (complete)
 - Walking features: Plan 23 (ready now — Plan 04 complete); Plans 19/20 complete
 
 ## Key Domain Concepts
@@ -235,7 +236,7 @@ graph TD
 - All upgrade cost formulas follow: `baseCost * (scaling ^ level)`.
 - Step counting must work reliably when the app is backgrounded or killed.
 - Steps can **never** be generated passively in-game — this is a hard design rule.
-- Anti-cheat: rate-limit at 200 steps/min, daily ceiling of 50,000 steps, cross-validate with Health Connect.
+- Anti-cheat: rate-limit at 200 steps/min, step velocity analysis (shaker/spoof detection), daily ceiling of 50,000 steps, graduated Health Connect cross-validation (4 offense levels), activity minute validation, per-minute overlap deduction.
 - Domain models are pure Kotlin — no Android imports in `domain/`.
 - Loadouts enforce max capacity: 3 UWs, 3 Cards.
 
@@ -258,7 +259,7 @@ The battle screen uses a custom `SurfaceView` with a game loop (not Compose). Ke
 - **Run tests:** `./run-gradle.sh testDebugUnitTest`
 - **Test source:** `app/src/test/java/com/whitefang/stepsofbabylon/`
 - **Fakes:** `test/fakes/` — FakePlayerRepository, FakeWorkshopRepository, FakeUltimateWeaponRepository, FakeLabRepository, FakeCardRepository, FakeWalkingEncounterRepository, FakeMilestoneDao, FakeDailyMissionDao (in-memory StateFlow-backed).
-- **Current coverage:** 206 JVM tests — all use cases, domain models with validation logic, battle condition effects, tier unlock logic, biome themes, EnemyScaler, StepRateLimiter, Labs research (cost/time/start/complete/rush/unlock/auto-complete), Cards (pack opening/upgrade/effects/loadout), Walking Encounters (supply drop generation/claiming), Wave Milestones (PS awards), Milestones (check/claim), Daily Missions (generation/types).
+- **Current coverage:** 222 JVM tests — all use cases, domain models with validation logic, battle condition effects, tier unlock logic, biome themes, EnemyScaler, StepRateLimiter, StepVelocityAnalyzer, StepCrossValidator, ActivityMinuteValidator, Labs research (cost/time/start/complete/rush/unlock/auto-complete), Cards (pack opening/upgrade/effects/loadout), Walking Encounters (supply drop generation/claiming), Wave Milestones (PS awards), Milestones (check/claim), Daily Missions (generation/types).
 
 ## Important Notes
 

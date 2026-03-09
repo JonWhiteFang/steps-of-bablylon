@@ -50,7 +50,7 @@ The Walk Loop runs continuously in the background via Android's step counter sen
 4. Player opens the app and spends accumulated steps on permanent Workshop upgrades.
 5. Upgraded ziggurat performs better in battles, motivating the player to earn more steps for the next upgrade.
 
-**Anti-cheat:** Step data is cross-validated against Health Connect records. Rate limiting caps at 200 steps/minute (250 burst for running). Discrepancies >20% trigger escrow. Shaking exploits are mitigated by requiring consistent step patterns over time windows.
+**Anti-cheat:** Step data is cross-validated against Health Connect records with graduated response (4 offense levels). Rate limiting caps at 200 steps/minute (250 burst for running). Step velocity analysis detects phone shakers and spoofers via statistical pattern detection. Activity minute validation prevents gaming of exercise sessions. Per-minute overlap deduction prevents double-counting.
 
 ### 2.2 The Battle Loop (In-Game)
 
@@ -308,8 +308,10 @@ Temporary per-round bonuses activated at round start. Equip up to 3 Cards. Acqui
 | Measure | Implementation | Severity |
 |---|---|---|
 | Rate Limiting | Max 200 steps/min credited (bursts up to 250 for running) | Soft — excess discarded silently |
-| Health Connect Cross-Validation | Discrepancies >20% flagged | Medium — steps held in escrow |
-| Accelerometer Pattern Analysis | Detects mechanical regularity (phone shakers) | Hard — suspicious steps rejected |
+| Step Velocity Analysis | Detects constant rate (CV < 5%) and instant jumps (phone shakers/spoofers) | Medium — penalty multiplier (0.5× or 0.0×) |
+| Health Connect Cross-Validation | Discrepancies >20% flagged, graduated response (4 offense levels) | Medium–Hard — escrow → cap → penalty |
+| Activity Minute Validation | Filters extreme sessions (>4hr), micro-sessions (<2min), type flooding (>5/day) | Medium — sessions truncated/rejected |
+| Overlap Deduction | Per-minute sensor step tracking prevents double-counting with activity minutes | Soft — only credits non-overlapping minutes |
 | Daily Ceiling | Max 50,000 steps/day | Hard — prevents extreme exploits |
 
 ### 11.4 Activity Minute Parity (Indoor Workout Support)

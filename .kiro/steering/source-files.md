@@ -59,7 +59,8 @@ data/repository/WalkingEncounterRepositoryImpl.kt # Walking encounters
 ```
 data/sensor/StepSensorDataSource.kt  # TYPE_STEP_COUNTER wrapper, emits deltas via callbackFlow
 data/sensor/StepRateLimiter.kt       # Rolling 1-min window rate limiter (200/min, 250 burst)
-data/sensor/DailyStepManager.kt      # Orchestrates: rate limit → 50k ceiling → Room persist + activity minutes
+data/sensor/StepVelocityAnalyzer.kt  # Unnatural step pattern detection (shaker/spoof), penalty multiplier
+data/sensor/DailyStepManager.kt      # Orchestrates: rate limit → velocity analysis → 50k ceiling → Room persist + activity minutes
 ```
 
 ## Data Layer — Health Connect
@@ -67,12 +68,14 @@ data/sensor/DailyStepManager.kt      # Orchestrates: rate limit → 50k ceiling 
 ```
 data/healthconnect/HealthConnectClientWrapper.kt  # HealthConnectClient wrapper, availability, permissions
 data/healthconnect/HealthConnectStepReader.kt      # Reads aggregated daily steps via aggregate()
-data/healthconnect/StepCrossValidator.kt           # Cross-validation, escrow system (>20% discrepancy)
+data/healthconnect/StepCrossValidator.kt           # Cross-validation, graduated response (4 offense levels)
 data/healthconnect/StepGapFiller.kt                # Recovers missed steps from HC when service killed
 data/healthconnect/ExerciseSessionReader.kt        # Reads exercise sessions for Activity Minute Parity
 data/healthconnect/ActivityMinuteConverter.kt      # Converts exercise minutes to step-equivalents with caps
+data/healthconnect/ActivityMinuteValidator.kt      # Filters suspicious exercise sessions (duration/type/micro caps)
 data/BiomePreferences.kt                          # SharedPreferences wrapper for first-seen biome tracking
 data/NotificationPreferences.kt                   # SharedPreferences wrapper for 4 notification toggles
+data/anticheat/AntiCheatPreferences.kt            # SharedPreferences wrapper for anti-cheat counters + CV offense tracking
 ```
 
 ## Domain Layer — Models
@@ -292,4 +295,7 @@ domain/model/BattleConditionEffectsTest.kt        # All tier condition modifiers
 presentation/battle/engine/EnemyScalerTest.kt     # Wave scaling, speed, cash rewards
 presentation/battle/biome/BiomeThemeTest.kt       # All 5 biome palettes, ziggurat colors, particles
 data/sensor/StepRateLimiterTest.kt                # Normal/burst caps, window expiry, edge cases
+data/sensor/StepVelocityAnalyzerTest.kt           # Natural/constant/jump patterns, window eviction
+data/healthconnect/StepCrossValidatorTest.kt      # Graduated response levels, offense tracking, escrow
+data/healthconnect/ActivityMinuteValidatorTest.kt # Duration/type/micro-session filtering
 ```

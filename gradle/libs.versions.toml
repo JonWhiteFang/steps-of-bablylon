@@ -16,6 +16,7 @@ sqliteKtx = "2.4.0"
 healthConnect = "1.2.0-alpha02"
 junit5 = "5.11.4"
 coroutinesTest = "1.10.1"
+mockitoKotlin = "5.4.0"
 
 [libraries]
 # Compose
@@ -61,6 +62,7 @@ sqlite = { group = "androidx.sqlite", name = "sqlite-ktx", version.ref = "sqlite
 # Testing
 junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junit5" }
 coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutinesTest" }
+mockito-kotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", version.ref = "mockitoKotlin" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -7,6 +7,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.whitefang.stepsofbabylon.data.healthconnect.ActivityMinuteConverter
+import com.whitefang.stepsofbabylon.data.healthconnect.ActivityMinuteValidator
 import com.whitefang.stepsofbabylon.data.healthconnect.ExerciseSessionReader
 import com.whitefang.stepsofbabylon.data.healthconnect.StepCrossValidator
 import com.whitefang.stepsofbabylon.data.healthconnect.StepGapFiller
@@ -25,6 +26,7 @@ class StepSyncWorker @AssistedInject constructor(
     private val stepCrossValidator: StepCrossValidator,
     private val exerciseSessionReader: ExerciseSessionReader,
     private val activityMinuteConverter: ActivityMinuteConverter,
+    private val activityMinuteValidator: ActivityMinuteValidator,
     private val smartReminderManager: SmartReminderManager,
 ) : CoroutineWorker(appContext, params) {
 
@@ -45,8 +47,10 @@ class StepSyncWorker @AssistedInject constructor(
             stepCrossValidator.validate(today)
 
             val sessions = exerciseSessionReader.getSessionsForDate(today)
-            if (sessions.isNotEmpty()) {
-                val result = activityMinuteConverter.convert(sessions, emptyMap())
+            val validSessions = activityMinuteValidator.validate(sessions)
+            if (validSessions.isNotEmpty()) {
+                val sensorStepsPerMinute = dailyStepManager.getSensorStepsPerMinute()
+                val result = activityMinuteConverter.convert(validSessions, sensorStepsPerMinute)
                 dailyStepManager.recordActivityMinutes(result.activityMinutes, result.stepEquivalents)
             }
         } catch (_: Exception) {

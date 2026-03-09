@@ -1,5 +1,6 @@
 package com.whitefang.stepsofbabylon.data.sensor
 
+import com.whitefang.stepsofbabylon.data.anticheat.AntiCheatPreferences
 import com.whitefang.stepsofbabylon.data.local.DailyLoginDao
 import com.whitefang.stepsofbabylon.data.local.DailyStepDao
 import com.whitefang.stepsofbabylon.data.local.WeeklyChallengeDao
@@ -26,6 +27,8 @@ class DailyStepManager @Inject constructor(
     private val stepRepository: StepRepository,
     private val playerRepository: PlayerRepository,
     private val rateLimiter: StepRateLimiter,
+    private val velocityAnalyzer: StepVelocityAnalyzer,
+    private val antiCheatPrefs: AntiCheatPreferences,
     private val walkingEncounterRepository: WalkingEncounterRepository,
     private val supplyDropNotificationManager: SupplyDropNotificationManager,
     private val dailyLoginDao: DailyLoginDao,
@@ -46,10 +49,14 @@ class DailyStepManager @Inject constructor(
     private val generateSupplyDrop = GenerateSupplyDrop()
     private var dropState = DropGeneratorState()
 
+    private val stepsPerMinute = mutableMapOf<Long, Long>()
+
     private val trackDailyLogin by lazy { TrackDailyLogin(dailyLoginDao, playerRepository) }
     private val trackWeeklyChallenge by lazy { TrackWeeklyChallenge(weeklyChallengeDao, dailyStepDao, playerRepository) }
 
     fun getDailyCredited(): Long = dailyCreditedTotal
+
+    fun getSensorStepsPerMinute(): Map<Long, Long> = stepsPerMinute.toMap()
 
     fun todayDate(): String = LocalDate.now().format(DATE_FMT)
 
@@ -62,7 +69,9 @@ class DailyStepManager @Inject constructor(
             dailySensorTotal = 0L
             dailyCreditedTotal = 0L
             dropState = DropGeneratorState()
+            stepsPerMinute.clear()
             initialized = false
+            antiCheatPrefs.resetDailyCounters(today)
         }
 
         if (!initialized) {
@@ -76,10 +85,19 @@ class DailyStepManager @Inject constructor(
         }
 
         val rateLimited = rateLimiter.credit(rawDelta, timestampMs)
+        val rateRejected = rawDelta - rateLimited
+        if (rateRejected > 0) antiCheatPrefs.incrementRateRejected(rateRejected)
         if (rateLimited <= 0) return
 
+        // Velocity analysis — penalize unnatural patterns
+        val velocityMultiplier = velocityAnalyzer.analyze(rawDelta, timestampMs)
+        val velocityAdjusted = (rateLimited * velocityMultiplier).toLong()
+        val velocityPenalized = rateLimited - velocityAdjusted
+        if (velocityPenalized > 0) antiCheatPrefs.incrementVelocityPenalized(velocityPenalized)
+        if (velocityAdjusted <= 0) return
+
         val remainingCeiling = (DAILY_CEILING - dailyCreditedTotal).coerceAtLeast(0)
-        val credited = rateLimited.coerceAtMost(remainingCeiling)
+        val credited = velocityAdjusted.coerceAtMost(remainingCeiling)
         if (credited <= 0) return
 
         dailySensorTotal += rawDelta
@@ -87,6 +105,14 @@ class DailyStepManager @Inject constructor(
 
         stepRepository.updateDailySteps(currentDate, dailySensorTotal, dailyCreditedTotal)
         playerRepository.addSteps(credited)
+
+        // Per-minute tracking for overlap deduction
+        val epochMin = timestampMs / 60_000
+        stepsPerMinute[epochMin] = (stepsPerMinute[epochMin] ?: 0) + credited
+        if (stepsPerMinute.size > 1440) {
+            val oldest = stepsPerMinute.keys.min()
+            stepsPerMinute.remove(oldest)
+        }
 
         // Widget update
         try { widgetUpdateHelper.update(dailyCreditedTotal, 0) } catch (_: Exception) {}
@@ -121,7 +147,9 @@ class DailyStepManager @Inject constructor(
             dailySensorTotal = 0L
             dailyCreditedTotal = 0L
             dropState = DropGeneratorState()
+            stepsPerMinute.clear()
             initialized = false
+            antiCheatPrefs.resetDailyCounters(today)
         }
 
         if (!initialized) {

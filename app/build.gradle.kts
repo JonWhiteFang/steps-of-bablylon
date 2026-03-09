@@ -34,6 +34,7 @@ android {
     @Suppress("UnstableApiUsage")
     testOptions {
         unitTests.all { it.useJUnitPlatform() }
+        unitTests.isReturnDefaultValues = true
     }
 }
 
@@ -87,4 +88,5 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation(libs.coroutines.test)
+    testImplementation(libs.mockito.kotlin)
 }

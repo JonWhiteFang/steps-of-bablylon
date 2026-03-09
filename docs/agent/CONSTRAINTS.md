@@ -17,9 +17,12 @@
 - Step Overdrive: once per round, 60-second duration.
 
 ## Anti-cheat rules
-- Rate limit: 200 steps/min maximum.
+- Rate limit: 200 steps/min maximum (250 burst for running).
+- Step velocity analysis: detects shakers (constant rate) and spoofers (instant jumps). Penalty multiplier 0.5×/0.0×.
 - Daily ceiling: 50,000 steps/day.
-- Health Connect cross-validation required.
+- Health Connect cross-validation: graduated response (4 offense levels: escrow → faster discard → cap at HC → cap minus 10%).
+- Activity minute validation: rejects micro-sessions (<2min), truncates extreme (>4hr), caps at 5 activity types/day.
+- Per-minute overlap deduction: sensor steps ≥50/min → credit only sensor steps, not activity minutes.
 - Step counting must work reliably when app is backgrounded or killed.
 
 ## Security

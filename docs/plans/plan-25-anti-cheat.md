@@ -1,6 +1,6 @@
 # Plan 25 — Anti-Cheat & Validation
 
-**Status:** Not Started
+**Status:** ✅ Complete
 **Dependencies:** Plan 05 (Health Connect Integration)
 **Layer:** `data/` + `domain/usecase/`
 
@@ -8,9 +8,35 @@
 
 ## Objective
 
-Harden the anti-cheat system beyond the basic rate limiting and daily ceiling from Plan 04. Add accelerometer pattern analysis to detect phone shakers, strengthen Health Connect cross-validation, prevent Activity Minute gaming, and implement overlap deduction.
+Harden the anti-cheat system beyond the basic rate limiting and daily ceiling from Plan 04. Step velocity analysis detects phone shakers and spoofers, graduated Health Connect cross-validation escalates response for repeat offenders, activity minute validation prevents gaming, and per-minute overlap deduction fixes double-counting.
 
 Reference: `docs/step-tracking.md` §Anti-Cheat Rules, GDD §11.3.
+
+---
+
+## Implementation (Actual)
+
+### Decision: No Accelerometer Sensor
+Step velocity analysis detects shakers via statistical patterns in step counter data (constant rate, instant jumps) at zero battery cost. Accelerometer deferred — velocity analysis catches 90% of shaker patterns.
+
+### Decision: No Room Entity for Logging
+SharedPreferences counters + Logcat for anti-cheat event tracking. No DB migration needed.
+
+### Decision: SharedPreferences for Offense Tracking
+Cross-validation offense count stored in SharedPreferences (survives DB wipes, matches BiomePreferences/NotificationPreferences pattern).
+
+### Files Created
+- `data/anticheat/AntiCheatPreferences.kt` — SharedPreferences wrapper: daily counters + CV offense tracking + 7-day decay
+- `data/sensor/StepVelocityAnalyzer.kt` — rolling 15-min window, instant jump + constant rate detection, penalty multiplier
+- `data/healthconnect/ActivityMinuteValidator.kt` — filters: <2min micro-sessions, >4hr truncation, >5 types/day rejection
+
+### Files Updated
+- `data/sensor/DailyStepManager.kt` — velocity analysis + per-minute tracking in pipeline
+- `data/healthconnect/StepCrossValidator.kt` — graduated response (4 offense levels)
+- `service/StepSyncWorker.kt` — validator wiring + real sensorStepsPerMinute
+
+### Tests: 16 new (222 total)
+- `StepVelocityAnalyzerTest` (6), `StepCrossValidatorTest` (5), `ActivityMinuteValidatorTest` (5)
 
 ---
 

@@ -42,24 +42,40 @@
 | Rule | Threshold | Action |
 |---|---|---|
 | Rate limit | 200 steps/min (250 burst for running) | Excess steps silently discarded |
+| Step velocity analysis | Constant rate (CV < 5%) or instant jump (0→150/min) | Penalty multiplier (0.5× or 0.0×) |
 | Daily ceiling | 50,000 steps/day | Hard cap, no more steps credited |
-| Health Connect cross-validation | >20% discrepancy | Steps held in escrow until reconciled |
-| Accelerometer pattern analysis | *(Planned)* Mechanical regularity detected | Suspicious steps rejected |
+| Health Connect cross-validation | >20% discrepancy, graduated by offense count | Level 0: escrow; Level 1: faster discard; Level 2: cap at HC; Level 3: cap at HC −10% |
+| Activity minute validation | >4hr sessions, <2min micro-sessions, >5 types/day | Truncate, discard, or reject |
+| Overlap deduction | Sensor ≥50 steps/min during activity period | Credit only sensor steps, not activity minutes |
 
 ### Rate Limiting Implementation
 
 - Track steps per rolling 1-minute window
 - If delta > 200 in any window, cap at 200
 - Running bursts (up to 250) allowed for short windows (<5 min)
-- Log discarded steps for analytics
+- Discarded steps logged to AntiCheatPreferences
 
-### Escrow System
+### Step Velocity Analysis
 
-When Health Connect discrepancy >20%:
-1. Steps are credited to an escrow balance (not spendable)
-2. Next WorkManager sync re-checks
-3. If resolved within 3 syncs, escrow releases to main balance
-4. If still discrepant, escrow is discarded
+- Rolling 15-minute window of (timestamp, stepDelta) entries
+- Two detection heuristics:
+  - **Instant jump**: Rate goes from <20 to >150 steps/min with no ramp-up
+  - **Constant rate**: Coefficient of variation <5% over 10-minute window (phone shakers)
+- Returns penalty multiplier: 1.0 (normal), 0.5 (one flag), 0.0 (both flags)
+- Minimum 5 entries required before analysis activates
+
+### Escrow System (Graduated Response)
+
+Cross-validation offense count tracked in SharedPreferences, decays by 1 after 7 days without offense.
+
+| Offense Level | Count | Behavior |
+|---|---|---|
+| Level 0 | 0 | Escrow excess, release on reconciliation (3 syncs) |
+| Level 1 | 1–2 | Escrow with faster discard (2 syncs) |
+| Level 2 | 3–5 | Cap credited steps at Health Connect value |
+| Level 3 | 6+ | Cap at Health Connect value minus 10% penalty |
+
+When discrepancy resolves cleanly, escrow releases and offense count decays.
 
 ## Activity Minute Parity
 
@@ -77,7 +93,14 @@ For non-ambulatory activities tracked by Health Connect:
 
 ### Double-Counting Prevention
 
-Step-equivalents from Activity Minutes are only credited when the step sensor records <50 steps/min during that period. This prevents counting a walk as both steps AND active minutes.
+Step-equivalents from Activity Minutes are only credited when the step sensor records <50 steps/min during that period. Per-minute sensor step counts are tracked in `DailyStepManager` and passed to `ActivityMinuteConverter` for minute-level overlap deduction.
+
+### Activity Minute Validation
+
+Sessions are filtered by `ActivityMinuteValidator` before conversion:
+- Sessions <2 minutes discarded (noise/gaming)
+- Sessions >4 hours truncated to 240 minutes
+- More than 5 distinct activity types per day: extras rejected
 
 ## Health Connect Integration
 
@@ -92,11 +115,15 @@ Health Connect (replacing deprecated Google Fit) is used as the secondary data s
 
 ```
 Sensor Event
-  → Foreground Service (delta calculation, rate limiting)
-    → Room (DailyStepRecord update)
-      → WorkManager (Health Connect reconciliation, escrow check)
-        → Room (final credited steps)
-          → PlayerProfile.currentStepBalance update
+  → Foreground Service (delta calculation)
+    → StepRateLimiter (200/min cap)
+      → StepVelocityAnalyzer (shaker/spoof penalty)
+        → Daily ceiling (50k cap)
+          → Room (DailyStepRecord update) + per-minute tracking
+            → WorkManager (HC gap-fill, cross-validation, activity minutes)
+              → ActivityMinuteValidator (gaming prevention)
+                → ActivityMinuteConverter (overlap deduction via per-minute data)
+                  → PlayerProfile.currentStepBalance update
 ```
 
 ## Permissions

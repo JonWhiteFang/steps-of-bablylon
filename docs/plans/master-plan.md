@@ -35,7 +35,7 @@ See `docs/StepsOfBabylon_GDD.md` for the full game design document.
 | 22 | [Stats & History Screen](./plan-22-stats-history.md) | Walking history charts (daily/weekly/monthly), battle statistics, all-time stats, Steps vs Activity Minute breakdown. | Plan 06 |
 | 23 | [Notifications & Widget](./plan-23-notifications-widget.md) | Persistent step count notification, home screen widget (2x2), smart reminders ("2,000 steps away from..."), milestone alerts, biome unlock cinematics. | Plan 04 |
 | 24 | [Accessibility](./plan-24-accessibility.md) | TalkBack support for all menu screens, battle screen audio cues, color-blind modes (3 palettes), adjustable text size (system font settings), rest day encouragement. | Plan 18 |
-| 25 | [Anti-Cheat & Validation](./plan-25-anti-cheat.md) | Rate limiting (200 steps/min), daily ceiling (50k), Health Connect cross-validation, accelerometer pattern analysis, Activity Minute gaming prevention, overlap deduction. | Plan 05 |
+| 25 | [Anti-Cheat & Validation](./plan-25-anti-cheat.md) | Step velocity analysis (shaker/spoof detection), graduated HC cross-validation (4 offense levels), activity minute gaming prevention, per-minute overlap deduction. | Plan 05 |
 | 26 | [Monetization & Ads](./plan-26-monetization.md) | Optional reward ads (post-round Gem, double PS, free Card Pack), ad removal IAP, Gem pack IAPs, Season Pass, cosmetic theme IAPs. | Plan 17 |
 | 27 | [Polish & Visual Effects](./plan-27-polish-vfx.md) | Projectile effects, UW visual spectacles, Overdrive auras, enemy death animations, wave transition effects, UI animations, sound effects integration. | Plan 18 |
 | 28 | [Balancing & Tuning](./plan-28-balancing.md) | Step economy tuning across player profiles, Workshop cost curves, enemy HP/damage scaling, tier difficulty curves, cash multiplier validation, Card balance pass. | Plan 27 |
@@ -120,7 +120,7 @@ graph TD
 - [x] Plan 22: Stats & History Screen
 - [x] Plan 23: Notifications & Widget
 - [ ] Plan 24: Accessibility *(deferred — post-v1.0)*
-- [ ] Plan 25: Anti-Cheat & Validation
+- [x] Plan 25: Anti-Cheat & Validation
 - [ ] Plan 26: Monetization & Ads
 - [ ] Plan 27: Polish & Visual Effects
 - [ ] Plan 28: Balancing & Tuning
