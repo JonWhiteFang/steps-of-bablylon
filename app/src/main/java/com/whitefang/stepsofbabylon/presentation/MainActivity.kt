@@ -34,6 +34,7 @@ import com.whitefang.stepsofbabylon.presentation.labs.LabsScreen
 import com.whitefang.stepsofbabylon.presentation.missions.MissionsScreen
 import com.whitefang.stepsofbabylon.presentation.navigation.BottomNavBar
 import com.whitefang.stepsofbabylon.presentation.navigation.Screen
+import com.whitefang.stepsofbabylon.presentation.stats.StatsScreen
 import com.whitefang.stepsofbabylon.presentation.supplies.UnclaimedSuppliesScreen
 import com.whitefang.stepsofbabylon.presentation.ui.theme.StepsOfBabylonTheme
 import com.whitefang.stepsofbabylon.presentation.weapons.UltimateWeaponScreen
@@ -144,7 +145,7 @@ class MainActivity : ComponentActivity() {
                             LabsScreen()
                         }
                         composable(Screen.Stats.route) {
-                            PlaceholderScreen("Stats")
+                            StatsScreen()
                         }
                         composable(Screen.Supplies.route) {
                             UnclaimedSuppliesScreen()

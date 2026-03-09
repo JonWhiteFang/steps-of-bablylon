@@ -125,11 +125,12 @@ Each entity gets its own DAO:
 - Write manual migrations for complex changes (column renames, data transforms)
 - Version numbering: increment by 1 per plan that touches the schema
 - Test migrations with `MigrationTestHelper` in instrumented tests
-- Current schema version: 5
+- Current schema version: 6
 - v1→v2: Added `highestUnlockedTier` column to `player_profile` (Plan 13). Uses `fallbackToDestructiveMigration` during development.
 - v2→v3: Added `labSlotCount` column to `player_profile` (Plan 16). Uses `fallbackToDestructiveMigration` during development.
 - v3→v4: Added `WeeklyChallengeEntity`, `DailyLoginEntity`, streak fields on `player_profile` (Plan 20). Uses `fallbackToDestructiveMigration`.
 - v4→v5: Added `MilestoneEntity`, `DailyMissionEntity` (Plan 21). Uses `fallbackToDestructiveMigration`.
+- v5→v6: Added lifetime currency counters and battle stats to `player_profile` (Plan 22). Uses `fallbackToDestructiveMigration`.
 
 ## Type Converters
 

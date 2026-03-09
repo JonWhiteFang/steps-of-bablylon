@@ -214,6 +214,10 @@ presentation/economy/CurrencyDashboardScreen.kt      # Dashboard: weekly progres
 presentation/missions/MissionsViewModel.kt           # @HiltViewModel: milestones + daily missions + claim flow
 presentation/missions/MissionsUiState.kt             # UI state: missions list, milestones list, midnight countdown
 presentation/missions/MissionsScreen.kt              # Missions screen: daily missions + walking milestones + claim
+presentation/stats/StatsViewModel.kt                 # @HiltViewModel: walking history, battle stats, all-time aggregates
+presentation/stats/StatsUiState.kt                   # UI state: bars, periods, battle/all-time stats
+presentation/stats/StatsScreen.kt                    # Stats screen: chart, today, battle, all-time sections
+presentation/stats/WalkingHistoryChart.kt            # Canvas-drawn bar chart with period toggle
 ```
 
 ## Service Layer

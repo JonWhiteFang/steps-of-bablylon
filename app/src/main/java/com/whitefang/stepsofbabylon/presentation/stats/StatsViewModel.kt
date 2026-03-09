@@ -1,0 +1,114 @@
+package com.whitefang.stepsofbabylon.presentation.stats
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.whitefang.stepsofbabylon.domain.model.DailyStepSummary
+import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
+import com.whitefang.stepsofbabylon.domain.repository.StepRepository
+import com.whitefang.stepsofbabylon.domain.repository.WorkshopRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.stateIn
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.temporal.TemporalAdjusters
+import javax.inject.Inject
+
+@HiltViewModel
+class StatsViewModel @Inject constructor(
+    private val stepRepository: StepRepository,
+    private val playerRepository: PlayerRepository,
+    private val workshopRepository: WorkshopRepository,
+) : ViewModel() {
+
+    private val _selectedPeriod = MutableStateFlow(StatsPeriod.WEEK)
+    private val today = LocalDate.now()
+    private val fmt = DateTimeFormatter.ISO_LOCAL_DATE
+
+    // Observe history reactively based on selected period — use 90 days to cover all periods
+    private val historyFlow = stepRepository.observeHistory(
+        today.minusDays(89).format(fmt), today.format(fmt)
+    )
+
+    val uiState: StateFlow<StatsUiState> = combine(
+        playerRepository.observeProfile(),
+        historyFlow,
+        workshopRepository.observeAllUpgrades(),
+        _selectedPeriod,
+    ) { profile, history, upgrades, period ->
+        val todayRecord = history.find { it.date == today.format(fmt) }
+        val bars = buildBars(history, period)
+        val daysActive = history.count { it.creditedSteps > 0 }
+
+        StatsUiState(
+            todaySteps = todayRecord?.creditedSteps ?: 0,
+            todayStepEquivalents = todayRecord?.stepEquivalents ?: 0,
+            todayActivityMinutes = todayRecord?.activityMinutes ?: emptyMap(),
+            allTimeSteps = profile.totalStepsEarned,
+            bars = bars,
+            selectedPeriod = period,
+            bestWavePerTier = profile.bestWavePerTier,
+            totalRoundsPlayed = profile.totalRoundsPlayed,
+            totalEnemiesKilled = profile.totalEnemiesKilled,
+            totalCashEarned = profile.totalCashEarned,
+            totalGemsEarned = profile.totalGemsEarned,
+            totalGemsSpent = profile.totalGemsSpent,
+            totalPowerStonesEarned = profile.totalPowerStonesEarned,
+            totalPowerStonesSpent = profile.totalPowerStonesSpent,
+            currentGems = profile.gems,
+            currentPowerStones = profile.powerStones,
+            totalWorkshopLevels = upgrades.values.sum(),
+            daysActive = daysActive,
+            averageDailySteps = if (daysActive > 0) profile.totalStepsEarned / daysActive else 0,
+            isLoading = false,
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StatsUiState())
+
+    fun selectPeriod(period: StatsPeriod) { _selectedPeriod.value = period }
+
+    private fun buildBars(history: List<DailyStepSummary>, period: StatsPeriod): List<DailyBarData> {
+        val byDate = history.associateBy { it.date }
+        return when (period) {
+            StatsPeriod.WEEK -> (6 downTo 0).map { daysAgo ->
+                val d = today.minusDays(daysAgo.toLong())
+                val rec = byDate[d.format(fmt)]
+                DailyBarData(
+                    label = d.dayOfWeek.name.take(3),
+                    sensorSteps = (rec?.creditedSteps ?: 0) - (rec?.stepEquivalents ?: 0),
+                    stepEquivalents = rec?.stepEquivalents ?: 0,
+                )
+            }
+            StatsPeriod.MONTH -> (29 downTo 0).map { daysAgo ->
+                val d = today.minusDays(daysAgo.toLong())
+                val rec = byDate[d.format(fmt)]
+                DailyBarData(
+                    label = "${d.dayOfMonth}",
+                    sensorSteps = (rec?.creditedSteps ?: 0) - (rec?.stepEquivalents ?: 0),
+                    stepEquivalents = rec?.stepEquivalents ?: 0,
+                )
+            }
+            StatsPeriod.QUARTER -> {
+                // Aggregate into 12 weekly buckets ending this week
+                val thisMonday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+                (11 downTo 0).map { weeksAgo ->
+                    val weekStart = thisMonday.minusWeeks(weeksAgo.toLong())
+                    val weekEnd = weekStart.plusDays(6)
+                    val weekRecords = history.filter { rec ->
+                        val d = LocalDate.parse(rec.date, fmt)
+                        !d.isBefore(weekStart) && !d.isAfter(weekEnd)
+                    }
+                    DailyBarData(
+                        label = "W${weekStart.dayOfMonth}",
+                        sensorSteps = weekRecords.sumOf { it.creditedSteps - it.stepEquivalents },
+                        stepEquivalents = weekRecords.sumOf { it.stepEquivalents },
+                    )
+                }
+            }
+        }
+    }
+}

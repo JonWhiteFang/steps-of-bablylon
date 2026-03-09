@@ -101,7 +101,7 @@ All in `domain/model/`:
 | `di/RepositoryModule.kt` | Hilt module: binds all 7 repository interfaces to impls |
 | `di/StepModule.kt` | Hilt module: provides SensorManager |
 | `di/HealthConnectModule.kt` | Hilt module: Health Connect organizational module |
-| `data/local/AppDatabase.kt` | Room database (11 entities, 11 DAOs, version 5) |
+| `data/local/AppDatabase.kt` | Room database (11 entities, 11 DAOs, version 6) |
 | `data/local/DatabaseKeyManager.kt` | SQLCipher passphrase via Android Keystore |
 | `data/local/Converters.kt` | TypeConverters for `Map<Int,Int>` and `Map<String,Int>` (JSON) |
 | `data/sensor/StepSensorDataSource.kt` | TYPE_STEP_COUNTER wrapper, emits deltas via callbackFlow |

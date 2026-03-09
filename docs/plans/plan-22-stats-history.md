@@ -1,7 +1,7 @@
 # Plan 22 — Stats & History Screen
 
-**Status:** Not Started
-**Dependencies:** Plan 06 (Home Screen & Navigation)
+**Status:** Complete
+**Dependencies:** Plan 06 (Home Screen & Navigation) ✓
 **Layer:** `presentation/`
 
 ---

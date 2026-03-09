@@ -146,6 +146,9 @@ class BattleViewModel @Inject constructor(
             }
             // Update daily mission progress for battle missions
             try {
+                playerRepository.incrementBattleStats(1, eng.totalEnemiesKilled.toLong(), eng.totalCashEarned)
+            } catch (_: Exception) { /* best-effort */ }
+            try {
                 val today = LocalDate.now().toString()
                 val missions = dailyMissionDao.getByDateOnce(today)
                 for (m in missions) {

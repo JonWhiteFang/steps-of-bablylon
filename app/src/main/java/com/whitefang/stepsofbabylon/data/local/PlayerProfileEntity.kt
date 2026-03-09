@@ -22,6 +22,20 @@ data class PlayerProfileEntity(
     val currentStreak: Int = 0,
     @ColumnInfo(defaultValue = "")
     val lastLoginDate: String = "",
+    @ColumnInfo(defaultValue = "0")
+    val totalGemsEarned: Long = 0,
+    @ColumnInfo(defaultValue = "0")
+    val totalGemsSpent: Long = 0,
+    @ColumnInfo(defaultValue = "0")
+    val totalPowerStonesEarned: Long = 0,
+    @ColumnInfo(defaultValue = "0")
+    val totalPowerStonesSpent: Long = 0,
+    @ColumnInfo(defaultValue = "0")
+    val totalRoundsPlayed: Long = 0,
+    @ColumnInfo(defaultValue = "0")
+    val totalEnemiesKilled: Long = 0,
+    @ColumnInfo(defaultValue = "0")
+    val totalCashEarned: Long = 0,
     val createdAt: Long = System.currentTimeMillis(),
     val lastActiveAt: Long = System.currentTimeMillis(),
 )

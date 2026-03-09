@@ -192,6 +192,7 @@ graph TD
 - [x] **Plan 19: Walking Encounters & Supply Drops** ✓
 - [x] **Plan 20: Power Stone & Gem Economy** ✓
 - [x] **Plan 21: Milestones & Daily Missions** ✓
+- [x] **Plan 22: Stats & History Screen** ✓
 - [ ] **Plan 27: Polish & Visual Effects** ← next on critical path
 
 ### Parallelizable Branches (after dependencies met)

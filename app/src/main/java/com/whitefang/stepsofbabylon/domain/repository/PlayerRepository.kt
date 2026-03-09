@@ -21,5 +21,6 @@ interface PlayerRepository {
     suspend fun updateLabSlotCount(count: Int)
     suspend fun updateBestWave(tier: Int, wave: Int)
     suspend fun updateStreak(streak: Int, date: String)
+    suspend fun incrementBattleStats(rounds: Long, kills: Long, cash: Long)
     suspend fun ensureProfileExists()
 }

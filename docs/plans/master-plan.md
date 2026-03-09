@@ -117,7 +117,7 @@ graph TD
 - [x] Plan 19: Walking Encounters & Supply Drops
 - [x] Plan 20: Power Stone & Gem Economy
 - [x] Plan 21: Milestones & Daily Missions
-- [ ] Plan 22: Stats & History Screen
+- [x] Plan 22: Stats & History Screen
 - [ ] Plan 23: Notifications & Widget
 - [ ] Plan 24: Accessibility
 - [ ] Plan 25: Anti-Cheat & Validation

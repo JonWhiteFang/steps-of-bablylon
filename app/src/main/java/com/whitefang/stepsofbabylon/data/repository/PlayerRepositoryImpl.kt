@@ -26,16 +26,29 @@ class PlayerRepositoryImpl @Inject constructor(
 
     override suspend fun addSteps(amount: Long) = dao.adjustStepBalance(amount)
     override suspend fun spendSteps(amount: Long) = dao.adjustStepBalance(-amount)
-    override suspend fun addGems(amount: Long) = dao.adjustGems(amount)
-    override suspend fun spendGems(amount: Long) = dao.adjustGems(-amount)
-    override suspend fun addPowerStones(amount: Long) = dao.adjustPowerStones(amount)
-    override suspend fun spendPowerStones(amount: Long) = dao.adjustPowerStones(-amount)
+    override suspend fun addGems(amount: Long) {
+        dao.adjustGems(amount)
+        dao.incrementGemsEarned(amount)
+    }
+    override suspend fun spendGems(amount: Long) {
+        dao.adjustGems(-amount)
+        dao.incrementGemsSpent(amount)
+    }
+    override suspend fun addPowerStones(amount: Long) {
+        dao.adjustPowerStones(amount)
+        dao.incrementPowerStonesEarned(amount)
+    }
+    override suspend fun spendPowerStones(amount: Long) {
+        dao.adjustPowerStones(-amount)
+        dao.incrementPowerStonesSpent(amount)
+    }
     override suspend fun addCardDust(amount: Long) = dao.adjustCardDust(amount)
     override suspend fun spendCardDust(amount: Long) = dao.adjustCardDust(-amount)
     override suspend fun updateTier(tier: Int) = dao.updateTier(tier)
     override suspend fun updateHighestUnlockedTier(tier: Int) = dao.updateHighestUnlockedTier(tier)
     override suspend fun updateLabSlotCount(count: Int) = dao.updateLabSlotCount(count)
     override suspend fun updateStreak(streak: Int, date: String) = dao.updateStreak(streak, date)
+    override suspend fun incrementBattleStats(rounds: Long, kills: Long, cash: Long) = dao.incrementBattleStats(rounds, kills, cash)
 
     override suspend fun updateBestWave(tier: Int, wave: Int) {
         val entity = dao.get().first() ?: return
@@ -62,6 +75,13 @@ class PlayerRepositoryImpl @Inject constructor(
         bestWavePerTier = bestWavePerTier,
         currentStreak = currentStreak,
         lastLoginDate = lastLoginDate,
+        totalGemsEarned = totalGemsEarned,
+        totalGemsSpent = totalGemsSpent,
+        totalPowerStonesEarned = totalPowerStonesEarned,
+        totalPowerStonesSpent = totalPowerStonesSpent,
+        totalRoundsPlayed = totalRoundsPlayed,
+        totalEnemiesKilled = totalEnemiesKilled,
+        totalCashEarned = totalCashEarned,
         createdAt = createdAt,
         lastActiveAt = lastActiveAt,
     )

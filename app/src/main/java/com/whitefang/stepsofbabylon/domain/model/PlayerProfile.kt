@@ -13,6 +13,13 @@ data class PlayerProfile(
     val bestWavePerTier: Map<Int, Int> = emptyMap(),
     val currentStreak: Int = 0,
     val lastLoginDate: String = "",
+    val totalGemsEarned: Long = 0,
+    val totalGemsSpent: Long = 0,
+    val totalPowerStonesEarned: Long = 0,
+    val totalPowerStonesSpent: Long = 0,
+    val totalRoundsPlayed: Long = 0,
+    val totalEnemiesKilled: Long = 0,
+    val totalCashEarned: Long = 0,
     val createdAt: Long = 0,
     val lastActiveAt: Long = 0,
 ) {

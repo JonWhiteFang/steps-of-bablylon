@@ -562,3 +562,33 @@ Implement lifetime walking milestones and daily missions with progress tracking 
 - Milestone cosmetic rewards are no-op (needs cosmetics system — Plan 26/27).
 - Walking mission auto-progress runs once on MissionsScreen open (not continuously from DailyStepManager) — sufficient since steps flow updates the ViewModel.
 - Daily mission notification on completion (deferred to Plan 23).
+
+## Run — 2026-03-09 — Plan 22: Stats & History Screen
+
+### Objective
+Build the Stats & History screen with walking history charts, battle stats, and all-time aggregates.
+
+### Design decisions
+- Canvas-drawn bar chart (no third-party library, matches existing Canvas patterns).
+- Lifetime currency counters (totalGemsEarned/Spent, totalPowerStonesEarned/Spent) on PlayerProfileEntity — tracked at DAO/repository level, zero caller changes.
+- Battle stats (totalRoundsPlayed, totalEnemiesKilled, totalCashEarned) on PlayerProfileEntity — no separate entity.
+- DB version 6 with destructive fallback.
+
+### What was done
+1. **Task 1 — Data layer**: Added 7 new columns to `PlayerProfileEntity` (totalGemsEarned/Spent, totalPowerStonesEarned/Spent, totalRoundsPlayed, totalEnemiesKilled, totalCashEarned). Updated `PlayerProfile` domain model, `PlayerProfileDao` (6 new queries), `PlayerRepositoryImpl` (lifetime tracking in add/spend methods + incrementBattleStats), `PlayerRepository` interface, `FakePlayerRepository`. Bumped DB to version 6.
+
+2. **Task 2 — Battle stats wiring**: Added `playerRepository.incrementBattleStats()` call in `BattleViewModel.endRound()`.
+
+3. **Task 3 — StatsViewModel**: Created `StatsUiState` (DailyBarData, StatsPeriod enum) and `StatsViewModel` (4-flow combine: profile + history + upgrades + period). Builds bar data for 7-day/30-day/12-week views. Computes daysActive, averageDailySteps, totalWorkshopLevels.
+
+4. **Task 4 — Walking history chart**: Created `WalkingHistoryChart` Canvas composable — vertical bars with primary/secondary color split (sensor steps vs step-equivalents), 50k ceiling dashed line, date labels, y-axis scale, FilterChip period toggle, legend.
+
+5. **Task 5 — Stats screen**: Created `StatsScreen` with 4 Card sections (Walking History, Today's Activity, Battle Stats, All-Time Stats). Replaced placeholder in `MainActivity`.
+
+### Test results
+- 206 total JVM tests, all green, 0 failures. No new tests (presentation-only plan).
+
+### What remains
+- Lifetime currency counters start from 0 (no retroactive backfill).
+- Chart tap-for-detail tooltip deferred to Plan 27 polish.
+- Pull-to-refresh deferred (data is already reactive via Flows).

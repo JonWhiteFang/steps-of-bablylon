@@ -55,4 +55,19 @@ interface PlayerProfileDao {
 
     @Query("UPDATE player_profile SET currentStreak = :streak, lastLoginDate = :date WHERE id = 1")
     suspend fun updateStreak(streak: Int, date: String)
+
+    @Query("UPDATE player_profile SET totalGemsEarned = totalGemsEarned + :amount WHERE id = 1")
+    suspend fun incrementGemsEarned(amount: Long)
+
+    @Query("UPDATE player_profile SET totalGemsSpent = totalGemsSpent + :amount WHERE id = 1")
+    suspend fun incrementGemsSpent(amount: Long)
+
+    @Query("UPDATE player_profile SET totalPowerStonesEarned = totalPowerStonesEarned + :amount WHERE id = 1")
+    suspend fun incrementPowerStonesEarned(amount: Long)
+
+    @Query("UPDATE player_profile SET totalPowerStonesSpent = totalPowerStonesSpent + :amount WHERE id = 1")
+    suspend fun incrementPowerStonesSpent(amount: Long)
+
+    @Query("UPDATE player_profile SET totalRoundsPlayed = totalRoundsPlayed + :rounds, totalEnemiesKilled = totalEnemiesKilled + :kills, totalCashEarned = totalCashEarned + :cash WHERE id = 1")
+    suspend fun incrementBattleStats(rounds: Long, kills: Long, cash: Long)
 }
