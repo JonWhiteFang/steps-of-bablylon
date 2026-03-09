@@ -14,5 +14,6 @@ data class HomeUiState(
     val bestWavePerTier: Map<Int, Int> = emptyMap(),
     val unclaimedDropCount: Int = 0,
     val claimableMissionCount: Int = 0,
+    val seasonPassActive: Boolean = false,
     val isLoading: Boolean = true,
 )

@@ -3,6 +3,8 @@ package com.whitefang.stepsofbabylon.presentation.battle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.whitefang.stepsofbabylon.data.local.DailyMissionDao
+import com.whitefang.stepsofbabylon.domain.model.AdPlacement
+import com.whitefang.stepsofbabylon.domain.model.AdResult
 import com.whitefang.stepsofbabylon.domain.model.Biome
 import com.whitefang.stepsofbabylon.domain.model.DailyMissionType
 import com.whitefang.stepsofbabylon.data.BiomePreferences
@@ -12,6 +14,7 @@ import com.whitefang.stepsofbabylon.domain.model.OverdriveType
 import com.whitefang.stepsofbabylon.domain.model.ResolvedStats
 import com.whitefang.stepsofbabylon.domain.model.UpgradeType
 import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
+import com.whitefang.stepsofbabylon.domain.repository.RewardAdManager
 import com.whitefang.stepsofbabylon.domain.repository.CardRepository
 import com.whitefang.stepsofbabylon.domain.repository.UltimateWeaponRepository
 import com.whitefang.stepsofbabylon.domain.repository.WorkshopRepository
@@ -48,6 +51,7 @@ class BattleViewModel @Inject constructor(
     private val cardRepository: CardRepository,
     private val dailyMissionDao: DailyMissionDao,
     private val milestoneNotificationManager: MilestoneNotificationManager,
+    private val rewardAdManager: RewardAdManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BattleUiState())
@@ -92,7 +96,7 @@ class BattleViewModel @Inject constructor(
 
             _uiState.update {
                 it.copy(maxHp = resolvedStats.maxHealth, currentHp = resolvedStats.maxHealth, isLoading = false,
-                    biomeTransition = transition, stepBalance = profile.stepBalance)
+                    biomeTransition = transition, stepBalance = profile.stepBalance, adRemoved = profile.adRemoved)
             }
         }
     }
@@ -147,7 +151,7 @@ class BattleViewModel @Inject constructor(
             _uiState.update {
                 it.copy(isPaused = false, showUpgradeMenu = false, showOverdriveMenu = false,
                     roundEndState = RoundEndState(wave, eng.totalEnemiesKilled, eng.totalCashEarned,
-                        eng.elapsedTimeSeconds, result.isNewRecord, result.previousBest, newTier, psAwarded))
+                        eng.elapsedTimeSeconds, result.isNewRecord, result.previousBest, newTier, psAwarded, adRemoved = it.adRemoved))
             }
             // Update daily mission progress for battle missions
             try {
@@ -222,6 +226,27 @@ class BattleViewModel @Inject constructor(
 
     fun toggleUpgradeMenu() { _uiState.update { it.copy(showUpgradeMenu = !it.showUpgradeMenu, showOverdriveMenu = false) } }
     fun toggleOverdriveMenu() { _uiState.update { it.copy(showOverdriveMenu = !it.showOverdriveMenu, showUpgradeMenu = false) } }
+
+    fun watchGemAd() {
+        viewModelScope.launch {
+            val result = rewardAdManager.showRewardAd(AdPlacement.POST_ROUND_GEM)
+            if (result is AdResult.Rewarded) {
+                playerRepository.addGems(1)
+                _uiState.update { it.copy(roundEndState = it.roundEndState?.copy(gemAdWatched = true)) }
+            }
+        }
+    }
+
+    fun watchPsAd() {
+        viewModelScope.launch {
+            val state = _uiState.value.roundEndState ?: return@launch
+            val result = rewardAdManager.showRewardAd(AdPlacement.POST_ROUND_DOUBLE_PS)
+            if (result is AdResult.Rewarded && state.powerStonesAwarded > 0) {
+                playerRepository.addPowerStones(state.powerStonesAwarded.toLong())
+                _uiState.update { it.copy(roundEndState = it.roundEndState?.copy(psAdWatched = true)) }
+            }
+        }
+    }
     fun setSpeed(multiplier: Float) { _uiState.update { it.copy(speedMultiplier = multiplier) } }
     fun togglePause() { _uiState.update { it.copy(isPaused = !it.isPaused) } }
     fun pause() { _uiState.update { it.copy(isPaused = true) } }

@@ -1,5 +1,16 @@
 {
   "languages": {
+    "kotlin": {
+      "name": "kotlin-language-server",
+      "command": "/Users/jpawhite/.local/bin/kotlin-ls-wrapper",
+      "args": [],
+      "file_extensions": ["kt", "kts"],
+      "project_patterns": ["build.gradle.kts", "build.gradle", "settings.gradle.kts"],
+      "exclude_patterns": ["**/build/**", "**/.gradle/**"],
+      "multi_workspace": false,
+      "initialization_options": {},
+      "request_timeout_secs": 120
+    },
     "java": {
       "name": "jdtls",
       "command": "jdtls",

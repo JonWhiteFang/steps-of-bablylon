@@ -36,5 +36,9 @@ class FakePlayerRepository(
     override suspend fun updateBestWave(tier: Int, wave: Int) {
         profile.update { it.copy(bestWavePerTier = it.bestWavePerTier + (tier to wave)) }
     }
+    override suspend fun updateAdRemoved(removed: Boolean) { profile.update { it.copy(adRemoved = removed) } }
+    override suspend fun updateSeasonPass(active: Boolean, expiry: Long) { profile.update { it.copy(seasonPassActive = active, seasonPassExpiry = expiry) } }
+    override suspend fun updateFreeLabRushUsed(date: String) { profile.update { it.copy(freeLabRushUsedToday = date) } }
+    override suspend fun updateFreeCardPackAdUsed(date: String) { profile.update { it.copy(freeCardPackAdUsedToday = date) } }
     override suspend fun ensureProfileExists() {}
 }

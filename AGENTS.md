@@ -198,6 +198,7 @@ graph TD
 - [x] **Plan 22: Stats & History Screen** ✓
 - [x] **Plan 23: Notifications & Widget** ✓
 - [x] **Plan 25: Anti-Cheat & Validation** ✓
+- [x] **Plan 26: Monetization & Ads** ✓ (stub implementation — real SDK integration deferred)
 - [ ] **Plan 27: Polish & Visual Effects** ← next on critical path
 
 ### Parallelizable Branches (after dependencies met)
@@ -206,7 +207,7 @@ graph TD
 - Battle extensions: Plans 14/15 (complete)
 - Labs: Plan 16 (complete)
 - Cards: Plan 17 (complete)
-- Monetization: Plan 26 (ready now — Plan 17 complete)
+- Monetization: Plan 26 (complete — stub implementation)
 - Stats: Plan 22 (ready now — Plan 06 complete)
 - Anti-cheat: Plan 25 (complete)
 - Walking features: Plan 23 (ready now — Plan 04 complete); Plans 19/20 complete

@@ -92,6 +92,7 @@ class LabsViewModel @Inject constructor(
             stepBalance = profile.stepBalance,
             gems = profile.gems,
             canAffordSlotUnlock = profile.labSlotCount < UnlockLabSlot.MAX_SLOTS && profile.gems >= UnlockLabSlot.SLOT_COST_GEMS,
+            seasonPassFreeRushAvailable = profile.seasonPassActive && profile.seasonPassExpiry > now && profile.freeLabRushUsedToday != LocalDate.now().toString(),
             isLoading = false,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LabsUiState())
@@ -109,6 +110,19 @@ class LabsViewModel @Inject constructor(
             val activeList = labRepository.observeActiveResearch().stateIn(viewModelScope).value
             val active = activeList.find { it.type == type } ?: return@launch
             rushResearch(type, active, profile.toWallet())
+            updateResearchMission()
+        }
+    }
+
+    fun freeRush(type: ResearchType) {
+        viewModelScope.launch {
+            val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
+            if (!profile.seasonPassActive || profile.seasonPassExpiry <= System.currentTimeMillis()) return@launch
+            if (profile.freeLabRushUsedToday == LocalDate.now().toString()) return@launch
+            val activeList = labRepository.observeActiveResearch().stateIn(viewModelScope).value
+            val active = activeList.find { it.type == type } ?: return@launch
+            labRepository.completeResearch(type)
+            playerRepository.updateFreeLabRushUsed(LocalDate.now().toString())
             updateResearchMission()
         }
     }

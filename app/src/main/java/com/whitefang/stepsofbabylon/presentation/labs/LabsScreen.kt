@@ -54,6 +54,8 @@ fun LabsScreen(viewModel: LabsViewModel = hiltViewModel()) {
                     slotAvailable = state.activeSlots < state.totalSlots,
                     onStart = { viewModel.startResearch(info.type) },
                     onRush = { viewModel.rushResearch(info.type) },
+                    freeRushAvailable = state.seasonPassFreeRushAvailable && info.isActive,
+                    onFreeRush = { viewModel.freeRush(info.type) },
                 )
             }
         }
@@ -66,6 +68,8 @@ private fun ResearchCard(
     slotAvailable: Boolean,
     onStart: () -> Unit,
     onRush: () -> Unit,
+    freeRushAvailable: Boolean = false,
+    onFreeRush: () -> Unit = {},
 ) {
     Card(
         Modifier.fillMaxWidth(),
@@ -96,8 +100,13 @@ private fun ResearchCard(
                     Spacer(Modifier.height(4.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(formatTime(info.remainingMs), style = MaterialTheme.typography.bodySmall)
-                        Button(onClick = onRush, enabled = info.canAffordRush) {
-                            Text("Rush (${info.rushCostGems} 💎)")
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            if (freeRushAvailable) {
+                                OutlinedButton(onClick = onFreeRush) { Text("Free ⭐") }
+                            }
+                            Button(onClick = onRush, enabled = info.canAffordRush) {
+                                Text("Rush (${info.rushCostGems} 💎)")
+                            }
                         }
                     }
                 }

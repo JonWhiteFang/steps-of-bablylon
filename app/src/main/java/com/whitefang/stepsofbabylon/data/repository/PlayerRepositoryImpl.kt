@@ -49,6 +49,10 @@ class PlayerRepositoryImpl @Inject constructor(
     override suspend fun updateLabSlotCount(count: Int) = dao.updateLabSlotCount(count)
     override suspend fun updateStreak(streak: Int, date: String) = dao.updateStreak(streak, date)
     override suspend fun incrementBattleStats(rounds: Long, kills: Long, cash: Long) = dao.incrementBattleStats(rounds, kills, cash)
+    override suspend fun updateAdRemoved(removed: Boolean) = dao.updateAdRemoved(removed)
+    override suspend fun updateSeasonPass(active: Boolean, expiry: Long) = dao.updateSeasonPass(active, expiry)
+    override suspend fun updateFreeLabRushUsed(date: String) = dao.updateFreeLabRushUsed(date)
+    override suspend fun updateFreeCardPackAdUsed(date: String) = dao.updateFreeCardPackAdUsed(date)
 
     override suspend fun updateBestWave(tier: Int, wave: Int) {
         val entity = dao.get().first() ?: return
@@ -82,6 +86,11 @@ class PlayerRepositoryImpl @Inject constructor(
         totalRoundsPlayed = totalRoundsPlayed,
         totalEnemiesKilled = totalEnemiesKilled,
         totalCashEarned = totalCashEarned,
+        adRemoved = adRemoved,
+        seasonPassActive = seasonPassActive,
+        seasonPassExpiry = seasonPassExpiry,
+        freeLabRushUsedToday = freeLabRushUsedToday,
+        freeCardPackAdUsedToday = freeCardPackAdUsedToday,
         createdAt = createdAt,
         lastActiveAt = lastActiveAt,
     )

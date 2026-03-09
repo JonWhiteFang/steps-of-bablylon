@@ -70,4 +70,16 @@ interface PlayerProfileDao {
 
     @Query("UPDATE player_profile SET totalRoundsPlayed = totalRoundsPlayed + :rounds, totalEnemiesKilled = totalEnemiesKilled + :kills, totalCashEarned = totalCashEarned + :cash WHERE id = 1")
     suspend fun incrementBattleStats(rounds: Long, kills: Long, cash: Long)
+
+    @Query("UPDATE player_profile SET adRemoved = :removed WHERE id = 1")
+    suspend fun updateAdRemoved(removed: Boolean)
+
+    @Query("UPDATE player_profile SET seasonPassActive = :active, seasonPassExpiry = :expiry WHERE id = 1")
+    suspend fun updateSeasonPass(active: Boolean, expiry: Long)
+
+    @Query("UPDATE player_profile SET freeLabRushUsedToday = :date WHERE id = 1")
+    suspend fun updateFreeLabRushUsed(date: String)
+
+    @Query("UPDATE player_profile SET freeCardPackAdUsedToday = :date WHERE id = 1")
+    suspend fun updateFreeCardPackAdUsed(date: String)
 }

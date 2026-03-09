@@ -25,9 +25,9 @@ class OpenCardPack(
         data object InsufficientGems : Result()
     }
 
-    suspend operator fun invoke(packTier: PackTier, gems: Long, ownedCards: List<OwnedCard>): Result {
-        if (gems < packTier.gemCost) return Result.InsufficientGems
-        playerRepository.spendGems(packTier.gemCost)
+    suspend operator fun invoke(packTier: PackTier, gems: Long, ownedCards: List<OwnedCard>, isFree: Boolean = false): Result {
+        if (!isFree && gems < packTier.gemCost) return Result.InsufficientGems
+        if (!isFree) playerRepository.spendGems(packTier.gemCost)
 
         val ownedTypes = ownedCards.map { it.type }.toMutableSet()
         val results = mutableListOf<CardResult>()

@@ -32,4 +32,7 @@ abstract class RepositoryModule {
 
     @Binds @Singleton
     abstract fun bindWalkingEncounterRepository(impl: WalkingEncounterRepositoryImpl): WalkingEncounterRepository
+
+    @Binds @Singleton
+    abstract fun bindCosmeticRepository(impl: CosmeticRepositoryImpl): CosmeticRepository
 }

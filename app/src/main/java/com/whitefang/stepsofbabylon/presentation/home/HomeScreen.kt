@@ -46,6 +46,7 @@ fun HomeScreen(
     onEconomyClick: () -> Unit = {},
     onMissionsClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
+    onStoreClick: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -108,6 +109,12 @@ fun HomeScreen(
 
             OutlinedButton(onClick = onSettingsClick, modifier = Modifier.fillMaxWidth()) {
                 Text("⚙️  Settings")
+            }
+            OutlinedButton(onClick = onStoreClick, modifier = Modifier.fillMaxWidth()) {
+                Text("🏪 Store")
+            }
+            if (state.seasonPassActive) {
+                Text("⭐ Season Pass Active", style = MaterialTheme.typography.labelMedium, color = Color(0xFFFFD700))
             }
 
             Spacer(Modifier.weight(1f))

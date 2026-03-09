@@ -23,5 +23,6 @@ data class LabsUiState(
     val gems: Long = 0,
     val slotUnlockCostGems: Long = 200,
     val canAffordSlotUnlock: Boolean = false,
+    val seasonPassFreeRushAvailable: Boolean = false,
     val isLoading: Boolean = true,
 )

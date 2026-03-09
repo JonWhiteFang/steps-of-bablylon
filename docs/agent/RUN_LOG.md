@@ -662,3 +662,51 @@ Harden anti-cheat beyond basic rate limiting + daily ceiling + HC escrow. Add ve
 - StepCrossValidator Level 2/3 could also adjust `creditedSteps` in Room (currently only escrows excess).
 - AntiCheatPreferences counters not surfaced in any UI (debug screen could be added).
 - Step burst trigger for supply drops still deferred.
+
+## Run — 2026-03-09 — Plan 26: Monetization & Ads
+
+### Objective
+Implement monetization layer with stub billing/ads, cosmetic store, Season Pass, and reward ads.
+
+### Design decisions
+- Stub-first architecture: `BillingManager` and `RewardAdManager` interfaces in domain (pure Kotlin), stub impls in data. Swap via DI bindings when real SDKs integrated.
+- Season Pass daily Gem bonus piggybacks on existing `TrackDailyLogin` (automatic, not manual claim).
+- Cosmetic store uses placeholder items — visual application deferred to Plan 27.
+- `OpenCardPack` gets `isFree: Boolean = false` default param — backward-compatible, zero caller impact.
+- No new test dependencies needed — stubs are simple enough to not warrant dedicated tests.
+- DB version 7 with destructive fallback (still in dev).
+
+### What was done
+1. **Task 1 — Database & Profile**: Added 5 monetization fields to `PlayerProfileEntity` (`adRemoved`, `seasonPassActive`, `seasonPassExpiry`, `freeLabRushUsedToday`, `freeCardPackAdUsedToday`). Created `CosmeticEntity` + `CosmeticDao`. Bumped DB to version 7 (12 entities). Updated `PlayerProfileDao` (4 new queries), `PlayerRepository` interface (4 new methods), `PlayerRepositoryImpl`, `FakePlayerRepository`.
+
+2. **Task 2 — Billing Manager Stub**: Created `BillingProduct` enum (5 products), `PurchaseResult` sealed class, `BillingManager` interface, `StubBillingManager` (500ms delay, always succeeds), `BillingModule` DI binding.
+
+3. **Task 3 — Gem Pack Purchase + Store UI**: Created `PurchaseGemPack` use case, `StoreScreen` (Gem packs, Ad Removal, Season Pass, Cosmetics sections), `StoreViewModel`, `StoreUiState`. Added `Screen.Store` route, wired in `MainActivity` NavHost.
+
+4. **Task 4 — Ad Removal**: Ad Removal card in StoreScreen, `StoreViewModel.purchaseAdRemoval()`, "Already Purchased" state.
+
+5. **Task 5 — Season Pass**: Updated `TrackDailyLogin` with `seasonPassActive`/`seasonPassExpiry` params (+10 Gems/day). Updated `LabsViewModel` with `freeRush()` method and `seasonPassFreeRushAvailable` state. Updated `LabsScreen` with "Free ⭐" button. Season Pass card in StoreScreen.
+
+6. **Task 6 — Reward Ad Stub**: Created `AdPlacement` enum (3 placements), `AdResult` sealed class, `RewardAdManager` interface, `StubRewardAdManager` (1s delay, always rewards), `AdModule` DI binding.
+
+7. **Task 7 — Post-Round Ads**: Added `adRemoved`/`gemAdWatched`/`psAdWatched` to `RoundEndState`. Injected `RewardAdManager` into `BattleViewModel`, added `watchGemAd()`/`watchPsAd()`. Updated `PostRoundOverlay` with ad buttons (hidden if adRemoved, disabled after use).
+
+8. **Task 8 — Free Card Pack Ad**: Added `isFree` param to `OpenCardPack` (backward-compatible default). Injected `RewardAdManager` into `CardsViewModel`, added `watchFreePackAd()`. Updated `CardsScreen` with "🎬 Free Pack (Ad)" button (hidden if adRemoved, disabled if used today).
+
+9. **Task 9 — Cosmetic Store**: Created `CosmeticCategory` enum, `CosmeticItem` domain model, `CosmeticRepository` interface, `CosmeticRepositoryImpl` (7 placeholder items, seed on first access). Added cosmetics section to StoreScreen with buy/equip/unequip.
+
+10. **Task 10 — Integration**: Added Store button to HomeScreen and Economy screen. Season Pass badge on HomeScreen. All ad UI gated on `adRemoved` flag.
+
+### Test results
+- 222 total JVM tests, all green, 0 failures. No new tests (stub implementations, presentation-only changes).
+- Build: assembleDebug successful.
+
+### What remains (deferred)
+- Google Play Billing Library v7 integration (replace StubBillingManager).
+- AdMob SDK integration (replace StubRewardAdManager).
+- Real purchase verification and receipt validation.
+- Subscription renewal handling and grace periods.
+- Real cosmetic content and visual application (Plan 27).
+- Play Console product configuration and test tracks.
+- Ad mediation for fill rate optimization.
+- ADR for stub billing decision (documented in plan-26-monetization.md instead).

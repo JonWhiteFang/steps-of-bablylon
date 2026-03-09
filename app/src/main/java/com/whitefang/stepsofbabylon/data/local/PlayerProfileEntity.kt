@@ -36,6 +36,16 @@ data class PlayerProfileEntity(
     val totalEnemiesKilled: Long = 0,
     @ColumnInfo(defaultValue = "0")
     val totalCashEarned: Long = 0,
+    @ColumnInfo(defaultValue = "0")
+    val adRemoved: Boolean = false,
+    @ColumnInfo(defaultValue = "0")
+    val seasonPassActive: Boolean = false,
+    @ColumnInfo(defaultValue = "0")
+    val seasonPassExpiry: Long = 0,
+    @ColumnInfo(defaultValue = "")
+    val freeLabRushUsedToday: String = "",
+    @ColumnInfo(defaultValue = "")
+    val freeCardPackAdUsedToday: String = "",
     val createdAt: Long = System.currentTimeMillis(),
     val lastActiveAt: Long = System.currentTimeMillis(),
 )

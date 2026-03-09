@@ -42,6 +42,17 @@ fun CardsScreen(viewModel: CardsViewModel = hiltViewModel()) {
         Text("Equipped: ${state.equippedCount}/3", style = MaterialTheme.typography.titleSmall)
         Spacer(Modifier.height(8.dp))
 
+        // Free pack ad button
+        if (state.freePackAvailable) {
+            OutlinedButton(onClick = { viewModel.watchFreePackAd() }, modifier = Modifier.fillMaxWidth()) {
+                Text("🎬 Free Pack (Ad)")
+            }
+            Spacer(Modifier.height(4.dp))
+        } else if (!state.adRemoved) {
+            Text("Free pack used today", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            Spacer(Modifier.height(4.dp))
+        }
+
         // Pack buttons
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             state.packOptions.forEach { pack ->

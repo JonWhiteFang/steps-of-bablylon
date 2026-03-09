@@ -98,11 +98,11 @@ All in `domain/model/`:
 | File | Purpose |
 |---|---|
 | `StepsOfBabylonApp.kt` | `@HiltAndroidApp`, `Configuration.Provider` (HiltWorkerFactory) |
-| `di/DatabaseModule.kt` | Hilt module: Room DB (SQLCipher) + all 11 DAOs |
-| `di/RepositoryModule.kt` | Hilt module: binds all 7 repository interfaces to impls |
+| `di/DatabaseModule.kt` | Hilt module: Room DB (SQLCipher) + all 12 DAOs |
+| `di/RepositoryModule.kt` | Hilt module: binds all 8 repository interfaces to impls |
 | `di/StepModule.kt` | Hilt module: provides SensorManager |
 | `di/HealthConnectModule.kt` | Hilt module: Health Connect organizational module |
-| `data/local/AppDatabase.kt` | Room database (11 entities, 11 DAOs, version 6) |
+| `data/local/AppDatabase.kt` | Room database (12 entities, 12 DAOs, version 7) |
 | `data/local/DatabaseKeyManager.kt` | SQLCipher passphrase via Android Keystore |
 | `data/local/Converters.kt` | TypeConverters for `Map<Int,Int>` and `Map<String,Int>` (JSON) |
 | `data/sensor/StepSensorDataSource.kt` | TYPE_STEP_COUNTER wrapper, emits deltas via callbackFlow |

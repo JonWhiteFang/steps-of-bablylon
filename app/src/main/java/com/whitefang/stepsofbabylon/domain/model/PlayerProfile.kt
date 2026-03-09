@@ -20,6 +20,11 @@ data class PlayerProfile(
     val totalRoundsPlayed: Long = 0,
     val totalEnemiesKilled: Long = 0,
     val totalCashEarned: Long = 0,
+    val adRemoved: Boolean = false,
+    val seasonPassActive: Boolean = false,
+    val seasonPassExpiry: Long = 0,
+    val freeLabRushUsedToday: String = "",
+    val freeCardPackAdUsedToday: String = "",
     val createdAt: Long = 0,
     val lastActiveAt: Long = 0,
 ) {

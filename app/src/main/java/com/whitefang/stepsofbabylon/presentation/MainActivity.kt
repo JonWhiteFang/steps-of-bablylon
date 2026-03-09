@@ -36,6 +36,7 @@ import com.whitefang.stepsofbabylon.presentation.navigation.BottomNavBar
 import com.whitefang.stepsofbabylon.presentation.navigation.Screen
 import com.whitefang.stepsofbabylon.presentation.settings.NotificationSettingsScreen
 import com.whitefang.stepsofbabylon.presentation.stats.StatsScreen
+import com.whitefang.stepsofbabylon.presentation.store.StoreScreen
 import com.whitefang.stepsofbabylon.presentation.supplies.UnclaimedSuppliesScreen
 import com.whitefang.stepsofbabylon.presentation.ui.theme.StepsOfBabylonTheme
 import com.whitefang.stepsofbabylon.presentation.weapons.UltimateWeaponScreen
@@ -129,6 +130,7 @@ class MainActivity : ComponentActivity() {
                                 onEconomyClick = { navController.navigate(Screen.Economy.route) },
                                 onMissionsClick = { navController.navigate(Screen.Missions.route) },
                                 onSettingsClick = { navController.navigate(Screen.Settings.route) },
+                                onStoreClick = { navController.navigate(Screen.Store.route) },
                             )
                         }
                         composable(Screen.Workshop.route) {
@@ -156,13 +158,18 @@ class MainActivity : ComponentActivity() {
                             UnclaimedSuppliesScreen()
                         }
                         composable(Screen.Economy.route) {
-                            CurrencyDashboardScreen()
+                            CurrencyDashboardScreen(
+                                onStoreClick = { navController.navigate(Screen.Store.route) },
+                            )
                         }
                         composable(Screen.Missions.route) {
                             MissionsScreen()
                         }
                         composable(Screen.Settings.route) {
                             NotificationSettingsScreen()
+                        }
+                        composable(Screen.Store.route) {
+                            StoreScreen()
                         }
                     }
                 }

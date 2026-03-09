@@ -32,6 +32,8 @@ fun PostRoundOverlay(
     state: RoundEndState,
     onPlayAgain: () -> Unit,
     onReturnToWorkshop: () -> Unit,
+    onWatchGemAd: () -> Unit = {},
+    onWatchPsAd: () -> Unit = {},
 ) {
     val minutes = (state.timeSurvivedSeconds / 60).toInt()
     val seconds = (state.timeSurvivedSeconds % 60).toInt()
@@ -78,6 +80,28 @@ fun PostRoundOverlay(
                 StatRow("Time Survived", "%d:%02d".format(minutes, seconds))
 
                 Spacer(Modifier.height(24.dp))
+
+                // Reward ad buttons (hidden if ad removal purchased)
+                if (!state.adRemoved) {
+                    if (state.gemAdWatched) {
+                        Text("✅ +1 Gem Earned!", color = Color(0xFF4CAF50), style = MaterialTheme.typography.bodySmall)
+                    } else {
+                        OutlinedButton(onClick = onWatchGemAd, modifier = Modifier.fillMaxWidth()) {
+                            Text("🎬 Watch Ad for +1 Gem")
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    if (state.powerStonesAwarded > 0) {
+                        if (state.psAdWatched) {
+                            Text("✅ Power Stones Doubled!", color = Color(0xFF9C27B0), style = MaterialTheme.typography.bodySmall)
+                        } else {
+                            OutlinedButton(onClick = onWatchPsAd, modifier = Modifier.fillMaxWidth()) {
+                                Text("🎬 Watch Ad to Double PS")
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
 
                 Button(onClick = onPlayAgain, modifier = Modifier.fillMaxWidth()) {
                     Text("Play Again")

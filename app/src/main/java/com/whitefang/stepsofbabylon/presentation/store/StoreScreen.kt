@@ -1,0 +1,124 @@
+package com.whitefang.stepsofbabylon.presentation.store
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.whitefang.stepsofbabylon.domain.model.BillingProduct
+
+@Composable
+fun StoreScreen(viewModel: StoreViewModel = hiltViewModel()) {
+    val state by viewModel.uiState.collectAsState()
+
+    LazyColumn(
+        Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            Text("Store", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text("💎 ${state.gems} Gems", style = MaterialTheme.typography.titleMedium, color = Color(0xFF2196F3))
+            Spacer(Modifier.height(8.dp))
+        }
+
+        // Gem Packs
+        item { Text("Gem Packs", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
+        val gemPacks = listOf(BillingProduct.GEM_PACK_SMALL, BillingProduct.GEM_PACK_MEDIUM, BillingProduct.GEM_PACK_LARGE)
+        items(gemPacks) { product ->
+            Card(Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column {
+                        Text("${product.gemAmount} 💎 Gems", fontWeight = FontWeight.Bold)
+                        Text(product.priceDisplay, color = Color.Gray)
+                    }
+                    Button(onClick = { viewModel.purchaseGemPack(product) }) { Text("Buy") }
+                }
+            }
+        }
+
+        // Ad Removal
+        item {
+            Spacer(Modifier.height(8.dp))
+            Text("Premium", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        }
+        item {
+            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = if (state.adRemoved) Color(0xFF1B5E20) else CardDefaults.cardColors().containerColor)) {
+                Row(Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column {
+                        Text("Ad Removal", fontWeight = FontWeight.Bold)
+                        Text(if (state.adRemoved) "✅ Purchased" else BillingProduct.AD_REMOVAL.priceDisplay, color = Color.Gray)
+                    }
+                    if (!state.adRemoved) {
+                        Button(onClick = { viewModel.purchaseAdRemoval() }) { Text("Buy") }
+                    }
+                }
+            }
+        }
+
+        // Season Pass
+        item {
+            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = if (state.seasonPassActive) Color(0xFF1A237E) else CardDefaults.cardColors().containerColor)) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Column {
+                            Text("⭐ Season Pass", fontWeight = FontWeight.Bold)
+                            Text(if (state.seasonPassActive) "✅ Active" else BillingProduct.SEASON_PASS.priceDisplay, color = Color.Gray)
+                        }
+                        if (!state.seasonPassActive) {
+                            Button(onClick = { viewModel.purchaseSeasonPass() }) { Text("Subscribe") }
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text("• 10 bonus Gems/day", style = MaterialTheme.typography.bodySmall)
+                    Text("• 1 free Lab rush/day", style = MaterialTheme.typography.bodySmall)
+                    Text("• Exclusive cosmetics", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+
+        // Cosmetics
+        item {
+            Spacer(Modifier.height(8.dp))
+            Text("Cosmetics", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("Visual application coming soon", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+        }
+        items(state.cosmetics) { cosmetic ->
+            Card(Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column(Modifier.weight(1f)) {
+                        Text(cosmetic.name, fontWeight = FontWeight.Bold)
+                        Text(cosmetic.description, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        Text(cosmetic.category.replace("_", " "), style = MaterialTheme.typography.labelSmall)
+                    }
+                    when {
+                        cosmetic.isEquipped -> OutlinedButton(onClick = { viewModel.unequipCosmetic(cosmetic.cosmeticId) }) { Text("Unequip") }
+                        cosmetic.isOwned -> Button(onClick = { viewModel.equipCosmetic(cosmetic.cosmeticId) }) { Text("Equip") }
+                        else -> Button(
+                            onClick = { viewModel.purchaseCosmetic(cosmetic.cosmeticId) },
+                            enabled = state.gems >= cosmetic.priceGems,
+                        ) { Text("${cosmetic.priceGems} 💎") }
+                    }
+                }
+            }
+        }
+    }
+}

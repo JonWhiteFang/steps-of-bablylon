@@ -22,5 +22,9 @@ interface PlayerRepository {
     suspend fun updateBestWave(tier: Int, wave: Int)
     suspend fun updateStreak(streak: Int, date: String)
     suspend fun incrementBattleStats(rounds: Long, kills: Long, cash: Long)
+    suspend fun updateAdRemoved(removed: Boolean)
+    suspend fun updateSeasonPass(active: Boolean, expiry: Long)
+    suspend fun updateFreeLabRushUsed(date: String)
+    suspend fun updateFreeCardPackAdUsed(date: String)
     suspend fun ensureProfileExists()
 }

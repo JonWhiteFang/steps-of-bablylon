@@ -30,11 +30,15 @@ import com.whitefang.stepsofbabylon.presentation.ui.theme.Gold
 @Composable
 fun CurrencyDashboardScreen(
     viewModel: CurrencyDashboardViewModel = hiltViewModel(),
+    onStoreClick: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("Premium Currencies", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("Premium Currencies", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            androidx.compose.material3.TextButton(onClick = onStoreClick) { Text("🏪 Store") }
+        }
 
         // Balances
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {

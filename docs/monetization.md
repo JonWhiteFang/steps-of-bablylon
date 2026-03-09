@@ -82,3 +82,35 @@ No gameplay advantages beyond convenience. A non-subscriber can earn everything 
 - No FOMO mechanics — missing a day has zero penalty.
 - Cosmetics are the primary revenue driver.
 - Ads are opt-in rewards, never interruptions.
+
+## Implementation Status
+
+### Architecture
+
+All billing and ad functionality uses interface-based abstractions in the domain layer (pure Kotlin), with stub implementations in the data layer:
+
+| Interface | Stub Implementation | Location |
+|---|---|---|
+| `BillingManager` | `StubBillingManager` | `data/billing/` |
+| `RewardAdManager` | `StubRewardAdManager` | `data/ads/` |
+
+DI bindings in `di/BillingModule.kt` and `di/AdModule.kt` wire stubs to interfaces. To integrate real SDKs, create new implementations and swap the DI bindings — no other code changes needed.
+
+### What's Implemented (Stub)
+
+- Gem Pack purchases (3 tiers) — simulated with 500ms delay, credits Gems immediately
+- Ad Removal — sets flag, hides all ad UI across the app
+- Season Pass — sets flag + 30-day expiry, awards 10 bonus Gems/day via TrackDailyLogin, 1 free Lab rush/day
+- Post-round reward ads — +1 Gem and double PS buttons (simulated with 1s delay)
+- Daily free Card Pack ad — once per day, opens Common pack without Gem cost
+- Cosmetic store — 7 placeholder items (3 ziggurat skins, 2 projectile effects, 2 enemy skins), purchase/equip/unequip
+
+### What's Deferred (Real SDK Integration)
+
+- Google Play Billing Library v7 (replace StubBillingManager)
+- AdMob SDK (replace StubRewardAdManager)
+- Purchase verification and receipt validation
+- Subscription renewal, grace periods, billing retries
+- Real cosmetic content and visual application in battle
+- Play Console product configuration and test tracks
+- Ad mediation for fill rate optimization

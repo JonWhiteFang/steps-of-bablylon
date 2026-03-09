@@ -6,16 +6,18 @@ All paths relative to `app/src/main/java/com/whitefang/stepsofbabylon/`.
 
 ```
 StepsOfBabylonApp.kt              # @HiltAndroidApp, Configuration.Provider (HiltWorkerFactory)
-di/DatabaseModule.kt               # Hilt: Room DB (SQLCipher) + 11 DAO providers
-di/RepositoryModule.kt             # Hilt: 7 repository interface → impl bindings (@Singleton)
+di/DatabaseModule.kt               # Hilt: Room DB (SQLCipher) + 12 DAO providers
+di/RepositoryModule.kt             # Hilt: 8 repository interface → impl bindings (@Singleton)
 di/StepModule.kt                   # Hilt: SensorManager provider
 di/HealthConnectModule.kt          # Hilt: Health Connect organizational module
+di/BillingModule.kt                # Hilt: BillingManager stub binding
+di/AdModule.kt                     # Hilt: RewardAdManager stub binding
 ```
 
 ## Data Layer — Room
 
 ```
-data/local/AppDatabase.kt         # @Database: 11 entities, 11 DAOs, version 6, exportSchema=true
+data/local/AppDatabase.kt         # @Database: 12 entities, 12 DAOs, version 7, exportSchema=true
 data/local/Converters.kt          # @TypeConverters: Map<Int,Int> and Map<String,Int> via JSON
 data/local/DatabaseKeyManager.kt  # SQLCipher passphrase via Android Keystore
 data/local/PlayerProfileEntity.kt # Player profile entity (single row, id=1)
@@ -40,6 +42,8 @@ data/local/MilestoneEntity.kt      # Milestone claim state entity
 data/local/MilestoneDao.kt         # Milestone DAO
 data/local/DailyMissionEntity.kt   # Daily mission entity
 data/local/DailyMissionDao.kt      # Daily mission DAO
+data/local/CosmeticEntity.kt       # Cosmetic store entity
+data/local/CosmeticDao.kt          # Cosmetic store DAO
 ```
 
 ## Data Layer — Repositories
@@ -61,6 +65,13 @@ data/sensor/StepSensorDataSource.kt  # TYPE_STEP_COUNTER wrapper, emits deltas v
 data/sensor/StepRateLimiter.kt       # Rolling 1-min window rate limiter (200/min, 250 burst)
 data/sensor/StepVelocityAnalyzer.kt  # Unnatural step pattern detection (shaker/spoof), penalty multiplier
 data/sensor/DailyStepManager.kt      # Orchestrates: rate limit → velocity analysis → 50k ceiling → Room persist + activity minutes
+```
+
+## Data Layer — Billing & Ads
+
+```
+data/billing/StubBillingManager.kt   # Stub billing: simulates purchases with 500ms delay, credits Gems/flags
+data/ads/StubRewardAdManager.kt      # Stub ads: simulates ad view with 1s delay, always rewards
 ```
 
 ## Data Layer — Health Connect
@@ -96,6 +107,10 @@ domain/model/Milestone.kt               # 6 walking milestones with step thresho
 domain/model/MilestoneReward.kt          # Sealed class: Gems, PowerStones, Cosmetic
 domain/model/DailyMissionType.kt         # 6 daily mission types (walking/battle/upgrade)
 domain/model/MissionCategory.kt          # Mission categories: WALKING, BATTLE, UPGRADE (in DailyMissionType.kt)
+domain/model/BillingProduct.kt           # 5 billing products + PurchaseResult sealed class
+domain/model/AdPlacement.kt              # 3 ad placements + AdResult sealed class
+domain/model/CosmeticCategory.kt         # 3 cosmetic categories (ziggurat, projectile, enemy)
+domain/model/CosmeticItem.kt             # Cosmetic item domain model
 domain/model/UpgradeType.kt           # 23 Workshop upgrade types with configs
 domain/model/UpgradeCategory.kt       # Attack, Defense, Utility categories
 domain/model/UpgradeConfig.kt         # Upgrade configuration (baseCost, scaling, maxLevel)
@@ -127,6 +142,9 @@ domain/repository/CardRepository.kt             # Card inventory interface
 domain/repository/UltimateWeaponRepository.kt   # Ultimate weapon interface
 domain/repository/StepRepository.kt             # Daily step records + escrow + Health Connect methods
 domain/repository/WalkingEncounterRepository.kt # Walking encounter interface
+domain/repository/BillingManager.kt             # Billing interface (purchase, query)
+domain/repository/RewardAdManager.kt            # Reward ad interface (show ad, availability)
+domain/repository/CosmeticRepository.kt         # Cosmetic store interface
 domain/usecase/CalculateUpgradeCost.kt          # Cost formula: baseCost * scaling^level
 domain/usecase/CanAffordUpgrade.kt              # Affordability check against wallet
 domain/usecase/PurchaseUpgrade.kt               # Deducts Steps, increments upgrade level
@@ -158,6 +176,7 @@ domain/usecase/AwardWaveMilestone.kt             # PS on new personal-best waves
 domain/usecase/CheckMilestones.kt                # Detect newly achievable walking milestones
 domain/usecase/ClaimMilestone.kt                 # Credit milestone rewards (Gems, PS, cosmetics)
 domain/usecase/GenerateDailyMissions.kt          # Generate 3 daily missions (date-seeded random)
+domain/usecase/PurchaseGemPack.kt                # Purchase Gem pack via BillingManager
 ```
 
 ## Presentation Layer
@@ -224,6 +243,9 @@ presentation/stats/StatsScreen.kt                    # Stats screen: chart, toda
 presentation/stats/WalkingHistoryChart.kt            # Canvas-drawn bar chart with period toggle
 presentation/settings/NotificationSettingsViewModel.kt # @HiltViewModel: notification preference toggles
 presentation/settings/NotificationSettingsScreen.kt    # Settings screen: 4 notification toggles
+presentation/store/StoreViewModel.kt                   # @HiltViewModel: billing + cosmetic purchase actions
+presentation/store/StoreUiState.kt                     # UI state: gems, adRemoved, seasonPass, cosmetics
+presentation/store/StoreScreen.kt                      # Store screen: Gem packs, Ad Removal, Season Pass, Cosmetics
 ```
 
 ## Service Layer

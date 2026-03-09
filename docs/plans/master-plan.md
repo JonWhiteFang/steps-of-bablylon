@@ -121,7 +121,7 @@ graph TD
 - [x] Plan 23: Notifications & Widget
 - [ ] Plan 24: Accessibility *(deferred — post-v1.0)*
 - [x] Plan 25: Anti-Cheat & Validation
-- [ ] Plan 26: Monetization & Ads
+- [x] Plan 26: Monetization & Ads (stub implementation — real SDK integration deferred)
 - [ ] Plan 27: Polish & Visual Effects
 - [ ] Plan 28: Balancing & Tuning
 - [ ] Plan 29: Testing & QA

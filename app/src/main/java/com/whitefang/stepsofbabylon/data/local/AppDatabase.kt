@@ -17,8 +17,9 @@ import androidx.room.TypeConverters
         DailyLoginEntity::class,
         MilestoneEntity::class,
         DailyMissionEntity::class,
+        CosmeticEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -34,4 +35,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun dailyLoginDao(): DailyLoginDao
     abstract fun milestoneDao(): MilestoneDao
     abstract fun dailyMissionDao(): DailyMissionDao
+    abstract fun cosmeticDao(): CosmeticDao
 }

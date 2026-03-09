@@ -22,6 +22,8 @@ data class CardsUiState(
     val cardDust: Long = 0,
     val packOptions: List<PackOption> = PackTier.entries.map { PackOption(it, false) },
     val lastPackResult: List<CardResult>? = null,
+    val freePackAvailable: Boolean = false,
+    val adRemoved: Boolean = false,
     val isLoading: Boolean = true,
 )
 

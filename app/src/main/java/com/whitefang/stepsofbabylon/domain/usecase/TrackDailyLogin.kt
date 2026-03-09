@@ -15,9 +15,10 @@ class TrackDailyLogin(
         private const val PS_STEP_THRESHOLD = 1_000L
         private const val MAX_STREAK = 7
         private const val MAX_GEM_REWARD = 5
+        private const val SEASON_PASS_DAILY_GEMS = 10L
     }
 
-    suspend fun checkAndAward(todayDate: String, todayCreditedSteps: Long) {
+    suspend fun checkAndAward(todayDate: String, todayCreditedSteps: Long, seasonPassActive: Boolean = false, seasonPassExpiry: Long = 0) {
         val login = dailyLoginDao.getByDate(todayDate) ?: DailyLoginEntity(date = todayDate)
         var updated = login.copy(stepsWalked = todayCreditedSteps)
 
@@ -40,7 +41,11 @@ class TrackDailyLogin(
             }
 
             if (profile.lastLoginDate != todayDate) {
-                val gemReward = newStreak.coerceAtMost(MAX_GEM_REWARD).toLong()
+                var gemReward = newStreak.coerceAtMost(MAX_GEM_REWARD).toLong()
+                // Season Pass bonus: +10 Gems/day
+                if (seasonPassActive && seasonPassExpiry > System.currentTimeMillis()) {
+                    gemReward += SEASON_PASS_DAILY_GEMS
+                }
                 playerRepository.addGems(gemReward)
                 playerRepository.updateStreak(newStreak, todayDate)
             }

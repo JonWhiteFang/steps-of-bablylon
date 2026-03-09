@@ -13,6 +13,9 @@ data class RoundEndState(
     val previousBest: Int,
     val tierUnlocked: Int? = null,
     val powerStonesAwarded: Int = 0,
+    val adRemoved: Boolean = false,
+    val gemAdWatched: Boolean = false,
+    val psAdWatched: Boolean = false,
 )
 
 data class UWSlotInfo(
@@ -43,4 +46,5 @@ data class BattleUiState(
     val stepBalance: Long = 0,
     val showOverdriveMenu: Boolean = false,
     val uwSlots: List<UWSlotInfo> = emptyList(),
+    val adRemoved: Boolean = false,
 )

@@ -49,7 +49,8 @@ class HomeViewModel @Inject constructor(
             // Trigger daily login streak on app open
             val today = LocalDate.now().toString()
             val todaySteps = stepRepository.getDailyRecord(today)?.creditedSteps ?: 0
-            TrackDailyLogin(dailyLoginDao, playerRepository).checkAndAward(today, todaySteps)
+            val profile0 = playerRepository.observeProfile().first()
+            TrackDailyLogin(dailyLoginDao, playerRepository).checkAndAward(today, todaySteps, profile0.seasonPassActive, profile0.seasonPassExpiry)
             GenerateDailyMissions(dailyMissionDao)(today)
 
             // Notify for newly achievable milestones
@@ -80,6 +81,7 @@ class HomeViewModel @Inject constructor(
             bestWavePerTier = profile.bestWavePerTier,
             unclaimedDropCount = unclaimedCount,
             claimableMissionCount = claimableMissions + achievableMilestones,
+            seasonPassActive = profile.seasonPassActive && profile.seasonPassExpiry > System.currentTimeMillis(),
             isLoading = false,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
