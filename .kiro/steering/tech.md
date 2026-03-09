@@ -26,6 +26,7 @@ All versions managed in `gradle/libs.versions.toml`. Never hardcode versions in 
 | JUnit 5 | 5.11.4 | Unit testing framework |
 | kotlinx-coroutines-test | 1.10.1 | Coroutine test utilities |
 | SQLCipher | 4.13.0 | Database encryption |
+| Health Connect | 1.2.0-alpha02 | Step cross-validation, Activity Minute Parity |
 | SQLite KTX | 2.4.0 | SQLite support library |
 | Core KTX | 1.17.0 | Kotlin extensions for Android |
 | Activity Compose | 1.12.3 | Compose Activity integration |

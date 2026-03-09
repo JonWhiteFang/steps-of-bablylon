@@ -14,10 +14,10 @@
 
 ### Foreground Service
 
-- Persistent notification showing daily step count and spendable balance
+- Persistent notification showing daily step count, spendable balance, and Workshop/Battle action buttons
 - Registers `TYPE_STEP_COUNTER` sensor listener
 - Runs continuously while the app is installed
-- Tap notification → open app
+- Tap notification → open app; action buttons → Workshop or Battle screen
 
 ### WorkManager
 

@@ -98,7 +98,7 @@ All in `domain/model/`:
 | File | Purpose |
 |---|---|
 | `StepsOfBabylonApp.kt` | `@HiltAndroidApp`, `Configuration.Provider` (HiltWorkerFactory) |
-| `di/DatabaseModule.kt` | Hilt module: Room DB (SQLCipher) + all 9 DAOs |
+| `di/DatabaseModule.kt` | Hilt module: Room DB (SQLCipher) + all 11 DAOs |
 | `di/RepositoryModule.kt` | Hilt module: binds all 7 repository interfaces to impls |
 | `di/StepModule.kt` | Hilt module: provides SensorManager |
 | `di/HealthConnectModule.kt` | Hilt module: Health Connect organizational module |
@@ -121,7 +121,7 @@ All in `domain/model/`:
 | `domain/usecase/UnlockUltimateWeapon.kt` | Checks Power Stone balance, deducts, unlocks UW |
 | `domain/usecase/UpgradeUltimateWeapon.kt` | Cost scaling per level, max level 10 |
 | `presentation/MainActivity.kt` | Single Activity, Scaffold + NavHost + BottomNavBar (hidden during battle), permissions |
-| `presentation/navigation/Screen.kt` | 6 navigation routes (Home, Workshop, Battle, Labs, Stats, Weapons) |
+| `presentation/navigation/Screen.kt` | 11 navigation routes (Home, Workshop, Battle, Labs, Stats, Weapons, Cards, Supplies, Economy, Missions, Settings) |
 | `presentation/home/HomeViewModel.kt` | Combines profile + step flows into HomeUiState |
 | `presentation/battle/GameSurfaceView.kt` | SurfaceView managing game loop thread lifecycle |
 | `presentation/battle/GameLoopThread.kt` | Fixed timestep (60 UPS), accumulator, speed multiplier |

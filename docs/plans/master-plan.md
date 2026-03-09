@@ -107,7 +107,7 @@ graph TD
 - [x] Plan 10b: Advanced Combat Mechanics (Orbs, Multishot, Bounce Shot)
 - [x] Plan 11: In-Round Upgrades & Cash Economy
 - [x] Plan 12: Round Lifecycle & Post-Round
-- [x] Domain Layer Unit Tests (80 JVM tests — use cases, models, formulas, anti-cheat)
+- [x] Domain Layer Unit Tests (206 JVM tests — all use cases, domain models, formulas, anti-cheat, tier system, labs, cards, encounters, milestones, missions)
 - [x] Plan 13: Tier System & Progression
 - [x] Plan 14: Step Overdrive
 - [x] Plan 15: Ultimate Weapons

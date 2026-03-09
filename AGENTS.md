@@ -49,7 +49,7 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 ├── domain/         # Pure Kotlin — no Android imports
 │   ├── model/      # Currency, PlayerWallet, PlayerProfile, BattleConditionEffects, and all game domain models
 │   ├── repository/ # Repository interfaces
-│   └── usecase/    # CalculateUpgradeCost, CanAffordUpgrade, ResolveStats, CalculateDamage, CalculateDefense, PurchaseUpgrade, QuickInvest, UpdateBestWave, CheckTierUnlock, ActivateOverdrive, UnlockUltimateWeapon, UpgradeUltimateWeapon, CalculateResearchCost, CalculateResearchTime, StartResearch, CompleteResearch, RushResearch, UnlockLabSlot, CheckResearchCompletion, OpenCardPack, UpgradeCard, ApplyCardEffects, ManageCardLoadout, GenerateSupplyDrop, ClaimSupplyDrop, TrackWeeklyChallenge, TrackDailyLogin, AwardWaveMilestone
+│   └── usecase/    # CalculateUpgradeCost, CanAffordUpgrade, ResolveStats, CalculateDamage, CalculateDefense, PurchaseUpgrade, QuickInvest, UpdateBestWave, CheckTierUnlock, ActivateOverdrive, UnlockUltimateWeapon, UpgradeUltimateWeapon, CalculateResearchCost, CalculateResearchTime, StartResearch, CompleteResearch, RushResearch, UnlockLabSlot, CheckResearchCompletion, OpenCardPack, UpgradeCard, ApplyCardEffects, ManageCardLoadout, GenerateSupplyDrop, ClaimSupplyDrop, TrackWeeklyChallenge, TrackDailyLogin, AwardWaveMilestone, CheckMilestones, ClaimMilestone, GenerateDailyMissions
 ├── presentation/   # ViewModels, Compose screens, SurfaceView battle renderer
 │   ├── navigation/ # Screen routes, BottomNavBar
 │   ├── home/       # HomeScreen, TierSelector
@@ -64,9 +64,12 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 │   ├── cards/      # CardsScreen, CardsViewModel
 │   ├── supplies/   # UnclaimedSuppliesScreen, UnclaimedSuppliesViewModel
 │   ├── economy/    # CurrencyDashboardScreen, CurrencyDashboardViewModel
+│   ├── missions/   # MissionsScreen, MissionsViewModel
+│   ├── settings/   # NotificationSettingsScreen, NotificationSettingsViewModel
+│   ├── stats/      # StatsScreen, StatsViewModel
 │   └── ui/theme/   # Color, Theme
 ├── di/             # Hilt modules (DatabaseModule, RepositoryModule, StepModule, HealthConnectModule)
-└── service/        # Foreground step-counting service, WorkManager workers (Plan 04)
+└── service/        # Foreground step-counting service, WorkManager workers, boot receiver, notifications, widget
 ```
 
 Follow Clean Architecture layers: `presentation → domain ← data`. The domain layer has zero Android dependencies.
@@ -182,7 +185,7 @@ graph TD
 - [x] **Plan 10b: Advanced Combat (Orbs, Multishot, Bounce)** ✓
 - [x] **Plan 11: In-Round Upgrades & Cash Economy** ✓
 - [x] **Plan 12: Round Lifecycle & Post-Round** ✓
-- [x] **Domain Layer Unit Tests** ✓ (93 JVM tests — use cases, models, formulas, anti-cheat, tier system)
+- [x] **Domain Layer Unit Tests** ✓ (206 JVM tests — all use cases, domain models, formulas, anti-cheat, tier system, labs, cards, encounters, milestones, missions)
 - [x] **Plan 13: Tier System & Progression** ✓
 - [x] **Plan 18: Narrative Biome Progression** ✓
 - [x] **Plan 14: Step Overdrive** ✓
@@ -254,7 +257,7 @@ The battle screen uses a custom `SurfaceView` with a game loop (not Compose). Ke
 - **Test framework:** JUnit 5 + kotlinx-coroutines-test (pure JVM, no emulator needed).
 - **Run tests:** `./run-gradle.sh testDebugUnitTest`
 - **Test source:** `app/src/test/java/com/whitefang/stepsofbabylon/`
-- **Fakes:** `test/fakes/` — FakePlayerRepository, FakeWorkshopRepository, FakeUltimateWeaponRepository, FakeLabRepository, FakeCardRepository (in-memory StateFlow-backed).
+- **Fakes:** `test/fakes/` — FakePlayerRepository, FakeWorkshopRepository, FakeUltimateWeaponRepository, FakeLabRepository, FakeCardRepository, FakeWalkingEncounterRepository, FakeMilestoneDao, FakeDailyMissionDao (in-memory StateFlow-backed).
 - **Current coverage:** 206 JVM tests — all use cases, domain models with validation logic, battle condition effects, tier unlock logic, biome themes, EnemyScaler, StepRateLimiter, Labs research (cost/time/start/complete/rush/unlock/auto-complete), Cards (pack opening/upgrade/effects/loadout), Walking Encounters (supply drop generation/claiming), Wave Milestones (PS awards), Milestones (check/claim), Daily Missions (generation/types).
 
 ## Important Notes

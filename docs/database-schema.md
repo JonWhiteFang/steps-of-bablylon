@@ -20,6 +20,15 @@ Primary player record. One row per player (single-player game).
 | highestUnlockedTier | Int | Highest tier unlocked (default 1) |
 | labSlotCount | Int | Lab slots unlocked (default 1, max 4) |
 | bestWavePerTier | String (JSON) | Map<Int, Int> serialized |
+| currentStreak | Int | Daily login streak count |
+| lastLoginDate | String | ISO date of last login |
+| totalGemsEarned | Long | Lifetime Gems earned |
+| totalGemsSpent | Long | Lifetime Gems spent |
+| totalPowerStonesEarned | Long | Lifetime Power Stones earned |
+| totalPowerStonesSpent | Long | Lifetime Power Stones spent |
+| totalRoundsPlayed | Long | Lifetime battle rounds |
+| totalEnemiesKilled | Long | Lifetime enemies killed |
+| totalCashEarned | Long | Lifetime in-round Cash earned |
 | createdAt | Long | Epoch millis |
 | lastActiveAt | Long | Epoch millis |
 
@@ -93,6 +102,50 @@ Unclaimed and historical supply drops.
 | createdAt | Long | Epoch millis |
 | claimedAt | Long? | Epoch millis |
 
+### WeeklyChallenge
+
+Weekly step challenge tracking, one row per week.
+
+| Column | Type | Notes |
+|---|---|---|
+| weekStart | String (PK) | ISO date of week start |
+| stepsRecorded | Long | Steps accumulated this week |
+| tier1Claimed | Boolean | 50k tier claimed |
+| tier2Claimed | Boolean | 75k tier claimed |
+| tier3Claimed | Boolean | 100k tier claimed |
+
+### DailyLogin
+
+Daily login tracking for streak rewards.
+
+| Column | Type | Notes |
+|---|---|---|
+| date | String (PK) | ISO date |
+| claimed | Boolean | Whether reward was claimed |
+
+### Milestone
+
+Walking milestone claim state.
+
+| Column | Type | Notes |
+|---|---|---|
+| milestoneId | String (PK) | Milestone identifier |
+| claimed | Boolean | Whether reward was claimed |
+| claimedAt | Long? | Epoch millis |
+
+### DailyMission
+
+Daily mission tracking, refreshed at midnight.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | Int (PK, auto) | |
+| missionType | String | DailyMissionType enum name |
+| date | String | ISO date generated |
+| progress | Int | Current progress toward target |
+| completed | Boolean | Whether target was reached |
+| claimed | Boolean | Whether reward was claimed |
+
 ## Relationships
 
 ```
@@ -102,6 +155,10 @@ PlayerProfile (1) ──── (*) CardInventory
 PlayerProfile (1) ──── (*) UltimateWeaponState
 PlayerProfile (1) ──── (*) DailyStepRecord
 PlayerProfile (1) ──── (*) WalkingEncounter
+PlayerProfile (1) ──── (*) WeeklyChallenge
+PlayerProfile (1) ──── (*) DailyLogin
+PlayerProfile (1) ──── (*) Milestone
+PlayerProfile (1) ──── (*) DailyMission
 ```
 
 All relationships are implicit (single player, no foreign keys needed). Queries filter by type/date.
@@ -117,6 +174,10 @@ Each entity gets its own DAO:
 - `UltimateWeaponDao` — unlocked list, equipped loadout
 - `DailyStepDao` — insert/update daily, history range queries
 - `WalkingEncounterDao` — unclaimed list, claim, history
+- `WeeklyChallengeDao` — weekly challenge tracking, tier claims
+- `DailyLoginDao` — daily login tracking, streak queries
+- `MilestoneDao` — milestone claim state
+- `DailyMissionDao` — daily mission tracking, refresh queries
 
 ## Migration Strategy
 

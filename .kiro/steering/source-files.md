@@ -6,7 +6,7 @@ All paths relative to `app/src/main/java/com/whitefang/stepsofbabylon/`.
 
 ```
 StepsOfBabylonApp.kt              # @HiltAndroidApp, Configuration.Provider (HiltWorkerFactory)
-di/DatabaseModule.kt               # Hilt: Room DB (SQLCipher) + 9 DAO providers
+di/DatabaseModule.kt               # Hilt: Room DB (SQLCipher) + 11 DAO providers
 di/RepositoryModule.kt             # Hilt: 7 repository interface → impl bindings (@Singleton)
 di/StepModule.kt                   # Hilt: SensorManager provider
 di/HealthConnectModule.kt          # Hilt: Health Connect organizational module
@@ -15,7 +15,7 @@ di/HealthConnectModule.kt          # Hilt: Health Connect organizational module
 ## Data Layer — Room
 
 ```
-data/local/AppDatabase.kt         # @Database: 9 entities, 9 DAOs, version 4, exportSchema=true
+data/local/AppDatabase.kt         # @Database: 11 entities, 11 DAOs, version 6, exportSchema=true
 data/local/Converters.kt          # @TypeConverters: Map<Int,Int> and Map<String,Int> via JSON
 data/local/DatabaseKeyManager.kt  # SQLCipher passphrase via Android Keystore
 data/local/PlayerProfileEntity.kt # Player profile entity (single row, id=1)
@@ -162,7 +162,7 @@ domain/usecase/GenerateDailyMissions.kt          # Generate 3 daily missions (da
 ```
 presentation/MainActivity.kt                      # Single Activity, Scaffold + NavHost + BottomNavBar, permissions
 presentation/HealthConnectPermissionActivity.kt    # Privacy policy stub for Health Connect
-presentation/navigation/Screen.kt                 # Sealed class: 6 routes (Home, Workshop, Battle, Labs, Stats, Weapons)
+presentation/navigation/Screen.kt                 # Sealed class: 11 routes (Home, Workshop, Battle, Labs, Stats, Weapons, Cards, Supplies, Economy, Missions, Settings)
 presentation/navigation/BottomNavBar.kt            # Bottom navigation bar with 5 items
 presentation/home/HomeViewModel.kt                 # @HiltViewModel: combines profile + step flows → HomeUiState
 presentation/home/HomeUiState.kt                   # UI state: steps, balance, tier, biome, bestWave
@@ -249,6 +249,8 @@ fakes/FakeUltimateWeaponRepository.kt            # In-memory StateFlow-backed fa
 fakes/FakeLabRepository.kt                       # In-memory StateFlow-backed fake for LabRepository
 fakes/FakeCardRepository.kt                      # In-memory StateFlow-backed fake for CardRepository
 fakes/FakeWalkingEncounterRepository.kt          # In-memory StateFlow-backed fake for WalkingEncounterRepository
+fakes/FakeMilestoneDao.kt                        # In-memory fake for MilestoneDao
+fakes/FakeDailyMissionDao.kt                     # In-memory fake for DailyMissionDao
 domain/usecase/CalculateUpgradeCostTest.kt        # Cost formula: baseCost × scaling^level, all 23 types
 domain/usecase/CanAffordUpgradeTest.kt            # Affordability checks against wallet
 domain/usecase/QuickInvestTest.kt                 # Cheapest affordable upgrade recommendation
