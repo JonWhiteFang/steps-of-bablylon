@@ -28,13 +28,14 @@
 
 ## Top priorities (next 5)
 1. Plan 30: Release Prep (CRITICAL PATH — depends on Plan 29 ✓)
-2. Real SDK integration for billing/ads
-3. Replace placeholder audio with real sound effects
-4. Plan 24: Accessibility (post-v1.0)
-5. Instrumented tests (Room DAOs, Compose UI)
+2. Plan 31: Play Console & Store Publication (depends on Plan 30)
+3. Real SDK integration for billing/ads (part of Plan 31)
+4. Replace placeholder audio with real sound effects
+5. Plan 24: Accessibility (post-v1.0)
 
 ## Next actions (explicit order)
-1. Plan 30 (Release Prep) — ProGuard/R8, signing, Play Store assets, privacy policy, AAB.
+1. Plan 30 (Release Prep) — ProGuard/R8, signing, version, privacy policy, listing assets, build verification, AAB.
+2. Plan 31 (Play Console) — Console setup, store listing upload, IAP/ad SDK integration, test tracks, publication.
 
 ## Do-not-touch / fragile zones
 - `domain/model/` — stable, all constants validated by balance tests.
@@ -49,5 +50,5 @@
 ## References
 - Master plan: docs/plans/master-plan.md
 - Balance report: docs/balance/balance-report.md
-- Critical path: 01→02→03→06→08→09→10→11→12→13→18→27→28→29→30
+- Critical path: 01→02→03→06→08→09→10→11→12→13→18→27→28→29→30→31
 - Last run: 2026-03-10 (Plan 29 implementation)

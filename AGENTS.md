@@ -79,7 +79,7 @@ See `.kiro/steering/source-files.md` for the full source file index.
 
 ## Plans & Roadmap
 
-Development follows a 30-plan master plan. See `docs/plans/master-plan.md` for the full index, dependency graph, and status tracker.
+Development follows a 31-plan master plan. See `docs/plans/master-plan.md` for the full index, dependency graph, and status tracker.
 
 ### Key Documents
 
@@ -129,6 +129,7 @@ Development follows a 30-plan master plan. See `docs/plans/master-plan.md` for t
 | 28 | Balancing & Tuning | Step economy, Workshop cost curves, enemy scaling, Card balance. | Plan 27 |
 | 29 | Testing & QA | Unit tests, ViewModel tests, DAO tests, sensor tests, UI tests. | Plan 28 |
 | 30 | Release Prep | ProGuard/R8, signing, Play Store assets, privacy policy, AAB. | Plan 29 |
+| 31 | Play Console & Store Publication | Console setup, store listing upload, IAP/ad SDK integration, test tracks, publication. | Plan 30 |
 
 ### Dependency Graph
 
@@ -164,11 +165,12 @@ graph TD
     P27 --> P28[28: Balancing & Tuning]
     P28 --> P29[29: Testing & QA]
     P29 --> P30[30: Release Prep]
+    P30 --> P31[31: Play Console]
 ```
 
 ### Critical Path
 
-01 → 02 → 03 → 06 → 08 → 09 → 10 → 11 → 12 → 13 → 18 → 27 → 28 → 29 → 30
+01 → 02 → 03 → 06 → 08 → 09 → 10 → 11 → 12 → 13 → 18 → 27 → 28 → 29 → 30 → 31
 
 ### Current Status
 

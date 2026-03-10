@@ -8,7 +8,7 @@
 
 ## Objective
 
-Prepare the app for Google Play Store release: ProGuard/R8 optimization, app signing configuration, Play Store listing assets (screenshots, descriptions, graphics), privacy policy, final build verification, and AAB generation.
+Prepare the app for release: ProGuard/R8 optimization, app signing configuration, Play Store listing assets, privacy policy, final build verification, and AAB generation. Play Console upload and store configuration deferred to Plan 31.
 
 ---
 
@@ -23,8 +23,6 @@ Update `app/build.gradle.kts`:
   - Keep Hilt-generated classes
   - Keep Kotlin serialization models
   - Keep Health Connect API classes
-  - Keep Google Play Billing classes
-  - Keep AdMob classes
   - Keep SensorEvent callback methods
 - Test release build to verify no runtime crashes from over-aggressive shrinking
 
@@ -72,8 +70,8 @@ Create `docs/release/privacy-policy.md`:
 - Data stored: locally on device only (Room database)
 - No server-side data collection in v1.0
 - Health Connect: permissions `READ_STEPS` and `READ_EXERCISE`, data used only for step validation
-- AdMob: standard ad SDK data collection disclosure
-- Google Play Billing: standard purchase data
+- AdMob: standard ad SDK data collection disclosure (when integrated)
+- Google Play Billing: standard purchase data (when integrated)
 - No personal data shared with third parties beyond ad/billing SDKs
 - Host privacy policy at a public URL (GitHub Pages or similar)
 
@@ -82,12 +80,10 @@ Create `docs/release/privacy-policy.md`:
 ### Task 6: Final Build Verification
 
 Pre-release checklist:
-- [ ] Release APK installs and runs on API 34 device
-- [ ] Release APK installs and runs on API 36 device
+- [ ] Release APK installs and runs on API 34 device/emulator
+- [ ] Release APK installs and runs on API 36 device/emulator
 - [ ] Step counting works in background (release build)
 - [ ] Health Connect permissions and step reading works
-- [ ] All IAPs testable via Google Play test tracks
-- [ ] Reward ads load and grant rewards
 - [ ] No ANRs or crashes in 30-minute play session
 - [ ] ProGuard didn't break any functionality
 - [ ] All notification channels work
@@ -100,23 +96,8 @@ Pre-release checklist:
 
 Generate release Android App Bundle:
 - `./gradlew bundleRelease`
-- Verify AAB with `bundletool`
-- Test universal APK from AAB on device
-- Upload to Google Play Console (internal testing track first)
-
----
-
-### Task 8: Play Console Setup
-
-Configure Google Play Console:
-- Create app listing with all assets from Task 4
-- Set up internal testing track
-- Configure pricing: Free (with IAP)
-- Set target countries/regions
-- Complete content rating questionnaire
-- Complete data safety section
-- Link privacy policy URL
-- Set up pre-launch report (Firebase Test Lab)
+- Verify AAB size and contents
+- Test universal APK from AAB on emulator
 
 ---
 
@@ -142,9 +123,7 @@ CHANGELOG.md                    (update — v1.0.0 release notes)
 - Release build compiles, installs, and runs without crashes
 - R8 shrinking doesn't break any functionality
 - App signed with release keystore
-- All Play Store listing assets created
-- Privacy policy written and hosted at public URL
-- AAB generated and verified with bundletool
-- Internal testing track set up on Play Console
-- Pre-launch report shows no critical issues
+- All Play Store listing text assets created
+- Privacy policy written
+- AAB generated and verified
 - Final version tagged in version control

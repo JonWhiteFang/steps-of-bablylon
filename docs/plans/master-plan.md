@@ -40,7 +40,8 @@ See `docs/StepsOfBabylon_GDD.md` for the full game design document.
 | 27 | [Polish & Visual Effects](./plan-27-polish-vfx.md) | Projectile effects, UW visual spectacles, Overdrive auras, enemy death animations, wave transition effects, UI animations, sound effects integration. | Plan 18 |
 | 28 | [Balancing & Tuning](./plan-28-balancing.md) | Step economy tuning across player profiles, Workshop cost curves, enemy HP/damage scaling, tier difficulty curves, cash multiplier validation, Card balance pass. | Plan 27 |
 | 29 | [Testing & QA](./plan-29-testing.md) | Unit tests for domain logic (cost calcs, damage formulas, tier progression), ViewModel tests with fakes, Room DAO instrumented tests, step sensor integration tests, UI tests. | Plan 28 |
-| 30 | [Release Prep](./plan-30-release.md) | ProGuard/R8 config, app signing, Play Store listing assets, privacy policy, final build, release APK/AAB generation. | Plan 29 |
+| 30 | [Release Prep](./plan-30-release.md) | ProGuard/R8 config, app signing, Play Store listing assets, privacy policy, final build verification, AAB generation. | Plan 29 |
+| 31 | [Play Console & Store Publication](./plan-31-play-console.md) | Play Console setup, store listing upload, IAP/ad SDK integration, test tracks, pre-launch report, production release. | Plan 30 |
 
 ---
 
@@ -78,6 +79,7 @@ graph TD
     P27 --> P28[28: Balancing & Tuning]
     P28 --> P29[29: Testing & QA]
     P29 --> P30[30: Release Prep]
+    P30 --> P31[31: Play Console]
 ```
 
 ---
@@ -86,7 +88,7 @@ graph TD
 
 - Each plan will have its own detailed markdown file (e.g., `plan-01-domain-models.md`) created when that plan is ready to be worked on.
 - Plans can be worked on in parallel where dependencies allow (e.g., Plans 14, 15 can run in parallel since both depend on Plan 12).
-- The critical path runs: 01 → 02 → 03 → 06 → 08 → 09 → 10 → 11 → 12 → 13 → 18 → 27 → 28 → 29 → 30.
+- The critical path runs: 01 → 02 → 03 → 06 → 08 → 09 → 10 → 11 → 12 → 13 → 18 → 27 → 28 → 29 → 30 → 31.
 - Plans 04/05, 16/17, 19/20/21, 22, 23 are feature branches that can be parallelized after their dependencies are met.
 
 ---
@@ -126,3 +128,4 @@ graph TD
 - [x] Plan 28: Balancing & Tuning
 - [x] Plan 29: Testing & QA
 - [ ] Plan 30: Release Prep
+- [ ] Plan 31: Play Console & Store Publication
