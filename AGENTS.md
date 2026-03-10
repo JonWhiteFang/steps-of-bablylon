@@ -27,7 +27,7 @@ Operating rules:
 - **Package:** `com.whitefang.stepsofbabylon`
 - **Min SDK:** 34 (Android 14)
 - **Target/Compile SDK:** 36
-- **Version:** 0.1.0 (versionCode 1)
+- **Version:** 1.0.0 (versionCode 1)
 - **Architecture:** MVVM + Clean Architecture
 - **UI:** Jetpack Compose (menus/screens) + SurfaceView (battle renderer)
 - **DI:** Hilt (with KSP)
@@ -205,6 +205,7 @@ graph TD
 - [x] **Plan 27: Polish & Visual Effects** ✓
 - [x] **Plan 28: Balancing & Tuning** ✓
 - [x] **Plan 29: Testing & QA** ✓
+- [x] **Plan 30: Release Prep** ✓
 
 ### Parallelizable Branches (after dependencies met)
 

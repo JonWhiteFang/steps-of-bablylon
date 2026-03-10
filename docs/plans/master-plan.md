@@ -127,5 +127,5 @@ graph TD
 - [x] Plan 27: Polish & Visual Effects
 - [x] Plan 28: Balancing & Tuning
 - [x] Plan 29: Testing & QA
-- [ ] Plan 30: Release Prep
+- [x] Plan 30: Release Prep
 - [ ] Plan 31: Play Console & Store Publication

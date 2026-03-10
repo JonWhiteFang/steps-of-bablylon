@@ -847,3 +847,40 @@ Implement monetization layer with stub billing/ads, cosmetic store, Season Pass,
 - Plan 30: Release Prep (next on critical path)
 - Instrumented tests (Room DAOs, Compose UI) — post-release
 - LabsViewModel/MissionsViewModel direct VM tests (needs ticker refactoring or injectable clock)
+
+## 2026-03-10 — Plan 30: Release Prep
+
+### What was done
+- **Task 1: ProGuard/R8 hardening** — Added keep rules for Health Connect SDK, SensorEventListener callbacks, WorkManager ListenableWorker subclasses, Room entity fields, org.json. Restructured rules file with section headers.
+- **Task 2: Remove fallbackToDestructiveMigration** — Removed from DatabaseModule.kt. Added comment about future migration requirements.
+- **Task 3: Signing config** — Added `import java.util.Properties`, keystore.properties loader with graceful fallback, signingConfigs block, release build type wiring. Added keystore entries to .gitignore. Created docs/release/signing-guide.md.
+- **Task 4: Version bump** — Updated versionName from 0.1.0 to 1.0.0. Updated CHANGELOG.md with comprehensive v1.0.0 release notes covering all features.
+- **Task 5: Privacy policy** — Created docs/release/privacy-policy.md covering step data, Health Connect, local storage, third-party SDKs. Updated HealthConnectPermissionActivity with scrollable structured privacy content.
+- **Task 6: Play Store listing** — Created docs/release/play-store-listing.md (short/full descriptions, category, content rating notes). Created docs/release/release-checklist.md.
+- **Task 7: Build verification** — All 347 tests pass. Release APK builds successfully (26MB unsigned, R8 minification clean). Fixed Gradle DSL issue with java.util.Properties import.
+
+### Build verification results
+- `testDebugUnitTest`: BUILD SUCCESSFUL (347 tests, all green)
+- `assembleRelease`: BUILD SUCCESSFUL (26MB unsigned APK, R8 clean)
+- Only warnings: 4 redundant conversion calls, 6 hiltViewModel() deprecations (pre-existing)
+
+### Files created
+- `docs/release/privacy-policy.md`
+- `docs/release/play-store-listing.md`
+- `docs/release/signing-guide.md`
+- `docs/release/release-checklist.md`
+
+### Files modified
+- `app/proguard-rules.pro` — hardened R8 rules
+- `app/build.gradle.kts` — signing config, version 1.0.0
+- `app/src/main/java/.../di/DatabaseModule.kt` — removed fallbackToDestructiveMigration
+- `app/src/main/java/.../presentation/HealthConnectPermissionActivity.kt` — expanded privacy content
+- `CHANGELOG.md` — v1.0.0 release notes
+- `.gitignore` — keystore entries
+
+### What remains
+- Plan 31: Play Console & Store Publication
+- Generate upload keystore (manual step)
+- Host privacy policy at public URL
+- Create visual assets (icon, screenshots, feature graphic)
+- Replace contact email placeholders

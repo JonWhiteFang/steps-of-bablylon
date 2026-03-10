@@ -185,7 +185,7 @@ domain/usecase/PurchaseGemPack.kt                # Purchase Gem pack via Billing
 
 ```
 presentation/MainActivity.kt                      # Single Activity, Scaffold + NavHost + BottomNavBar, permissions
-presentation/HealthConnectPermissionActivity.kt    # Privacy policy stub for Health Connect
+presentation/HealthConnectPermissionActivity.kt    # Scrollable privacy policy for Health Connect permissions
 presentation/navigation/Screen.kt                 # Sealed class: 12 routes (Home, Workshop, Battle, Labs, Stats, Weapons, Cards, Supplies, Economy, Missions, Settings, Store)
 presentation/navigation/BottomNavBar.kt            # Bottom navigation bar with 5 items
 presentation/home/HomeViewModel.kt                 # @HiltViewModel: combines profile + step flows → HomeUiState

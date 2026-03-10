@@ -56,7 +56,7 @@ class Converters {
 ## Database Setup
 
 - SQLCipher encryption via `SupportOpenHelperFactory` with Android Keystore-managed passphrase
-- `fallbackToDestructiveMigration(dropAllTables = true)` during development
+- v1.0.0: no destructive migration — future schema changes require proper Migration objects
 - Schema exported to `app/schemas/` — commit these files
 - Schema location configured via Room Gradle plugin: `room { schemaDirectory("$projectDir/schemas") }`
 

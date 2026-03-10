@@ -79,5 +79,5 @@ In non-TTY environments (Kiro CLI, CI), use `./run-gradle.sh <task>` instead of 
 
 - All annotation processing uses KSP (not kapt)
 - Room schema exports to `app/schemas/` — commit these files
-- Database uses SQLCipher encryption with `fallbackToDestructiveMigration` during development
+- Database uses SQLCipher encryption; future schema changes require proper Migration objects
 - All new dependencies must be added to `gradle/libs.versions.toml`, not hardcoded in build files
