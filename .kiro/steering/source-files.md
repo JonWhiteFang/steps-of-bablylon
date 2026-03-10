@@ -56,6 +56,7 @@ data/repository/CardRepositoryImpl.kt            # Card inventory
 data/repository/UltimateWeaponRepositoryImpl.kt  # Ultimate weapon state
 data/repository/StepRepositoryImpl.kt            # Daily step records + escrow + getDailyRecord()
 data/repository/WalkingEncounterRepositoryImpl.kt # Walking encounters
+data/repository/CosmeticRepositoryImpl.kt        # Cosmetic store items
 ```
 
 ## Data Layer — Sensor
@@ -185,7 +186,7 @@ domain/usecase/PurchaseGemPack.kt                # Purchase Gem pack via Billing
 ```
 presentation/MainActivity.kt                      # Single Activity, Scaffold + NavHost + BottomNavBar, permissions
 presentation/HealthConnectPermissionActivity.kt    # Privacy policy stub for Health Connect
-presentation/navigation/Screen.kt                 # Sealed class: 11 routes (Home, Workshop, Battle, Labs, Stats, Weapons, Cards, Supplies, Economy, Missions, Settings)
+presentation/navigation/Screen.kt                 # Sealed class: 12 routes (Home, Workshop, Battle, Labs, Stats, Weapons, Cards, Supplies, Economy, Missions, Settings, Store)
 presentation/navigation/BottomNavBar.kt            # Bottom navigation bar with 5 items
 presentation/home/HomeViewModel.kt                 # @HiltViewModel: combines profile + step flows → HomeUiState
 presentation/home/HomeUiState.kt                   # UI state: steps, balance, tier, biome, bestWave

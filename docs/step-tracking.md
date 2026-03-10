@@ -6,7 +6,7 @@
 |---|---|---|
 | Primary | `TYPE_STEP_COUNTER` | Cumulative hardware step count. Battery efficient. Persists across reboots. |
 | Secondary | Health Connect SDK | Cross-validation, gap-filling, Activity Minute Parity |
-| Tertiary | `TYPE_STEP_DETECTOR` | *(Planned)* Real-time per-step events for notification/widget updates |
+| Tertiary | `TYPE_STEP_DETECTOR` | *(Deferred — not implemented in v1.0)* Real-time per-step events for notification/widget updates |
 
 `TYPE_STEP_COUNTER` returns a cumulative count since last reboot. Track deltas between readings to compute steps per interval.
 

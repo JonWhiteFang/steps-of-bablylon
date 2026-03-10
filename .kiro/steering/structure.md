@@ -8,7 +8,9 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 │   ├── local/          # Room database, entities, DAOs, TypeConverters, SQLCipher key manager
 │   ├── repository/     # Repository implementations (Room-backed, @Inject constructors)
 │   ├── sensor/         # Step sensor data source, rate limiter, daily step manager
-│   └── healthconnect/  # Health Connect client, step reader, cross-validator, gap filler, activity minutes
+│   ├── healthconnect/  # Health Connect client, step reader, cross-validator, gap filler, activity minutes
+│   ├── billing/        # StubBillingManager (simulated IAP purchases)
+│   └── ads/            # StubRewardAdManager (simulated reward ads)
 ├── domain/             # Pure Kotlin — no Android imports
 │   ├── model/          # Data classes and enums
 │   ├── repository/     # Repository interfaces (Flow-based)
@@ -30,9 +32,11 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 │   ├── economy/        # CurrencyDashboardScreen, CurrencyDashboardViewModel
 │   ├── missions/       # MissionsScreen, MissionsViewModel
 │   ├── settings/       # NotificationSettingsScreen, NotificationSettingsViewModel
+│   ├── stats/          # StatsScreen, StatsViewModel, WalkingHistoryChart
+│   ├── store/          # StoreScreen, StoreViewModel
 │   ├── audio/          # SoundManager (SoundPool wrapper, 7 effects, volume/mute)
 │   └── ui/theme/       # Compose theme, colors (Material3)
-├── di/                 # Hilt modules (DatabaseModule, RepositoryModule, StepModule, HealthConnectModule)
+├── di/                 # Hilt modules (DatabaseModule, RepositoryModule, StepModule, HealthConnectModule, BillingModule, AdModule)
 └── service/            # Foreground step-counting service, WorkManager workers, boot receiver
 
 app/src/test/java/com/whitefang/stepsofbabylon/
@@ -96,6 +100,10 @@ All in `domain/model/`:
 - `MilestoneReward` — sealed class: Gems, PowerStones, Cosmetic
 - `DailyMissionType` — 6 daily mission types (walking/battle/upgrade)
 - `MissionCategory` — mission categories: WALKING, BATTLE, UPGRADE
+- `BillingProduct` — 5 billing products + PurchaseResult sealed class
+- `AdPlacement` — 3 ad placements + AdResult sealed class
+- `CosmeticCategory` — 3 cosmetic categories (ziggurat, projectile, enemy)
+- `CosmeticItem` — cosmetic item domain model
 
 ## Key Files
 
@@ -106,6 +114,8 @@ All in `domain/model/`:
 | `di/RepositoryModule.kt` | Hilt module: binds all 8 repository interfaces to impls |
 | `di/StepModule.kt` | Hilt module: provides SensorManager |
 | `di/HealthConnectModule.kt` | Hilt module: Health Connect organizational module |
+| `di/BillingModule.kt` | Hilt module: binds BillingManager to stub |
+| `di/AdModule.kt` | Hilt module: binds RewardAdManager to stub |
 | `data/local/AppDatabase.kt` | Room database (12 entities, 12 DAOs, version 7) |
 | `data/local/DatabaseKeyManager.kt` | SQLCipher passphrase via Android Keystore |
 | `data/local/Converters.kt` | TypeConverters for `Map<Int,Int>` and `Map<String,Int>` (JSON) |
@@ -125,7 +135,7 @@ All in `domain/model/`:
 | `domain/usecase/UnlockUltimateWeapon.kt` | Checks Power Stone balance, deducts, unlocks UW |
 | `domain/usecase/UpgradeUltimateWeapon.kt` | Cost scaling per level, max level 10 |
 | `presentation/MainActivity.kt` | Single Activity, Scaffold + NavHost + BottomNavBar (hidden during battle), permissions |
-| `presentation/navigation/Screen.kt` | 11 navigation routes (Home, Workshop, Battle, Labs, Stats, Weapons, Cards, Supplies, Economy, Missions, Settings) |
+| `presentation/navigation/Screen.kt` | 12 navigation routes (Home, Workshop, Battle, Labs, Stats, Weapons, Cards, Supplies, Economy, Missions, Settings, Store) |
 | `presentation/home/HomeViewModel.kt` | Combines profile + step flows into HomeUiState |
 | `presentation/battle/GameSurfaceView.kt` | SurfaceView managing game loop thread lifecycle |
 | `presentation/battle/GameLoopThread.kt` | Fixed timestep (60 UPS), accumulator, speed multiplier |

@@ -38,7 +38,7 @@
 
 ## Do-not-touch / fragile zones
 - `domain/model/` — stable, all constants validated by balance tests.
-- `domain/usecase/` — all 34 use cases stable.
+- `domain/usecase/` — all 32 use cases stable.
 - `data/local/AppDatabase.kt` — 12 entities, version 7.
 - `data/sensor/DailyStepManager.kt` — integrates supply drops + economy rewards + widget updates + anti-cheat.
 - `gradle/libs.versions.toml` — single source for all dependency versions.

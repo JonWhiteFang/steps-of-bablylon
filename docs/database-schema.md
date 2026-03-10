@@ -29,6 +29,11 @@ Primary player record. One row per player (single-player game).
 | totalRoundsPlayed | Long | Lifetime battle rounds |
 | totalEnemiesKilled | Long | Lifetime enemies killed |
 | totalCashEarned | Long | Lifetime in-round Cash earned |
+| adRemoved | Boolean | Ad removal purchased |
+| seasonPassActive | Boolean | Season Pass currently active |
+| seasonPassExpiry | Long | Season Pass expiry epoch millis |
+| freeLabRushUsedToday | String | ISO date of last free Lab rush |
+| freeCardPackAdUsedToday | String | ISO date of last free Card Pack ad |
 | createdAt | Long | Epoch millis |
 | lastActiveAt | Long | Epoch millis |
 
@@ -146,6 +151,21 @@ Daily mission tracking, refreshed at midnight.
 | completed | Boolean | Whether target was reached |
 | claimed | Boolean | Whether reward was claimed |
 
+### Cosmetic
+
+Cosmetic store items (ziggurat skins, projectile effects, enemy skins).
+
+| Column | Type | Notes |
+|---|---|---|
+| id | Int (PK, auto) | |
+| cosmeticId | String | Unique cosmetic identifier |
+| category | String | CosmeticCategory enum name |
+| name | String | Display name |
+| description | String | Description text |
+| priceGems | Long | Gem cost |
+| isOwned | Boolean | Whether player owns this item |
+| isEquipped | Boolean | Whether currently equipped |
+
 ## Relationships
 
 ```
@@ -159,6 +179,7 @@ PlayerProfile (1) ──── (*) WeeklyChallenge
 PlayerProfile (1) ──── (*) DailyLogin
 PlayerProfile (1) ──── (*) Milestone
 PlayerProfile (1) ──── (*) DailyMission
+PlayerProfile (1) ──── (*) Cosmetic
 ```
 
 All relationships are implicit (single player, no foreign keys needed). Queries filter by type/date.
@@ -178,6 +199,7 @@ Each entity gets its own DAO:
 - `DailyLoginDao` — daily login tracking, streak queries
 - `MilestoneDao` — milestone claim state
 - `DailyMissionDao` — daily mission tracking, refresh queries
+- `CosmeticDao` — cosmetic store items, purchase/equip state
 
 ## Migration Strategy
 
@@ -186,12 +208,13 @@ Each entity gets its own DAO:
 - Write manual migrations for complex changes (column renames, data transforms)
 - Version numbering: increment by 1 per plan that touches the schema
 - Test migrations with `MigrationTestHelper` in instrumented tests
-- Current schema version: 6
+- Current schema version: 7
 - v1→v2: Added `highestUnlockedTier` column to `player_profile` (Plan 13). Uses `fallbackToDestructiveMigration` during development.
 - v2→v3: Added `labSlotCount` column to `player_profile` (Plan 16). Uses `fallbackToDestructiveMigration` during development.
 - v3→v4: Added `WeeklyChallengeEntity`, `DailyLoginEntity`, streak fields on `player_profile` (Plan 20). Uses `fallbackToDestructiveMigration`.
 - v4→v5: Added `MilestoneEntity`, `DailyMissionEntity` (Plan 21). Uses `fallbackToDestructiveMigration`.
 - v5→v6: Added lifetime currency counters and battle stats to `player_profile` (Plan 22). Uses `fallbackToDestructiveMigration`.
+- v6→v7: Added `CosmeticEntity`, monetization fields on `player_profile` (adRemoved, seasonPassActive, seasonPassExpiry, freeLabRushUsedToday, freeCardPackAdUsedToday) (Plan 26). Uses `fallbackToDestructiveMigration`.
 
 ## Type Converters
 

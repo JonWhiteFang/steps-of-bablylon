@@ -70,6 +70,8 @@ Hilt with KSP (not kapt). All modules in `di/`.
 - `RepositoryModule` — binds repository interfaces to Room-backed implementations
 - `StepModule` — provides SensorManager
 - `HealthConnectModule` — Health Connect organizational module
+- `BillingModule` — binds BillingManager interface to stub implementation
+- `AdModule` — binds RewardAdManager interface to stub implementation
 
 ## Naming Conventions
 
