@@ -124,7 +124,5 @@ graph TD
 - [x] Plan 26: Monetization & Ads (stub implementation — real SDK integration deferred)
 - [x] Plan 27: Polish & Visual Effects
 - [x] Plan 28: Balancing & Tuning
-- [ ] Plan 29: Testing & QA
-- [ ] Plan 28: Balancing & Tuning
-- [ ] Plan 29: Testing & QA
+- [x] Plan 29: Testing & QA
 - [ ] Plan 30: Release Prep

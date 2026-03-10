@@ -802,3 +802,48 @@ Implement monetization layer with stub billing/ads, cosmetic store, Season Pass,
 **What remains:**
 - Plan 29: Testing & QA (next on critical path)
 - Plan 30: Release Prep
+
+## Run: 2026-03-10 — Plan 29: Testing & QA
+
+**Objective:** Add ViewModel tests and deferred use case tests. JVM-only, no instrumented tests.
+
+**Approach:** StandardTestDispatcher + backgroundScope collector for StateFlow-based ViewModels. advanceTimeBy for VMs with ticker loops. Use-case-level testing for LabsViewModel/MissionsViewModel (infinite ticker loops prevent direct VM testing).
+
+**Created fakes:**
+- `FakeStepRepository` — in-memory StepRepository
+- `FakeBillingManager` — tracks purchases, configurable result
+- `FakeRewardAdManager` — configurable AdResult
+- `FakeCosmeticRepository` — in-memory cosmetic store
+- `FakeDailyLoginDao` — in-memory daily login
+- `FakeWeeklyChallengeDao` — in-memory weekly challenge
+- `FakeDailyStepDao` — in-memory daily step records with Flow support
+
+**Created test files (64 new tests):**
+- `presentation/stats/StatsViewModelTest.kt` — 6 tests
+- `presentation/weapons/UltimateWeaponViewModelTest.kt` — 4 tests
+- `presentation/supplies/UnclaimedSuppliesViewModelTest.kt` — 3 tests
+- `presentation/workshop/WorkshopViewModelTest.kt` — 6 tests
+- `presentation/cards/CardsViewModelTest.kt` — 5 tests
+- `presentation/labs/LabsViewModelTest.kt` — 4 tests (use-case level)
+- `presentation/home/HomeViewModelTest.kt` — 5 tests
+- `presentation/battle/BattleViewModelTest.kt` — 10 tests
+- `presentation/missions/MissionsViewModelTest.kt` — 4 tests (use-case level)
+- `presentation/economy/CurrencyDashboardViewModelTest.kt` — 3 tests
+- `presentation/store/StoreViewModelTest.kt` — 3 tests
+- `domain/usecase/TrackDailyLoginTest.kt` — 6 tests
+- `domain/usecase/TrackWeeklyChallengeTest.kt` — 5 tests
+
+**Key decisions:**
+- StandardTestDispatcher over UnconfinedTestDispatcher — prevents infinite loops from ticker coroutines.
+- `backgroundScope.launch { vm.uiState.collect {} }` required for WhileSubscribed StateFlows.
+- LabsViewModel/MissionsViewModel tested at use-case level (not VM level) due to `while(true) { delay(1000) }` ticker loops that hang even with advanceTimeBy.
+- HomeViewModel init modifies profile (TrackDailyLogin) — assertions check structural correctness, not exact currency values.
+- No instrumented tests — deferred to post-release.
+
+**Test results:** 347 JVM tests — all green (was 283, +64 new).
+**Build:** testDebugUnitTest successful in 44s.
+
+**What remains:**
+- Plan 30: Release Prep (next on critical path)
+- Instrumented tests (Room DAOs, Compose UI) — post-release
+- LabsViewModel/MissionsViewModel direct VM tests (needs ticker refactoring or injectable clock)

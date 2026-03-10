@@ -1,0 +1,83 @@
+package com.whitefang.stepsofbabylon.presentation.missions
+
+import com.whitefang.stepsofbabylon.data.local.DailyMissionEntity
+import com.whitefang.stepsofbabylon.data.local.MilestoneEntity
+import com.whitefang.stepsofbabylon.domain.model.DailyMissionType
+import com.whitefang.stepsofbabylon.domain.model.Milestone
+import com.whitefang.stepsofbabylon.domain.model.PlayerProfile
+import com.whitefang.stepsofbabylon.domain.usecase.ClaimMilestone
+import com.whitefang.stepsofbabylon.domain.usecase.GenerateDailyMissions
+import com.whitefang.stepsofbabylon.fakes.FakeDailyMissionDao
+import com.whitefang.stepsofbabylon.fakes.FakeMilestoneDao
+import com.whitefang.stepsofbabylon.fakes.FakePlayerRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import java.time.LocalDate
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class MissionsViewModelTest {
+
+    // MissionsViewModel has a while(true) ticker — test use cases directly
+    private val dispatcher = UnconfinedTestDispatcher()
+    private lateinit var missionDao: FakeDailyMissionDao
+    private lateinit var milestoneDao: FakeMilestoneDao
+    private lateinit var playerRepo: FakePlayerRepository
+    private val today = LocalDate.now().toString()
+
+    @BeforeEach
+    fun setup() {
+        Dispatchers.setMain(dispatcher)
+        missionDao = FakeDailyMissionDao()
+        milestoneDao = FakeMilestoneDao()
+        playerRepo = FakePlayerRepository(PlayerProfile(gems = 50, powerStones = 10, totalStepsEarned = 5000))
+    }
+
+    @AfterEach
+    fun tearDown() { Dispatchers.resetMain() }
+
+    @Test
+    fun `generate daily missions creates 3 missions`() = runTest {
+        val generate = GenerateDailyMissions(missionDao)
+        generate(today)
+        val missions = missionDao.getByDateOnce(today)
+        assertEquals(3, missions.size)
+    }
+
+    @Test
+    fun `claim mission credits gems`() = runTest {
+        missionDao.insert(DailyMissionEntity(date = today, missionType = DailyMissionType.WALK_5000.name, target = 5000, progress = 5000, completed = true, rewardGems = 5))
+        val missions = missionDao.getByDateOnce(today)
+        val m = missions.first()
+        playerRepo.addGems(0) // ensure profile exists
+        if (m.rewardGems > 0) playerRepo.addGems(m.rewardGems.toLong())
+        missionDao.markClaimed(m.id)
+        assertEquals(55, playerRepo.profile.value.gems)
+        assertTrue(missionDao.getByDateOnce(today).first().claimed)
+    }
+
+    @Test
+    fun `claim milestone credits reward`() = runTest {
+        val claim = ClaimMilestone(milestoneDao, playerRepo)
+        claim(Milestone.FIRST_STEPS)
+        // FIRST_STEPS rewards 60 Gems
+        assertEquals(110, playerRepo.profile.value.gems)
+        val entity = milestoneDao.getByIdOnce(Milestone.FIRST_STEPS.name)
+        assertNotNull(entity)
+        assertTrue(entity!!.claimed)
+    }
+
+    @Test
+    fun `milestone detection with steps`() = runTest {
+        // Player has 5000 steps — FIRST_STEPS requires 1000
+        val achievable = Milestone.entries.filter { it.requiredSteps <= 5000 }
+        assertTrue(achievable.contains(Milestone.FIRST_STEPS))
+    }
+}

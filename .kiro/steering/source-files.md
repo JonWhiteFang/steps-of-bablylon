@@ -343,4 +343,17 @@ balance/CashEconomyTest.kt                        # In-round cash flow and inter
 balance/CardBalanceTest.kt                        # Card tradeoffs and power levels
 balance/UWOverdriveBalanceTest.kt                 # UW cooldowns, damage, overdrive costs
 balance/SupplyDropEconomyTest.kt                  # Drop rates and premium currency income
+domain/usecase/TrackDailyLoginTest.kt              # Daily login PS/Gem streak awards
+domain/usecase/TrackWeeklyChallengeTest.kt         # Weekly step challenge PS awards
+presentation/stats/StatsViewModelTest.kt           # Stats VM: profile mapping, bars, period switching
+presentation/weapons/UltimateWeaponViewModelTest.kt # UW VM: display, owned/locked, balance
+presentation/supplies/UnclaimedSuppliesViewModelTest.kt # Supplies VM: drops, claim, claimAll
+presentation/workshop/WorkshopViewModelTest.kt     # Workshop VM: categories, purchase, quick invest
+presentation/cards/CardsViewModelTest.kt           # Cards VM: display, equip, upgrade
+presentation/labs/LabsViewModelTest.kt             # Labs: start research, unlock slot (use-case level)
+presentation/home/HomeViewModelTest.kt             # Home VM: profile mapping, tier, drops, missions
+presentation/battle/BattleViewModelTest.kt         # Battle VM: init stats, biome, overdrive, ads, toggles
+presentation/missions/MissionsViewModelTest.kt     # Missions: generation, claim, milestones (use-case level)
+presentation/economy/CurrencyDashboardViewModelTest.kt # Economy VM: weekly, streak, balances
+presentation/store/StoreViewModelTest.kt           # Store VM: gems, cosmetics, purchase
 ```
