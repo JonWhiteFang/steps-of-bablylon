@@ -884,3 +884,30 @@ Implement monetization layer with stub billing/ads, cosmetic store, Season Pass,
 - Host privacy policy at public URL
 - Create visual assets (icon, screenshots, feature graphic)
 - Replace contact email placeholders
+
+---
+
+## 2026-03-11 — Remediation Plan Creation
+
+### Context
+- External code review completed (`docs/external-reviews/REPO_ANALYSIS_BUGS_AND_UX.md`) identifying 12 high-priority findings across step integrity, battle wiring, database safety, widget, missions, notifications, deep-links, premium state, UX feedback, accessibility, and test coverage.
+- Plan 30 was complete; Plan 31 was next on the critical path.
+
+### What was done
+- Created `docs/plans/plan-R-remediation.md` — 12 sub-plans (R01–R12) organized into 3 priority tiers.
+- Updated `docs/plans/master-plan.md`:
+  - Added Plan R to plan index table.
+  - Updated dependency graph: Plan 30 → Plan R → Plan 31.
+  - Updated critical path to include Plan R (Tier 1) before Plan 31.
+  - Added Plan R to status tracker.
+- Updated `docs/agent/STATE.md` — current objective is now Plan R; priorities and next actions reflect remediation order.
+
+### Key decisions
+- Plan R Tier 1 (R01–R05) blocks production release (Plan 31). These are data-integrity and progression-correctness issues.
+- Plan R Tier 2 (R06–R09) should complete before release but are user-trust issues, not data corruption risks.
+- Plan R Tier 3 (R10–R12) can follow shortly after release.
+- R01 → R02 is the only sequential dependency within remediation. All other sub-plans are parallelizable.
+
+### What remains
+- Execute R01–R12 per priority tiers.
+- Plan 31 after R Tier 1 complete.

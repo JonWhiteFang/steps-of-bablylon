@@ -129,7 +129,8 @@ Development follows a 31-plan master plan. See `docs/plans/master-plan.md` for t
 | 28 | Balancing & Tuning | Step economy, Workshop cost curves, enemy scaling, Card balance. | Plan 27 |
 | 29 | Testing & QA | Unit tests, ViewModel tests, DAO tests, sensor tests, UI tests. | Plan 28 |
 | 30 | Release Prep | ProGuard/R8, signing, Play Store assets, privacy policy, AAB. | Plan 29 |
-| 31 | Play Console & Store Publication | Console setup, store listing upload, IAP/ad SDK integration, test tracks, publication. | Plan 30 |
+| 31 | Play Console & Store Publication | Console setup, store listing upload, IAP/ad SDK integration, test tracks, publication. | Plan 30, Plan R (Tier 1) |
+| R | Remediation | Bug and UX fixes from external code review. 12 sub-plans (R01–R12), 3 priority tiers. | Plan 30 |
 
 ### Dependency Graph
 
@@ -165,12 +166,13 @@ graph TD
     P27 --> P28[28: Balancing & Tuning]
     P28 --> P29[29: Testing & QA]
     P29 --> P30[30: Release Prep]
-    P30 --> P31[31: Play Console]
+    P30 --> PR[R: Remediation]
+    PR --> P31[31: Play Console]
 ```
 
 ### Critical Path
 
-01 → 02 → 03 → 06 → 08 → 09 → 10 → 11 → 12 → 13 → 18 → 27 → 28 → 29 → 30 → 31
+01 → 02 → 03 → 06 → 08 → 09 → 10 → 11 → 12 → 13 → 18 → 27 → 28 → 29 → 30 → R (Tier 1) → 31
 
 ### Current Status
 
@@ -206,6 +208,8 @@ graph TD
 - [x] **Plan 28: Balancing & Tuning** ✓
 - [x] **Plan 29: Testing & QA** ✓
 - [x] **Plan 30: Release Prep** ✓
+- [ ] **Plan R: Remediation** (external review fixes — Tier 1 blocks release)
+- [ ] **Plan 31: Play Console & Store Publication**
 
 ### Parallelizable Branches (after dependencies met)
 

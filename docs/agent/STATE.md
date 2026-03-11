@@ -1,63 +1,58 @@
 # Project State
 
 ## Current objective
-- Plan 30 (Release Prep) is complete. Next: Plan 31 (Play Console & Store Publication) — final critical path step.
+- Plan R (Remediation) — fix bugs and UX issues identified by external code review before production release. Tier 1 (R01–R05) blocks Plan 31.
 
 ## What works
-- Plans 01–30 + 10b: All foundation layers, battle system, stats engine, cash economy, in-round upgrades, all combat mechanics, full round lifecycle, tier system, biome progression, step overdrive, ultimate weapons, labs system, cards system, walking encounters, premium currency economy, milestones & daily missions, stats & history screen, notifications & widget, anti-cheat hardening, monetization (stub), polish & VFX, balancing & tuning, testing & QA, release prep complete.
-- Plan 30 complete: R8 rules hardened, signing config wired, fallbackToDestructiveMigration removed, version 1.0.0, privacy policy, Play Store listing text, CHANGELOG, release APK builds successfully (26MB unsigned).
-- DB version 7: 12 entities, PlayerProfile has monetization fields.
-- Unit tests: 347 JVM tests. All green.
-- Release build: assembleRelease succeeds with R8 minification, no R8 errors.
+- Plans 01–30 + 10b: All foundation layers, battle system, full round lifecycle, tier/biome progression, all progression systems, notifications & widget, anti-cheat, monetization (stub), polish & VFX, balancing, testing, release prep complete.
+- DB version 7: 12 entities. 347 JVM tests, all green. Release APK builds (26MB).
 
-## Known issues / debt
-- Billing and ads use stub implementations — real SDK integration deferred to Plan 31.
+## Known issues / debt (from external review)
+- **Critical:** Step double-crediting between StepCounterService and StepSyncWorker (R01).
+- **Critical:** Health Connect escrow doesn't actually withhold steps; can double-award (R02).
+- **High:** Battle engine gets `emptyMap()` for workshop utility levels — CASH_BONUS/CASH_PER_WAVE/INTEREST broken (R03).
+- **High:** STEP_MULTIPLIER and RECOVERY_PACKAGES purchasable but unimplemented (R04).
+- **High:** Encrypted DB backup/restore can crash on new device; no Room migrations (R05).
+- **High:** Widget balance always 0, click target broken (R06).
+- **High:** Walking missions only update on screen open (R07).
+- **Medium:** Persistent notification setting misleading; lastActiveAt never updated (R08).
+- **Medium:** Deep-link fails when app open; premium state inconsistent; adRemoved lost on replay (R09).
+- **Medium:** Silent action failures, no double-tap guards, midnight date staleness (R10).
+- **Medium:** Symbol-only labels, placeholder contact emails, README inaccuracies (R11).
+- Billing/ads use stub implementations — real SDK integration deferred to Plan 31.
 - Cosmetic visual application not implemented.
-- Notification uses placeholder system icon.
 - Sound assets are placeholder sine wave tones.
-- hiltViewModel() deprecation warnings (6 screens).
-- Step Surge gemMultiplier tracked but not yet consumed.
-- Supply drop step burst trigger deferred.
-- Milestone cosmetic rewards no-op visually.
-- Widget shows 0 for balance.
-- Lifetime currency counters start from 0.
-- First UW unlock takes ~3 weeks (not 2) — acceptable for mid-game reward.
-- Interest at max level is 59% of kill income — borderline but requires significant investment.
-- LabsViewModel and MissionsViewModel tests use use-case-level testing (not ViewModel-level) due to infinite ticker loops.
-- No instrumented tests (Room DAO, Compose UI) — deferred to post-release.
-- No app icon resources (using default Android icon) — deferred to Plan 31.
-- Upload keystore not yet generated — developer must run keytool manually (see docs/release/signing-guide.md).
-- Privacy policy needs hosting at public URL (GitHub Pages recommended).
-- Contact email placeholder in privacy policy and store listing.
+- No app icon resources.
 
 ## Top priorities (next 5)
-1. Plan 31: Play Console & Store Publication (CRITICAL PATH — depends on Plan 30 ✓)
-2. Generate upload keystore and create keystore.properties
-3. Host privacy policy at public URL (GitHub Pages)
-4. Create visual assets (app icon, screenshots, feature graphic)
-5. Real SDK integration for billing/ads
+1. R01: Step Ingestion Unification (Critical — blocks R02)
+2. R02: Escrow Redesign (Critical — blocks release)
+3. R03: Battle Workshop Wiring (High — quick fix)
+4. R04: Dead Upgrade Cleanup (High — quick fix)
+5. R05: Database Safety (High — blocks release)
 
 ## Next actions (explicit order)
-1. Generate upload keystore (manual: `keytool` command in docs/release/signing-guide.md)
-2. Plan 31 (Play Console) — Console setup, store listing upload, IAP/ad SDK integration, test tracks, publication.
-3. Replace placeholder audio with real sound effects.
-4. Plan 24: Accessibility (post-v1.0).
+1. R01 → R02 (sequential — step integrity critical path)
+2. R03, R04, R05, R06, R07 (parallel — all independent)
+3. R08, R09 (parallel — Tier 2)
+4. R10, R11 (parallel — Tier 3)
+5. R12: Integration test coverage (after R01–R11)
+6. Plan 31: Play Console & Store Publication (after R Tier 1 complete)
 
 ## Do-not-touch / fragile zones
 - `domain/model/` — stable, all constants validated by balance tests.
 - `domain/usecase/` — all 32 use cases stable.
-- `data/local/AppDatabase.kt` — 12 entities, version 7. No destructive migration.
-- `data/sensor/DailyStepManager.kt` — integrates supply drops + economy rewards + widget updates + anti-cheat.
-- `gradle/libs.versions.toml` — single source for all dependency versions.
-- `presentation/battle/engine/GameEngine.kt` — integrates EffectEngine, SoundManager, all trigger points.
-- `presentation/battle/effects/` — particle pool, effect engine, all visual effects.
 - Balance constants in UpgradeType, TierConfig, EnemyScaler, EnemyType — validated by 39 regression tests.
-- `app/proguard-rules.pro` — hardened R8 rules for all libraries.
+- `presentation/battle/effects/` — particle pool, effect engine, all visual effects.
+- `gradle/libs.versions.toml` — single source for all dependency versions.
+- `app/proguard-rules.pro` — hardened R8 rules.
 - `app/build.gradle.kts` — signing config, version 1.0.0.
 
 ## References
+- Remediation plan: docs/plans/plan-R-remediation.md
+- External review: docs/external-reviews/REPO_ANALYSIS_BUGS_AND_UX.md
 - Master plan: docs/plans/master-plan.md
 - Balance report: docs/balance/balance-report.md
-- Release docs: docs/release/ (privacy policy, store listing, signing guide, checklist)
-- Critical path: 01→02→03→06→08→09→10→11→12→13→18→27→28→29→30→31
-- Last run: 2026-03-10 (Plan 30 implementation)
+- Release docs: docs/release/
+- Critical path: 01→…→30→R (Tier 1)→31
+- Last run: 2026-03-11 (Remediation plan creation)
