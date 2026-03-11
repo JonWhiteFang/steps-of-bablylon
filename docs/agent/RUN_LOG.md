@@ -911,3 +911,24 @@ Implement monetization layer with stub billing/ads, cosmetic store, Season Pass,
 ### What remains
 - Execute R01–R12 per priority tiers.
 - Plan 31 after R Tier 1 complete.
+
+---
+
+## 2026-03-11 — R01: Step Ingestion Unification
+
+### What was done
+- Created `data/sensor/StepIngestionPreferences.kt` — SharedPreferences wrapper with service heartbeat (2-min threshold) and date-scoped day-start counter.
+- Refactored `service/StepSyncWorker.kt` — removed private `last_counter_value` baseline. Worker now checks heartbeat (skips if service alive), uses Room `sensorSteps` as authoritative baseline, and only credits the uncredited gap.
+- Updated `service/StepCounterService.kt` — writes heartbeat on every step credit, sets day-start counter on startup via one-shot sensor read.
+- Created `StepIngestionPreferencesTest.kt` (11 tests) — heartbeat read/write, isServiceAlive, day-start counter, day rollover.
+- Created `StepIngestionTest.kt` (10 tests) — service-active skip, gap recovery, day rollover, no double-credit, counter reboot safety.
+- All 368 tests pass. Debug build compiles clean.
+
+### Key design decisions
+- Two-mechanism approach: heartbeat (optimization) + Room baseline (correctness). Heartbeat prevents unnecessary sensor reads; Room baseline guarantees no double-credit even under race conditions.
+- Day-start counter set by whichever path (service or worker) reads the sensor first today. Service sets it on startup; worker sets it if service never ran.
+- Worker's old private `last_counter_value` replaced entirely — no migration needed since it was only used for catch-up delta computation.
+
+### What remains
+- R02: Escrow Redesign (next — depends on R01 ✓)
+- R03–R12: remaining remediation sub-plans

@@ -12,6 +12,8 @@ import com.whitefang.stepsofbabylon.data.healthconnect.ExerciseSessionReader
 import com.whitefang.stepsofbabylon.data.healthconnect.StepCrossValidator
 import com.whitefang.stepsofbabylon.data.healthconnect.StepGapFiller
 import com.whitefang.stepsofbabylon.data.sensor.DailyStepManager
+import com.whitefang.stepsofbabylon.data.sensor.StepIngestionPreferences
+import com.whitefang.stepsofbabylon.domain.repository.StepRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.time.LocalDate
@@ -28,18 +30,15 @@ class StepSyncWorker @AssistedInject constructor(
     private val activityMinuteConverter: ActivityMinuteConverter,
     private val activityMinuteValidator: ActivityMinuteValidator,
     private val smartReminderManager: SmartReminderManager,
+    private val stepIngestionPrefs: StepIngestionPreferences,
+    private val stepRepository: StepRepository,
 ) : CoroutineWorker(appContext, params) {
-
-    companion object {
-        private const val PREFS_NAME = "step_sync"
-        private const val KEY_LAST_COUNTER = "last_counter_value"
-    }
 
     override suspend fun doWork(): Result {
         val today = LocalDate.now().toString()
 
-        // 1. Sensor catch-up
-        sensorCatchUp()
+        // 1. Sensor catch-up (only when foreground service is not alive)
+        sensorCatchUp(today)
 
         // 2. Health Connect operations (best-effort)
         try {
@@ -63,20 +62,33 @@ class StepSyncWorker @AssistedInject constructor(
         return Result.success()
     }
 
-    private suspend fun sensorCatchUp() {
+    private suspend fun sensorCatchUp(today: String) {
+        // Skip if the foreground service is alive and handling ingestion
+        val now = System.currentTimeMillis()
+        if (stepIngestionPrefs.isServiceAlive(now)) return
+
         val sensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) ?: return
-        val prefs = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val lastCounter = prefs.getLong(KEY_LAST_COUNTER, -1L)
         val currentCounter = readCurrentCounter(sensor) ?: return
 
-        if (lastCounter >= 0) {
-            val delta = currentCounter - lastCounter
-            if (delta > 0) {
-                dailyStepManager.recordSteps(delta, System.currentTimeMillis())
-            }
+        // Get or establish the day-start baseline
+        val dayStart = stepIngestionPrefs.getCounterAtDayStart(today)
+        if (dayStart == null) {
+            // First read today — establish baseline, no delta to credit
+            stepIngestionPrefs.setCounterAtDayStart(today, currentCounter)
+            return
         }
 
-        prefs.edit().putLong(KEY_LAST_COUNTER, currentCounter).apply()
+        // Compute how many raw sensor steps have occurred today
+        val rawToday = currentCounter - dayStart
+        if (rawToday <= 0) return
+
+        // Check how many sensor steps have already been credited via Room
+        val record = stepRepository.getDailyRecord(today)
+        val alreadyCredited = record?.sensorSteps ?: 0L
+        val gap = rawToday - alreadyCredited
+        if (gap > 0) {
+            dailyStepManager.recordSteps(gap, now)
+        }
     }
 
     private fun readCurrentCounter(sensor: Sensor): Long? {

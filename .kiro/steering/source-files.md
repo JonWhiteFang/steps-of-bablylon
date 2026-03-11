@@ -65,6 +65,7 @@ data/repository/CosmeticRepositoryImpl.kt        # Cosmetic store items
 data/sensor/StepSensorDataSource.kt  # TYPE_STEP_COUNTER wrapper, emits deltas via callbackFlow
 data/sensor/StepRateLimiter.kt       # Rolling 1-min window rate limiter (200/min, 250 burst)
 data/sensor/StepVelocityAnalyzer.kt  # Unnatural step pattern detection (shaker/spoof), penalty multiplier
+data/sensor/StepIngestionPreferences.kt # Service heartbeat + day-start counter for worker/service coordination
 data/sensor/DailyStepManager.kt      # Orchestrates: rate limit → velocity analysis → 50k ceiling → Room persist + activity minutes
 ```
 
@@ -331,6 +332,8 @@ presentation/battle/engine/EnemyScalerTest.kt     # Wave scaling, speed, cash re
 presentation/battle/biome/BiomeThemeTest.kt       # All 5 biome palettes, ziggurat colors, particles
 data/sensor/StepRateLimiterTest.kt                # Normal/burst caps, window expiry, edge cases
 data/sensor/StepVelocityAnalyzerTest.kt           # Natural/constant/jump patterns, window eviction
+data/sensor/StepIngestionPreferencesTest.kt        # Heartbeat write/read, day-start counter, day rollover
+data/sensor/StepIngestionTest.kt                   # Worker/service coordination: no double-credit, gap recovery, heartbeat gating
 data/healthconnect/StepCrossValidatorTest.kt      # Graduated response levels, offense tracking, escrow
 data/healthconnect/ActivityMinuteValidatorTest.kt # Duration/type/micro-session filtering
 presentation/battle/effects/ParticlePoolTest.kt   # Acquire/release/recycle/expire/clear/reset

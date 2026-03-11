@@ -7,7 +7,7 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 ├── data/
 │   ├── local/          # Room database, entities, DAOs, TypeConverters, SQLCipher key manager
 │   ├── repository/     # Repository implementations (Room-backed, @Inject constructors)
-│   ├── sensor/         # Step sensor data source, rate limiter, daily step manager
+│   ├── sensor/         # Step sensor data source, rate limiter, velocity analyzer, ingestion preferences, daily step manager
 │   ├── healthconnect/  # Health Connect client, step reader, cross-validator, gap filler, activity minutes
 │   ├── billing/        # StubBillingManager (simulated IAP purchases)
 │   └── ads/            # StubRewardAdManager (simulated reward ads)

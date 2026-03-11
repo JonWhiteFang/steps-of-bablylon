@@ -321,7 +321,7 @@ graph TD
 
 ## Status
 
-- [ ] R01: Step Ingestion Unification
+- [x] R01: Step Ingestion Unification
 - [ ] R02: Escrow Redesign
 - [ ] R03: Battle Workshop Wiring
 - [ ] R04: Dead Upgrade Cleanup

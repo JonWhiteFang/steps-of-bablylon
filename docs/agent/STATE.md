@@ -5,10 +5,10 @@
 
 ## What works
 - Plans 01–30 + 10b: All foundation layers, battle system, full round lifecycle, tier/biome progression, all progression systems, notifications & widget, anti-cheat, monetization (stub), polish & VFX, balancing, testing, release prep complete.
-- DB version 7: 12 entities. 347 JVM tests, all green. Release APK builds (26MB).
+- DB version 7: 12 entities. 368 JVM tests, all green. Release APK builds (26MB).
 
 ## Known issues / debt (from external review)
-- **Critical:** Step double-crediting between StepCounterService and StepSyncWorker (R01).
+- **Critical:** ~~Step double-crediting between StepCounterService and StepSyncWorker (R01).~~ ✓ Fixed.
 - **Critical:** Health Connect escrow doesn't actually withhold steps; can double-award (R02).
 - **High:** Battle engine gets `emptyMap()` for workshop utility levels — CASH_BONUS/CASH_PER_WAVE/INTEREST broken (R03).
 - **High:** STEP_MULTIPLIER and RECOVERY_PACKAGES purchasable but unimplemented (R04).
@@ -25,14 +25,14 @@
 - No app icon resources.
 
 ## Top priorities (next 5)
-1. R01: Step Ingestion Unification (Critical — blocks R02)
-2. R02: Escrow Redesign (Critical — blocks release)
-3. R03: Battle Workshop Wiring (High — quick fix)
-4. R04: Dead Upgrade Cleanup (High — quick fix)
-5. R05: Database Safety (High — blocks release)
+1. R02: Escrow Redesign (Critical — depends on R01 ✓)
+2. R03: Battle Workshop Wiring (High — quick fix)
+3. R04: Dead Upgrade Cleanup (High — quick fix)
+4. R05: Database Safety (High — blocks release)
+5. R06: Widget Fix (High)
 
 ## Next actions (explicit order)
-1. R01 → R02 (sequential — step integrity critical path)
+1. R02 (sequential — step integrity critical path, R01 ✓)
 2. R03, R04, R05, R06, R07 (parallel — all independent)
 3. R08, R09 (parallel — Tier 2)
 4. R10, R11 (parallel — Tier 3)
@@ -55,4 +55,4 @@
 - Balance report: docs/balance/balance-report.md
 - Release docs: docs/release/
 - Critical path: 01→…→30→R (Tier 1)→31
-- Last run: 2026-03-11 (Remediation plan creation)
+- Last run: 2026-03-11 (R01: Step Ingestion Unification)
