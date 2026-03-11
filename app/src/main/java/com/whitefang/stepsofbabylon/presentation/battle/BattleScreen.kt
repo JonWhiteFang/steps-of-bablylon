@@ -56,7 +56,7 @@ fun BattleScreen(
     LaunchedEffect(state.speedMultiplier) { surfaceView.setSpeedMultiplier(state.speedMultiplier) }
     LaunchedEffect(state.isPaused) { surfaceView.setPaused(state.isPaused) }
     LaunchedEffect(state.isLoading) {
-        if (!state.isLoading) surfaceView.configure(viewModel.resolvedStats, viewModel.tier, emptyMap())
+        if (!state.isLoading) surfaceView.configure(viewModel.resolvedStats, viewModel.tier, viewModel.workshopLevels)
     }
 
     DisposableEffect(lifecycleOwner) {

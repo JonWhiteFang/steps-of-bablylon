@@ -950,3 +950,16 @@ Implement monetization layer with stub billing/ads, cosmetic store, Season Pass,
 
 ### What remains
 - R03–R12: remaining remediation sub-plans (all Tier 1 blockers now independent)
+
+---
+
+## 2026-03-11 — R03+R04: Battle Workshop Wiring + Dead Upgrade Cleanup
+
+### What was done
+- R03: Exposed `workshopLevels` from BattleViewModel (was private). Replaced `emptyMap()` with real workshop levels in both `BattleScreen.LaunchedEffect` and `BattleViewModel.playAgain()`. CASH_BONUS, CASH_PER_WAVE, and INTEREST now reach the GameEngine.
+- R04: Added `hiddenUpgrades` set in WorkshopViewModel filtering out STEP_MULTIPLIER and RECOVERY_PACKAGES from the workshop UI. Enum entries preserved for future implementation.
+- All 373 tests pass. Build clean.
+
+### What remains
+- R05: Database Safety (last Tier 1 blocker)
+- R06–R12: Tier 2 and 3 remediation

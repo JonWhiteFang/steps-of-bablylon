@@ -33,6 +33,7 @@ class WorkshopViewModel @Inject constructor(
     private val quickInvest = QuickInvest(calculateCost)
 
     private val _selectedCategory = MutableStateFlow(UpgradeCategory.ATTACK)
+    private val hiddenUpgrades = setOf(UpgradeType.STEP_MULTIPLIER, UpgradeType.RECOVERY_PACKAGES)
     private var allUpgrades: Map<UpgradeType, Int> = emptyMap()
 
     val uiState: StateFlow<WorkshopUiState> = combine(
@@ -41,7 +42,7 @@ class WorkshopViewModel @Inject constructor(
         _selectedCategory,
     ) { upgrades, wallet, category ->
         allUpgrades = upgrades
-        val filtered = upgrades.filter { (type, _) -> type.category == category }
+        val filtered = upgrades.filter { (type, _) -> type.category == category && type !in hiddenUpgrades }
         WorkshopUiState(
             upgrades = filtered.map { (type, level) ->
                 val maxLevel = type.config.maxLevel

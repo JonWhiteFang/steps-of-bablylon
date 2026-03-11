@@ -323,8 +323,8 @@ graph TD
 
 - [x] R01: Step Ingestion Unification
 - [x] R02: Escrow Redesign
-- [ ] R03: Battle Workshop Wiring
-- [ ] R04: Dead Upgrade Cleanup
+- [x] R03: Battle Workshop Wiring
+- [x] R04: Dead Upgrade Cleanup
 - [ ] R05: Database Safety
 - [ ] R06: Widget Fix
 - [ ] R07: Live Mission Progress

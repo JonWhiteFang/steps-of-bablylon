@@ -66,7 +66,7 @@ class BattleViewModel @Inject constructor(
     private val applyCardEffects = ApplyCardEffects()
 
     var resolvedStats: ResolvedStats = ResolvedStats(); private set
-    private var workshopLevels: Map<UpgradeType, Int> = emptyMap()
+    var workshopLevels: Map<UpgradeType, Int> = emptyMap(); private set
     private val inRoundLevels = mutableMapOf<UpgradeType, Int>()
     private var engine: GameEngine? = null
     private var surfaceView: GameSurfaceView? = null
@@ -188,7 +188,7 @@ class BattleViewModel @Inject constructor(
         cardSecondWind = cardResult.secondWindHpPercent
         _uiState.update { BattleUiState(maxHp = resolvedStats.maxHealth, currentHp = resolvedStats.maxHealth,
             speedMultiplier = it.speedMultiplier, isLoading = false, stepBalance = it.stepBalance) }
-        surfaceView?.configure(resolvedStats, tier, emptyMap())
+        surfaceView?.configure(resolvedStats, tier, workshopLevels)
         engine?.initUWs(equippedWeapons)
         engine?.secondWindHpPercent = cardSecondWind; engine?.cashBonusPercent = cardCashBonus
         val eng = engine ?: return; val sv = surfaceView ?: return
