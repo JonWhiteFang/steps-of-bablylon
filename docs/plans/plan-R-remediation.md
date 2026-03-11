@@ -325,7 +325,7 @@ graph TD
 - [x] R02: Escrow Redesign
 - [x] R03: Battle Workshop Wiring
 - [x] R04: Dead Upgrade Cleanup
-- [ ] R05: Database Safety
+- [x] R05: Database Safety
 - [ ] R06: Widget Fix
 - [ ] R07: Live Mission Progress
 - [ ] R08: Notification & Reminder Fixes

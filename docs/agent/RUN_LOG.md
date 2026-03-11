@@ -963,3 +963,24 @@ Implement monetization layer with stub billing/ads, cosmetic store, Season Pass,
 ### What remains
 - R05: Database Safety (last Tier 1 blocker)
 - R06–R12: Tier 2 and 3 remediation
+
+---
+
+## 2026-03-11 — R05: Database Safety
+
+### What was done
+- Disabled backup in AndroidManifest (`allowBackup="false"`). No valuable state to restore in a local-only game.
+- Added `fallbackToDestructiveMigration()` in DatabaseModule for pre-release schema mismatch safety.
+- Added try/catch recovery in `DatabaseKeyManager.getPassphrase()` — on decryption failure (keystore mismatch after restore), wipes stale passphrase blob and generates fresh key.
+- All 373 tests pass. Build clean.
+
+### Key decisions
+- Backup disabled entirely rather than selective exclusion — simpler, eliminates the whole class of restore bugs.
+- Destructive migration is pre-release only. CONSTRAINTS.md already mandates explicit migrations post-release.
+
+### Milestone
+- **Tier 1 remediation complete** (R01–R05). Plan 31 is now unblocked.
+
+### What remains
+- R06–R12: Tier 2 and 3 remediation
+- Plan 31: Play Console & Store Publication
