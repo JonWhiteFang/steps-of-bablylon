@@ -932,3 +932,21 @@ Implement monetization layer with stub billing/ads, cosmetic store, Season Pass,
 ### What remains
 - R02: Escrow Redesign (next — depends on R01 ✓)
 - R03–R12: remaining remediation sub-plans
+
+---
+
+## 2026-03-11 — R02: Escrow Redesign
+
+### What was done
+- Modified `PlayerProfileDao.adjustStepBalance` — added `MAX(0, ...)` clamp to prevent negative balances on any spend operation.
+- Rewrote `StepCrossValidator.validate()` — escrow now deducts excess from player balance via `spendSteps()`. Release restores via `addSteps()`. Discard leaves deduction in place. Level 0/1 branches track whether escrow was already deducted to avoid double-deduction on subsequent syncs.
+- Rewrote `StepCrossValidatorTest` — 10 tests (was 5): added balance deduction verification on all escrow branches, no-double-deduction on subsequent syncs, escrow→release net-zero test, escrow→discard keeps-deduction test.
+- All 373 tests pass. Build clean.
+
+### Key design decisions
+- Deduct-on-escrow approach: simplest correct fix, no schema changes, no new domain concepts.
+- Balance clamped to zero: prevents negative balances if player spent suspicious steps before reconciliation.
+- Level 0/1 branches check `record.escrowSteps == 0L` to distinguish first escrow (deduct) from subsequent syncs (metadata only).
+
+### What remains
+- R03–R12: remaining remediation sub-plans (all Tier 1 blockers now independent)

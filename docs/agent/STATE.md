@@ -5,11 +5,11 @@
 
 ## What works
 - Plans 01–30 + 10b: All foundation layers, battle system, full round lifecycle, tier/biome progression, all progression systems, notifications & widget, anti-cheat, monetization (stub), polish & VFX, balancing, testing, release prep complete.
-- DB version 7: 12 entities. 368 JVM tests, all green. Release APK builds (26MB).
+- DB version 7: 12 entities. 373 JVM tests, all green. Release APK builds (26MB).
 
 ## Known issues / debt (from external review)
 - **Critical:** ~~Step double-crediting between StepCounterService and StepSyncWorker (R01).~~ ✓ Fixed.
-- **Critical:** Health Connect escrow doesn't actually withhold steps; can double-award (R02).
+- **Critical:** ~~Health Connect escrow doesn't actually withhold steps; can double-award (R02).~~ ✓ Fixed.
 - **High:** Battle engine gets `emptyMap()` for workshop utility levels — CASH_BONUS/CASH_PER_WAVE/INTEREST broken (R03).
 - **High:** STEP_MULTIPLIER and RECOVERY_PACKAGES purchasable but unimplemented (R04).
 - **High:** Encrypted DB backup/restore can crash on new device; no Room migrations (R05).
@@ -25,15 +25,14 @@
 - No app icon resources.
 
 ## Top priorities (next 5)
-1. R02: Escrow Redesign (Critical — depends on R01 ✓)
-2. R03: Battle Workshop Wiring (High — quick fix)
-3. R04: Dead Upgrade Cleanup (High — quick fix)
-4. R05: Database Safety (High — blocks release)
-5. R06: Widget Fix (High)
+1. R03: Battle Workshop Wiring (High — quick fix)
+2. R04: Dead Upgrade Cleanup (High — quick fix)
+3. R05: Database Safety (High — blocks release)
+4. R06: Widget Fix (High)
+5. R07: Live Mission Progress (High)
 
 ## Next actions (explicit order)
-1. R02 (sequential — step integrity critical path, R01 ✓)
-2. R03, R04, R05, R06, R07 (parallel — all independent)
+1. R03, R04, R05, R06, R07 (parallel — all independent, R01+R02 ✓)
 3. R08, R09 (parallel — Tier 2)
 4. R10, R11 (parallel — Tier 3)
 5. R12: Integration test coverage (after R01–R11)
@@ -55,4 +54,4 @@
 - Balance report: docs/balance/balance-report.md
 - Release docs: docs/release/
 - Critical path: 01→…→30→R (Tier 1)→31
-- Last run: 2026-03-11 (R01: Step Ingestion Unification)
+- Last run: 2026-03-11 (R02: Escrow Redesign)

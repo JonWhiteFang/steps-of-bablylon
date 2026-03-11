@@ -10,6 +10,10 @@ import javax.inject.Singleton
  * Compares sensor steps vs Health Connect steps with graduated response.
  * Offense history tracked across days — repeat offenders face escalating penalties.
  *
+ * When a discrepancy is detected, the excess steps are deducted from the player
+ * balance (escrowed). If HC later confirms the steps, they are restored (released).
+ * If the discrepancy persists, the deduction stays (discarded).
+ *
  * Level 0 (0 offenses): escrow excess, release on reconciliation (3 syncs)
  * Level 1 (1–2 offenses): escrow with faster discard (2 syncs)
  * Level 2 (3–5 offenses): cap credited at HC value
@@ -51,6 +55,7 @@ class StepCrossValidator @Inject constructor(
                     val capped = (hcSteps * (1.0 - LEVEL3_PENALTY)).toLong()
                     if (record.creditedSteps > capped) {
                         val excess = record.creditedSteps - capped
+                        playerRepository.spendSteps(excess)
                         stepRepository.updateEscrow(date, excess, MAX_ESCROW_SYNCS_DEFAULT)
                     }
                 }
@@ -58,6 +63,7 @@ class StepCrossValidator @Inject constructor(
                 offenseCount >= 3 -> {
                     if (record.creditedSteps > hcSteps) {
                         val excess = record.creditedSteps - hcSteps
+                        playerRepository.spendSteps(excess)
                         stepRepository.updateEscrow(date, excess, MAX_ESCROW_SYNCS_DEFAULT)
                     }
                 }
@@ -66,8 +72,14 @@ class StepCrossValidator @Inject constructor(
                     val excess = sensorSteps - hcSteps
                     val newSyncCount = record.escrowSyncCount + 1
                     if (newSyncCount >= MAX_ESCROW_SYNCS_LEVEL1 && record.escrowSteps > 0) {
+                        // Already deducted on prior escrow — just discard metadata
                         stepRepository.discardEscrow(date)
+                    } else if (record.escrowSteps == 0L) {
+                        // First escrow — deduct from balance
+                        playerRepository.spendSteps(excess)
+                        stepRepository.updateEscrow(date, excess, newSyncCount)
                     } else {
+                        // Already escrowed — update metadata only
                         stepRepository.updateEscrow(date, excess, newSyncCount)
                     }
                 }
@@ -76,14 +88,20 @@ class StepCrossValidator @Inject constructor(
                     val excess = sensorSteps - hcSteps
                     val newSyncCount = record.escrowSyncCount + 1
                     if (newSyncCount >= MAX_ESCROW_SYNCS_DEFAULT && record.escrowSteps > 0) {
+                        // Already deducted on prior escrow — just discard metadata
                         stepRepository.discardEscrow(date)
+                    } else if (record.escrowSteps == 0L) {
+                        // First escrow — deduct from balance
+                        playerRepository.spendSteps(excess)
+                        stepRepository.updateEscrow(date, excess, newSyncCount)
                     } else {
+                        // Already escrowed — update metadata only
                         stepRepository.updateEscrow(date, excess, newSyncCount)
                     }
                 }
             }
         } else if (record.escrowSteps > 0) {
-            // Discrepancy resolved — release escrow and decay offenses
+            // Discrepancy resolved — restore escrowed steps and decay offenses
             playerRepository.addSteps(record.escrowSteps)
             stepRepository.releaseEscrow(date)
             antiCheatPrefs.decayCvOffenses()

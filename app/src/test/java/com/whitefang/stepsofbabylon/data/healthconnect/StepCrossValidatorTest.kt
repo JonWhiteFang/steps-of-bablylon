@@ -38,15 +38,45 @@ class StepCrossValidatorTest {
     )
 
     @Test
-    fun `level 0 - discrepancy escrows excess`() = runTest {
+    fun `level 0 - discrepancy escrows excess and deducts from balance`() = runTest {
         whenever(stepRepository.getDailyRecord("2026-03-09")).thenReturn(record(sensor = 1500, hc = 0))
         whenever(stepReader.getStepsForDate("2026-03-09")).thenReturn(1000L)
         whenever(antiCheatPrefs.getCvOffenseCount()).thenReturn(0)
 
         validator.validate("2026-03-09")
 
+        verify(playerRepository).spendSteps(500L)
         verify(stepRepository).updateEscrow(eq("2026-03-09"), eq(500L), eq(1))
         verify(antiCheatPrefs).recordCvOffense("2026-03-09")
+    }
+
+    @Test
+    fun `level 0 - subsequent sync updates metadata without double deduction`() = runTest {
+        whenever(stepRepository.getDailyRecord("2026-03-09")).thenReturn(
+            record(sensor = 1500, hc = 0, escrow = 500, escrowSync = 1)
+        )
+        whenever(stepReader.getStepsForDate("2026-03-09")).thenReturn(1000L)
+        whenever(antiCheatPrefs.getCvOffenseCount()).thenReturn(0)
+
+        validator.validate("2026-03-09")
+
+        verify(playerRepository, never()).spendSteps(any())
+        verify(stepRepository).updateEscrow(eq("2026-03-09"), eq(500L), eq(2))
+    }
+
+    @Test
+    fun `level 0 - discard after max syncs does not deduct again`() = runTest {
+        whenever(stepRepository.getDailyRecord("2026-03-09")).thenReturn(
+            record(sensor = 1500, hc = 0, escrow = 500, escrowSync = 2)
+        )
+        whenever(stepReader.getStepsForDate("2026-03-09")).thenReturn(1000L)
+        whenever(antiCheatPrefs.getCvOffenseCount()).thenReturn(0)
+
+        validator.validate("2026-03-09")
+
+        verify(playerRepository, never()).spendSteps(any())
+        verify(playerRepository, never()).addSteps(any())
+        verify(stepRepository).discardEscrow("2026-03-09")
     }
 
     @Test
@@ -59,11 +89,26 @@ class StepCrossValidatorTest {
 
         validator.validate("2026-03-09")
 
+        verify(playerRepository, never()).addSteps(any())
         verify(stepRepository).discardEscrow("2026-03-09")
     }
 
     @Test
-    fun `level 2 - caps at HC value`() = runTest {
+    fun `level 1 - first escrow deducts from balance`() = runTest {
+        whenever(stepRepository.getDailyRecord("2026-03-09")).thenReturn(
+            record(sensor = 1500, hc = 0, escrow = 0, escrowSync = 0)
+        )
+        whenever(stepReader.getStepsForDate("2026-03-09")).thenReturn(1000L)
+        whenever(antiCheatPrefs.getCvOffenseCount()).thenReturn(1)
+
+        validator.validate("2026-03-09")
+
+        verify(playerRepository).spendSteps(500L)
+        verify(stepRepository).updateEscrow(eq("2026-03-09"), eq(500L), eq(1))
+    }
+
+    @Test
+    fun `level 2 - caps at HC value and deducts excess`() = runTest {
         whenever(stepRepository.getDailyRecord("2026-03-09")).thenReturn(
             record(sensor = 1500, credited = 1500)
         )
@@ -72,12 +117,12 @@ class StepCrossValidatorTest {
 
         validator.validate("2026-03-09")
 
-        // credited (1500) > hcSteps (1000), so excess = 500 escrowed
+        verify(playerRepository).spendSteps(500L)
         verify(stepRepository).updateEscrow(eq("2026-03-09"), eq(500L), eq(3))
     }
 
     @Test
-    fun `level 3 - caps at HC minus 10 percent`() = runTest {
+    fun `level 3 - caps at HC minus 10 percent and deducts excess`() = runTest {
         whenever(stepRepository.getDailyRecord("2026-03-09")).thenReturn(
             record(sensor = 1500, credited = 1500)
         )
@@ -87,11 +132,12 @@ class StepCrossValidatorTest {
         validator.validate("2026-03-09")
 
         // capped = 1000 * 0.9 = 900, excess = 1500 - 900 = 600
+        verify(playerRepository).spendSteps(600L)
         verify(stepRepository).updateEscrow(eq("2026-03-09"), eq(600L), eq(3))
     }
 
     @Test
-    fun `no discrepancy releases escrow and decays offenses`() = runTest {
+    fun `no discrepancy releases escrow and restores balance`() = runTest {
         whenever(stepRepository.getDailyRecord("2026-03-09")).thenReturn(
             record(sensor = 1000, hc = 0, escrow = 200)
         )
@@ -104,5 +150,51 @@ class StepCrossValidatorTest {
         verify(stepRepository).releaseEscrow("2026-03-09")
         verify(antiCheatPrefs).decayCvOffenses()
         verify(antiCheatPrefs, never()).recordCvOffense(any())
+    }
+
+    @Test
+    fun `escrow then release is net zero balance change`() = runTest {
+        // First call: discrepancy detected, escrow deducts 500
+        whenever(stepRepository.getDailyRecord("2026-03-09")).thenReturn(
+            record(sensor = 1500, hc = 0, escrow = 0, escrowSync = 0)
+        )
+        whenever(stepReader.getStepsForDate("2026-03-09")).thenReturn(1000L)
+        whenever(antiCheatPrefs.getCvOffenseCount()).thenReturn(0)
+
+        validator.validate("2026-03-09")
+        verify(playerRepository).spendSteps(500L)
+
+        // Second call: discrepancy resolved, release restores 500
+        whenever(stepRepository.getDailyRecord("2026-03-09")).thenReturn(
+            record(sensor = 1000, hc = 0, escrow = 500, escrowSync = 1)
+        )
+        whenever(stepReader.getStepsForDate("2026-03-09")).thenReturn(1000L)
+
+        validator.validate("2026-03-09")
+        verify(playerRepository).addSteps(500L)
+        // Net: -500 + 500 = 0
+    }
+
+    @Test
+    fun `escrow then discard keeps deduction`() = runTest {
+        // First call: discrepancy detected, escrow deducts 500
+        whenever(stepRepository.getDailyRecord("2026-03-09")).thenReturn(
+            record(sensor = 1500, hc = 0, escrow = 0, escrowSync = 0)
+        )
+        whenever(stepReader.getStepsForDate("2026-03-09")).thenReturn(1000L)
+        whenever(antiCheatPrefs.getCvOffenseCount()).thenReturn(0)
+
+        validator.validate("2026-03-09")
+        verify(playerRepository).spendSteps(500L)
+
+        // Subsequent syncs: still discrepant, escrow metadata updated
+        whenever(stepRepository.getDailyRecord("2026-03-09")).thenReturn(
+            record(sensor = 1500, hc = 0, escrow = 500, escrowSync = 2)
+        )
+
+        validator.validate("2026-03-09")
+        // Discard — no addSteps, deduction stays
+        verify(stepRepository).discardEscrow("2026-03-09")
+        verify(playerRepository, never()).addSteps(any())
     }
 }
