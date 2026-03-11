@@ -22,9 +22,19 @@
 ### WorkManager
 
 - Periodic sync every 15 minutes
+- Checks service heartbeat before reading sensor — skips catch-up if service is alive (heartbeat within 2 minutes)
+- Uses Room `sensorSteps` as authoritative baseline — only credits the uncredited gap (prevents double-crediting)
 - Reconciles local step count with Health Connect
 - Catches up on missed steps if the foreground service was killed
 - Constraint: requires Health Connect availability
+
+### Service ↔ Worker Coordination
+
+The foreground service and WorkManager worker share step ingestion responsibility. To prevent double-crediting:
+
+- **Heartbeat**: Service writes a timestamp to `StepIngestionPreferences` on every step credit. Worker checks this — if the heartbeat is within 2 minutes, the service is alive and the worker skips sensor catch-up.
+- **Room baseline**: Worker uses the current `sensorSteps` value in Room as the authoritative baseline. It reads the hardware counter, computes the gap (`counter - dayStartCounter - sensorSteps`), and only credits the uncredited portion.
+- **Day-start counter**: Whichever path (service or worker) reads the sensor first today records the hardware counter value as the day-start baseline in SharedPreferences.
 
 ### Boot Receiver
 
@@ -70,12 +80,12 @@ Cross-validation offense count tracked in SharedPreferences, decays by 1 after 7
 
 | Offense Level | Count | Behavior |
 |---|---|---|
-| Level 0 | 0 | Escrow excess, release on reconciliation (3 syncs) |
-| Level 1 | 1–2 | Escrow with faster discard (2 syncs) |
+| Level 0 | 0 | Escrow excess (deducts from balance), release on reconciliation (3 syncs) |
+| Level 1 | 1–2 | Escrow with faster discard (2 syncs), deducts from balance |
 | Level 2 | 3–5 | Cap credited steps at Health Connect value |
 | Level 3 | 6+ | Cap at Health Connect value minus 10% penalty |
 
-When discrepancy resolves cleanly, escrow releases and offense count decays.
+When discrepancy resolves cleanly, escrow releases (restores deducted steps) and offense count decays. If escrow is discarded, the deduction remains — the player loses the suspicious steps.
 
 ## Activity Minute Parity
 
@@ -115,15 +125,17 @@ Health Connect (replacing deprecated Google Fit) is used as the secondary data s
 
 ```
 Sensor Event
-  → Foreground Service (delta calculation)
+  → Foreground Service (delta calculation, writes heartbeat)
     → StepRateLimiter (200/min cap)
       → StepVelocityAnalyzer (shaker/spoof penalty)
         → Daily ceiling (50k cap)
           → Room (DailyStepRecord update) + per-minute tracking
-            → WorkManager (HC gap-fill, cross-validation, activity minutes)
-              → ActivityMinuteValidator (gaming prevention)
-                → ActivityMinuteConverter (overlap deduction via per-minute data)
-                  → PlayerProfile.currentStepBalance update
+            → WorkManager (checks heartbeat → skips if service alive)
+              → Gap recovery (Room baseline, not private counter)
+              → HC gap-fill, cross-validation, activity minutes
+                → ActivityMinuteValidator (gaming prevention)
+                  → ActivityMinuteConverter (overlap deduction via per-minute data)
+                    → PlayerProfile.currentStepBalance update
 ```
 
 ## Permissions

@@ -54,4 +54,4 @@
 - Balance report: docs/balance/balance-report.md
 - Release docs: docs/release/
 - Critical path: 01→…→30→R (Tier 1)→31
-- Last run: 2026-03-11 (R05: Database Safety)
+- Last run: 2026-03-11 (Documentation Sweep — post-R05)

@@ -984,3 +984,32 @@ Implement monetization layer with stub billing/ads, cosmetic store, Season Pass,
 ### What remains
 - R06–R12: Tier 2 and 3 remediation
 - Plan 31: Play Console & Store Publication
+
+---
+
+## 2026-03-11 — Documentation Sweep (Post-R05)
+
+### Objective
+Full codebase documentation audit after R01–R05 remediation. Find and fix stale references.
+
+### Issues found and fixed (8 files)
+
+1. **CHANGELOG.md** — Test count 347→373. Added R01–R05 remediation section.
+2. **docs/release/release-checklist.md** — Unchecked `fallbackToDestructiveMigration` (R05 re-added it for pre-release safety). Updated test count 347→373.
+3. **docs/step-tracking.md** — Added R01 service↔worker coordination section (heartbeat, Room baseline, day-start counter). Updated escrow table for R02 balance deduction behavior. Updated data flow diagram with heartbeat and gap recovery steps.
+4. **docs/database-schema.md** — Added R05 key recovery mechanism and backup-disabled note to Security section.
+5. **docs/architecture.md** — Added backup-disabled row and key auto-recovery note to Security table.
+6. **.kiro/steering/source-files.md** — Added 7 missing test fakes from Plan 29 (FakeStepRepository, FakeCosmeticRepository, FakeBillingManager, FakeRewardAdManager, FakeDailyLoginDao, FakeWeeklyChallengeDao, FakeDailyStepDao).
+7. **.kiro/steering/structure.md** — Same 7 missing fakes added to fakes directory listing.
+8. **AGENTS.md** — Same 7 missing fakes added. Updated test coverage description with StepIngestionPreferences and StepIngestion test areas.
+
+### Verified as correct (no changes needed)
+- Google Fit references in RUN_LOG, ADR-0002, plan-02, plan-03, plan-05 — all historical/contextual.
+- AGENTS.md test count (373), use case count (32), route count (12), repository count (8) — all accurate.
+- database-schema.md entity schemas — all match actual code.
+- monetization.md — accurate, reflects stub implementation status.
+- master-plan.md — status tracker correct (Plan R unchecked, all others accurate).
+- step-tracking.md anti-cheat rules — all thresholds match code.
+
+### Commands/tests run: N/A (documentation-only changes)
+### Memory updated: STATE ✅ / RUN_LOG ✅

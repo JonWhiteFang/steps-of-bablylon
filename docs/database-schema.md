@@ -232,4 +232,6 @@ Each entity gets its own DAO:
 
 - Database is encrypted at rest using SQLCipher (`net.zetetic:sqlcipher-android`)
 - Encryption passphrase is generated randomly on first run, encrypted with an Android Keystore AES-256-GCM key, and stored in SharedPreferences
+- On decryption failure (e.g., keystore mismatch after device restore), `DatabaseKeyManager` wipes the stale passphrase and generates a fresh key (database resets)
+- Backup is disabled (`allowBackup="false"`) — local-only game, no valuable state to restore across devices
 - Uses `fallbackToDestructiveMigration()` during pre-release development

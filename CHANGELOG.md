@@ -61,7 +61,14 @@ All notable changes to Steps of Babylon are documented here.
 - 12-screen Compose navigation with bottom nav bar
 
 ### Testing
-- 347 JVM unit tests covering all use cases, domain models, balance validation, ViewModels, anti-cheat, and effects
+- 373 JVM unit tests covering all use cases, domain models, balance validation, ViewModels, anti-cheat, effects, and step ingestion coordination
+
+### Remediation (R01–R05)
+- Fixed step double-crediting between StepCounterService and StepSyncWorker via heartbeat + Room baseline coordination
+- Fixed Health Connect escrow to actually deduct suspicious steps from player balance
+- Fixed battle engine receiving empty workshop utility levels (CASH_BONUS/CASH_PER_WAVE/INTEREST)
+- Hidden unimplemented STEP_MULTIPLIER and RECOVERY_PACKAGES from Workshop UI
+- Disabled backup, added SQLCipher key recovery on keystore mismatch
 
 ### Release Prep
 - R8/ProGuard rules hardened for Room, Hilt, SQLCipher, Health Connect, sensors, WorkManager

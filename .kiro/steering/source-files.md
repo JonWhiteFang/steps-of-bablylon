@@ -288,8 +288,15 @@ fakes/FakeUltimateWeaponRepository.kt            # In-memory StateFlow-backed fa
 fakes/FakeLabRepository.kt                       # In-memory StateFlow-backed fake for LabRepository
 fakes/FakeCardRepository.kt                      # In-memory StateFlow-backed fake for CardRepository
 fakes/FakeWalkingEncounterRepository.kt          # In-memory StateFlow-backed fake for WalkingEncounterRepository
+fakes/FakeStepRepository.kt                      # In-memory StateFlow-backed fake for StepRepository
+fakes/FakeCosmeticRepository.kt                  # In-memory fake for CosmeticRepository
+fakes/FakeBillingManager.kt                      # Configurable fake for BillingManager
+fakes/FakeRewardAdManager.kt                     # Configurable fake for RewardAdManager
 fakes/FakeMilestoneDao.kt                        # In-memory fake for MilestoneDao
 fakes/FakeDailyMissionDao.kt                     # In-memory fake for DailyMissionDao
+fakes/FakeDailyLoginDao.kt                       # In-memory fake for DailyLoginDao
+fakes/FakeWeeklyChallengeDao.kt                  # In-memory fake for WeeklyChallengeDao
+fakes/FakeDailyStepDao.kt                        # In-memory fake for DailyStepDao with Flow support
 domain/usecase/CalculateUpgradeCostTest.kt        # Cost formula: baseCost × scaling^level, all 23 types
 domain/usecase/CanAffordUpgradeTest.kt            # Affordability checks against wallet
 domain/usecase/QuickInvestTest.kt                 # Cheapest affordable upgrade recommendation

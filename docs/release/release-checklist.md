@@ -5,7 +5,7 @@
 - [x] `isMinifyEnabled = true` for release build type
 - [x] `isShrinkResources = true` for release build type
 - [x] ProGuard/R8 rules hardened (Room, Hilt, SQLCipher, Health Connect, sensors, WorkManager)
-- [x] `fallbackToDestructiveMigration` removed
+- [ ] `fallbackToDestructiveMigration` removed *(re-added in R05 for pre-release safety — remove before production)*
 - [x] `versionName = "1.0.0"`, `versionCode = 1`
 - [ ] Upload keystore generated (`release/upload-keystore.jks`)
 - [ ] `keystore.properties` created with credentials
@@ -29,7 +29,7 @@
 - [ ] All notification channels work
 - [ ] Widget renders correctly
 - [ ] Battery usage acceptable (< 5% per day for step counting)
-- [ ] All 347 unit tests pass
+- [ ] All 373 unit tests pass
 
 ## Play Store Assets (Plan 31)
 

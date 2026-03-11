@@ -90,6 +90,7 @@ Hilt with KSP (not kapt). All modules in `di/`.
 | Layer | Measure | Details |
 |---|---|---|
 | Database | SQLCipher encryption | AES-256 full database encryption at rest via `net.zetetic:sqlcipher-android` |
-| Key management | Android Keystore | DB passphrase encrypted with AES-256-GCM Keystore key, stored in SharedPreferences |
+| Key management | Android Keystore | DB passphrase encrypted with AES-256-GCM Keystore key, stored in SharedPreferences. Auto-recovery on keystore mismatch. |
+| Backup | Disabled | `allowBackup="false"` — local-only game, prevents restore-related crashes |
 | Network | Network security config | Cleartext traffic blocked via `network_security_config.xml` |
 | Release build | R8 / ProGuard | Code shrinking, obfuscation, and resource shrinking enabled for release builds |
