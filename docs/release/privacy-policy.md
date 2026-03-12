@@ -54,4 +54,4 @@ We may update this privacy policy from time to time. Changes will be posted on t
 
 If you have questions about this privacy policy, contact us at:
 
-**Email:** <contact-email>
+**Email:** support@whitefanggames.com

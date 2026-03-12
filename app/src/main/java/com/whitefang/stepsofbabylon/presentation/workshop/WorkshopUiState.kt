@@ -17,4 +17,6 @@ data class WorkshopUiState(
     val stepBalance: Long = 0,
     val selectedCategory: UpgradeCategory = UpgradeCategory.ATTACK,
     val isLoading: Boolean = true,
+    val isProcessing: Boolean = false,
+    val userMessage: String? = null,
 )

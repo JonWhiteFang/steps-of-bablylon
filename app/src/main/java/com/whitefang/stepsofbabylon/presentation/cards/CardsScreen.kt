@@ -28,12 +28,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.whitefang.stepsofbabylon.domain.model.CardRarity
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 
 @Composable
 fun CardsScreen(viewModel: CardsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
+    LaunchedEffect(state.userMessage) {
+        state.userMessage?.let { snackbarHostState.showSnackbar(it); viewModel.clearMessage() }
+    }
+
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { innerPadding ->
+    Column(Modifier.fillMaxSize().padding(innerPadding).padding(16.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("💎 ${state.gems}", style = MaterialTheme.typography.titleMedium)
             Text("✨ ${state.cardDust} Dust", style = MaterialTheme.typography.titleMedium)
@@ -93,6 +104,7 @@ fun CardsScreen(viewModel: CardsViewModel = hiltViewModel()) {
             confirmButton = { TextButton(onClick = { viewModel.dismissPackResult() }) { Text("OK") } },
         )
     }
+    } // Scaffold
 }
 
 @Composable

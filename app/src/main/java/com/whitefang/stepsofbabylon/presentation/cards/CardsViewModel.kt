@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
@@ -36,13 +35,17 @@ class CardsViewModel @Inject constructor(
     private val manageLoadout = ManageCardLoadout(cardRepository)
 
     private val _lastPackResult = MutableStateFlow<List<CardResult>?>(null)
+    private val _processing = MutableStateFlow(false)
+    private val _userMessage = MutableStateFlow<String?>(null)
     private var allCards: List<OwnedCard> = emptyList()
 
     val uiState: StateFlow<CardsUiState> = combine(
         cardRepository.observeAllCards(),
         playerRepository.observeProfile(),
         _lastPackResult,
-    ) { cards, profile, packResult ->
+        _processing,
+        _userMessage,
+    ) { cards, profile, packResult, processing, message ->
         allCards = cards
         val equipped = cards.count { it.isEquipped }
         CardsUiState(
@@ -54,7 +57,7 @@ class CardsViewModel @Inject constructor(
                     isEquipped = card.isEquipped, isMaxLevel = isMax,
                     upgradeDustCost = dustCost,
                     canAffordUpgrade = !isMax && profile.cardDust >= dustCost,
-                    effectDescription = card.type.effectLv1, // simplified — shows lv1 description
+                    effectDescription = card.type.effectLv1,
                 )
             },
             equippedCount = equipped,
@@ -65,22 +68,49 @@ class CardsViewModel @Inject constructor(
             freePackAvailable = !profile.adRemoved && profile.freeCardPackAdUsedToday != LocalDate.now().toString(),
             adRemoved = profile.adRemoved,
             isLoading = false,
+            isProcessing = processing,
+            userMessage = message,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CardsUiState())
 
     fun openPack(packTier: PackTier) {
+        if (_processing.value) return
         viewModelScope.launch {
-            val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
-            val result = openCardPack(packTier, profile.gems, allCards)
-            if (result is OpenCardPack.Result.Opened) _lastPackResult.value = result.cards
+            _processing.value = true
+            try {
+                val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
+                val result = openCardPack(packTier, profile.gems, allCards)
+                if (result is OpenCardPack.Result.Opened) {
+                    _lastPackResult.value = result.cards
+                } else {
+                    _userMessage.value = "Not enough Gems"
+                }
+            } finally {
+                _processing.value = false
+            }
         }
     }
 
     fun upgradeCard(cardId: Int) {
+        if (_processing.value) return
         viewModelScope.launch {
-            val card = allCards.find { it.id == cardId } ?: return@launch
-            val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
-            upgradeCard(card, profile.cardDust)
+            _processing.value = true
+            try {
+                val card = allCards.find { it.id == cardId } ?: return@launch
+                if (card.level >= card.type.maxLevel) {
+                    _userMessage.value = "Card already at max level"
+                    return@launch
+                }
+                val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
+                val dustCost = card.level * card.type.rarity.upgradeDustPerLevel
+                if (profile.cardDust < dustCost) {
+                    _userMessage.value = "Not enough Card Dust"
+                    return@launch
+                }
+                upgradeCard(card, profile.cardDust)
+            } finally {
+                _processing.value = false
+            }
         }
     }
 
@@ -98,14 +128,22 @@ class CardsViewModel @Inject constructor(
     fun dismissPackResult() { _lastPackResult.value = null }
 
     fun watchFreePackAd() {
+        if (_processing.value) return
         viewModelScope.launch {
-            val result = rewardAdManager.showRewardAd(AdPlacement.DAILY_FREE_CARD_PACK)
-            if (result is AdResult.Rewarded) {
-                val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
-                val packResult = openCardPack(PackTier.COMMON, profile.gems, allCards, isFree = true)
-                if (packResult is OpenCardPack.Result.Opened) _lastPackResult.value = packResult.cards
-                playerRepository.updateFreeCardPackAdUsed(LocalDate.now().toString())
+            _processing.value = true
+            try {
+                val result = rewardAdManager.showRewardAd(AdPlacement.DAILY_FREE_CARD_PACK)
+                if (result is AdResult.Rewarded) {
+                    val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
+                    val packResult = openCardPack(PackTier.COMMON, profile.gems, allCards, isFree = true)
+                    if (packResult is OpenCardPack.Result.Opened) _lastPackResult.value = packResult.cards
+                    playerRepository.updateFreeCardPackAdUsed(LocalDate.now().toString())
+                }
+            } finally {
+                _processing.value = false
             }
         }
     }
+
+    fun clearMessage() { _userMessage.value = null }
 }

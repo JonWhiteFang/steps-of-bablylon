@@ -12,11 +12,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -30,8 +35,14 @@ fun WorkshopScreen(onNavigateToWeapons: () -> Unit = {}, onNavigateToCards: () -
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val categories = UpgradeCategory.entries
     val selectedIndex = categories.indexOf(state.selectedCategory)
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    Box(Modifier.fillMaxSize()) {
+    LaunchedEffect(state.userMessage) {
+        state.userMessage?.let { snackbarHostState.showSnackbar(it); viewModel.clearMessage() }
+    }
+
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { innerPadding ->
+        Box(Modifier.fillMaxSize().padding(innerPadding)) {
         Column(Modifier.fillMaxSize()) {
             // Weapons + Cards buttons
             OutlinedButton(onClick = onNavigateToWeapons, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
@@ -79,5 +90,6 @@ fun WorkshopScreen(onNavigateToWeapons: () -> Unit = {}, onNavigateToCards: () -
         ) {
             Text("⚡", style = MaterialTheme.typography.titleLarge)
         }
+    }
     }
 }

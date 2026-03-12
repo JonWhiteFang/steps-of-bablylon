@@ -3,16 +3,15 @@ package com.whitefang.stepsofbabylon.presentation.store
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.whitefang.stepsofbabylon.domain.model.BillingProduct
-import com.whitefang.stepsofbabylon.domain.model.PurchaseResult
 import com.whitefang.stepsofbabylon.domain.repository.BillingManager
 import com.whitefang.stepsofbabylon.domain.repository.CosmeticRepository
 import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -23,12 +22,17 @@ class StoreViewModel @Inject constructor(
     private val cosmeticRepository: CosmeticRepository,
 ) : ViewModel() {
 
+    private val _purchasing = MutableStateFlow(false)
+    private val _userMessage = MutableStateFlow<String?>(null)
+
     init { viewModelScope.launch { cosmeticRepository.ensureSeedData() } }
 
     val uiState: StateFlow<StoreUiState> = combine(
         playerRepository.observeProfile(),
         cosmeticRepository.observeAll(),
-    ) { profile, cosmetics ->
+        _purchasing,
+        _userMessage,
+    ) { profile, cosmetics, purchasing, message ->
         StoreUiState(
             gems = profile.gems,
             adRemoved = profile.adRemoved,
@@ -37,28 +41,50 @@ class StoreViewModel @Inject constructor(
             cosmetics = cosmetics.map {
                 CosmeticDisplayInfo(it.cosmeticId, it.category.name, it.name, it.description, it.priceGems, it.isOwned, it.isEquipped)
             },
+            isPurchasing = purchasing,
+            userMessage = message,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StoreUiState())
 
     fun purchaseGemPack(product: BillingProduct) {
-        viewModelScope.launch { billingManager.purchase(product) }
+        if (_purchasing.value) return
+        viewModelScope.launch {
+            _purchasing.value = true
+            try { billingManager.purchase(product) } finally { _purchasing.value = false }
+        }
     }
 
     fun purchaseAdRemoval() {
-        viewModelScope.launch { billingManager.purchase(BillingProduct.AD_REMOVAL) }
+        if (_purchasing.value) return
+        viewModelScope.launch {
+            _purchasing.value = true
+            try { billingManager.purchase(BillingProduct.AD_REMOVAL) } finally { _purchasing.value = false }
+        }
     }
 
     fun purchaseSeasonPass() {
-        viewModelScope.launch { billingManager.purchase(BillingProduct.SEASON_PASS) }
+        if (_purchasing.value) return
+        viewModelScope.launch {
+            _purchasing.value = true
+            try { billingManager.purchase(BillingProduct.SEASON_PASS) } finally { _purchasing.value = false }
+        }
     }
 
     fun purchaseCosmetic(cosmeticId: String) {
+        if (_purchasing.value) return
         viewModelScope.launch {
-            val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
-            val cosmetic = uiState.value.cosmetics.find { it.cosmeticId == cosmeticId } ?: return@launch
-            if (profile.gems >= cosmetic.priceGems) {
-                playerRepository.spendGems(cosmetic.priceGems)
-                cosmeticRepository.purchase(cosmeticId)
+            _purchasing.value = true
+            try {
+                val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
+                val cosmetic = uiState.value.cosmetics.find { it.cosmeticId == cosmeticId } ?: return@launch
+                if (profile.gems >= cosmetic.priceGems) {
+                    playerRepository.spendGems(cosmetic.priceGems)
+                    cosmeticRepository.purchase(cosmeticId)
+                } else {
+                    _userMessage.value = "Not enough Gems"
+                }
+            } finally {
+                _purchasing.value = false
             }
         }
     }
@@ -70,4 +96,6 @@ class StoreViewModel @Inject constructor(
     fun unequipCosmetic(cosmeticId: String) {
         viewModelScope.launch { cosmeticRepository.unequip(cosmeticId) }
     }
+
+    fun clearMessage() { _userMessage.value = null }
 }

@@ -368,4 +368,10 @@ presentation/battle/BattleViewModelTest.kt         # Battle VM: init stats, biom
 presentation/missions/MissionsViewModelTest.kt     # Missions: generation, claim, milestones (use-case level)
 presentation/economy/CurrencyDashboardViewModelTest.kt # Economy VM: weekly, streak, balances
 presentation/store/StoreViewModelTest.kt           # Store VM: gems, cosmetics, purchase
+presentation/ux/CurrencyGuardTest.kt               # Currency spend clamps to 0 (gems, PS, dust, steps)
+presentation/ux/UserFeedbackTest.kt                # Workshop purchase failure sets userMessage
+presentation/DeepLinkRoutingTest.kt                # Deep-link intent extra extraction
+data/local/RoomSchemaTest.kt                       # Room v7 schema round-trip (profile, steps, workshop)
+data/integration/EscrowLifecycleTest.kt            # End-to-end escrow lifecycle (release + discard)
+service/StepWidgetProviderTest.kt                  # Widget SharedPreferences round-trip
 ```

@@ -34,19 +34,22 @@ class MissionsViewModel @Inject constructor(
 
     private val generateMissions = GenerateDailyMissions(dailyMissionDao)
     private val claimMilestone = ClaimMilestone(milestoneDao, playerRepository)
-    private val today = LocalDate.now().toString()
+    private var today = LocalDate.now().toString()
     private val tick = MutableStateFlow(System.currentTimeMillis())
 
     init {
         viewModelScope.launch { generateMissions(today) }
-        viewModelScope.launch {
-            // Auto-update walking mission progress from step data
-            updateWalkingMissionProgress()
-        }
+        viewModelScope.launch { updateWalkingMissionProgress() }
         viewModelScope.launch {
             while (true) {
                 delay(1000)
                 tick.value = System.currentTimeMillis()
+                val now = LocalDate.now().toString()
+                if (now != today) {
+                    today = now
+                    generateMissions(today)
+                    updateWalkingMissionProgress()
+                }
             }
         }
     }

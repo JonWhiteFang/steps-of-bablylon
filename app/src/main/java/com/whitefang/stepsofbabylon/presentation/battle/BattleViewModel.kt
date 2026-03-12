@@ -229,6 +229,7 @@ class BattleViewModel @Inject constructor(
     fun toggleOverdriveMenu() { _uiState.update { it.copy(showOverdriveMenu = !it.showOverdriveMenu, showUpgradeMenu = false) } }
 
     fun watchGemAd() {
+        if (_uiState.value.roundEndState?.gemAdWatched == true) return
         viewModelScope.launch {
             val result = rewardAdManager.showRewardAd(AdPlacement.POST_ROUND_GEM)
             if (result is AdResult.Rewarded) {
@@ -239,6 +240,7 @@ class BattleViewModel @Inject constructor(
     }
 
     fun watchPsAd() {
+        if (_uiState.value.roundEndState?.psAdWatched == true) return
         viewModelScope.launch {
             val state = _uiState.value.roundEndState ?: return@launch
             val result = rewardAdManager.showRewardAd(AdPlacement.POST_ROUND_DOUBLE_PS)

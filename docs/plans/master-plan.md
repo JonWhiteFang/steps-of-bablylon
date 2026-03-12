@@ -131,5 +131,5 @@ graph TD
 - [x] Plan 28: Balancing & Tuning
 - [x] Plan 29: Testing & QA
 - [x] Plan 30: Release Prep
-- [ ] Plan R: Remediation (R01–R09 complete; R10–R12 remaining — Tier 3)
+- [x] Plan R: Remediation (R01–R12 complete)
 - [ ] Plan 31: Play Console & Store Publication

@@ -27,14 +27,20 @@ import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.whitefang.stepsofbabylon.presentation.battle.biome.BiomeTheme
 import com.whitefang.stepsofbabylon.presentation.ui.theme.Gold
@@ -52,6 +58,15 @@ fun HomeScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val theme = BiomeTheme.forBiome(state.currentBiome)
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.refreshDate()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     Box(
         Modifier.fillMaxSize().background(
@@ -89,7 +104,7 @@ fun HomeScreen(
             Text("Best Wave: ${state.bestWave}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
 
             if (state.unclaimedDropCount > 0) {
-                OutlinedButton(onClick = onSuppliesClick, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = onSuppliesClick, modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Unclaimed supplies, ${state.unclaimedDropCount} available" }) {
                     BadgedBox(badge = { Badge { Text("${state.unclaimedDropCount}") } }) {
                         Icon(Icons.Default.Email, contentDescription = "Supplies")
                     }

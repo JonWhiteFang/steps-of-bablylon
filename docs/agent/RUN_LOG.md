@@ -1080,3 +1080,97 @@ Full codebase documentation audit after R01–R05 remediation. Find and fix stal
 - `test/presentation/store/StoreViewModelTest.kt` — 2 new season pass tests
 
 **What's next:** R10 (UX Feedback & Guards) + R11 (Accessibility & Docs), parallelizable.
+
+## 2026-03-12 — R10 UX Feedback & Guards + R11 Accessibility & Docs
+
+**Objective:** Fix three UX issues (silent failures, double-tap races, midnight staleness) and three polish issues (symbol-only labels, placeholder emails, README inaccuracies).
+
+**R10 — UX Feedback & Guards (7 changes):**
+- `PlayerProfileDao`: Added `MAX(0, ...)` guards to `adjustGems`, `adjustPowerStones`, `adjustCardDust` — matching existing `adjustStepBalance` pattern.
+- `WorkshopUiState`, `CardsUiState`, `LabsUiState`, `StoreUiState`: Added `userMessage: String?` and `isProcessing: Boolean` fields.
+- `WorkshopViewModel`, `CardsViewModel`, `LabsViewModel`, `StoreViewModel`: Added `clearMessage()`, processing guards on all purchase/action methods (early return if `_processing.value`), feedback messages on failures (insufficient funds, max level, no slots).
+- `BattleViewModel`: Added VM-level guards to `watchGemAd`/`watchPsAd` — early return if already watched.
+- `WorkshopScreen`, `CardsScreen`, `LabsScreen`, `StoreScreen`: Wrapped content in `Scaffold` with `SnackbarHost`. Added `LaunchedEffect(state.userMessage)` to show snackbar and clear.
+- `MissionsViewModel`: Changed `today` from `val` to `var`. Added day-change detection in existing 1s ticker — regenerates missions and updates walking progress on midnight crossing.
+- `HomeViewModel`: Changed hardcoded `LocalDate.now()` to `MutableStateFlow<String>` with `flatMapLatest`. Added `refreshDate()` called from `HomeScreen` via lifecycle resume observer.
+- `StatsViewModel`: Changed `today` from `val` to `MutableStateFlow<LocalDate>` with `flatMapLatest`. Added `refreshDate()` called from `StatsScreen` via lifecycle resume observer.
+- `FakePlayerRepository`: Updated spend methods to clamp at 0, matching DAO guards.
+
+**R11 — Accessibility & Docs (4 changes):**
+- `BattleScreen`: Added `contentDescription` via `semantics` to speed buttons ("Speed 1x/2x/4x"), pause/resume button, upgrades button, overdrive button.
+- `UltimateWeaponBar`: Added `semantics { contentDescription }` to weapon slots — "Activate {name}" when ready, "{name} on cooldown, N seconds" when not.
+- `HomeScreen`: Added `contentDescription` to supplies badge button.
+- Replaced `<contact-email>` with `support@whitefanggames.com` in `privacy-policy.md`, `play-store-listing.md`, `HealthConnectPermissionActivity.kt`.
+- `README.md`: Replaced instrumented test section with note that they're planned but not yet implemented.
+
+**Tests added:** 7 new tests:
+- `CurrencyGuardTest` (4): gems/PS/dust/steps spend-beyond-balance clamps to 0.
+- `UserFeedbackTest` (3): workshop purchase failure sets userMessage, clearMessage resets, quickInvest failure sets message.
+
+**Test count:** 381 → 388 (all green).
+
+**Files changed:**
+- `data/local/PlayerProfileDao.kt` — MAX(0) guards on 3 currency queries
+- `presentation/workshop/WorkshopUiState.kt` — added isProcessing, userMessage
+- `presentation/cards/CardsUiState.kt` — added isProcessing, userMessage
+- `presentation/labs/LabsUiState.kt` — added isProcessing, userMessage
+- `presentation/store/StoreUiState.kt` — added userMessage
+- `presentation/workshop/WorkshopViewModel.kt` — rewritten with guards + feedback
+- `presentation/cards/CardsViewModel.kt` — rewritten with guards + feedback
+- `presentation/labs/LabsViewModel.kt` — rewritten with guards + feedback
+- `presentation/store/StoreViewModel.kt` — rewritten with guards + feedback
+- `presentation/battle/BattleViewModel.kt` — ad watch guards
+- `presentation/workshop/WorkshopScreen.kt` — Scaffold + SnackbarHost
+- `presentation/cards/CardsScreen.kt` — Scaffold + SnackbarHost
+- `presentation/labs/LabsScreen.kt` — Scaffold + SnackbarHost
+- `presentation/store/StoreScreen.kt` — Scaffold + SnackbarHost
+- `presentation/missions/MissionsViewModel.kt` — midnight day-change detection
+- `presentation/home/HomeViewModel.kt` — currentDate flow + refreshDate
+- `presentation/home/HomeScreen.kt` — lifecycle resume observer
+- `presentation/stats/StatsViewModel.kt` — today flow + refreshDate
+- `presentation/stats/StatsScreen.kt` — lifecycle resume observer
+- `presentation/battle/BattleScreen.kt` — contentDescription on all controls
+- `presentation/battle/ui/UltimateWeaponBar.kt` — semantics on weapon slots
+- `presentation/HealthConnectPermissionActivity.kt` — real email
+- `docs/release/privacy-policy.md` — real email
+- `docs/release/play-store-listing.md` — real email
+- `README.md` — fixed instrumented test reference
+- `test/fakes/FakePlayerRepository.kt` — spend clamps at 0
+- `test/presentation/ux/CurrencyGuardTest.kt` — new (4 tests)
+- `test/presentation/ux/UserFeedbackTest.kt` — new (3 tests)
+
+**What's next:** R12 (Integration Test Coverage), then Plan 31 (Play Console & Store Publication).
+
+## 2026-03-12 — R12 Integration Test Coverage
+
+**Objective:** Add integration-level tests for widget, deep-links, Room schema, and escrow lifecycle.
+
+**What was done:**
+1. **Task 1 — Robolectric setup**: Added `robolectric:4.14.1`, `androidx.test:core:1.6.1`, and `room-testing` to version catalog + build.gradle.kts. Enabled `unitTests.isIncludeAndroidResources = true`.
+
+2. **Task 2 — Widget tests** (`service/StepWidgetProviderTest.kt`, 3 tests): Robolectric-based tests verifying `saveData()` persists to SharedPreferences, overwrites work, and defaults are zero.
+
+3. **Task 3 — Deep-link tests** (`presentation/DeepLinkRoutingTest.kt`, 3 tests): Verify `navigate_to` intent extra extraction for supplies, workshop, and null case.
+
+4. **Task 4 — Room schema tests** (`data/local/RoomSchemaTest.kt`, 3 tests): In-memory Room DB round-trip for PlayerProfileEntity (gems/PS/tier), DailyStepRecordEntity (escrow fields), WorkshopUpgradeEntity (level).
+
+5. **Task 5 — Escrow lifecycle tests** (`data/integration/EscrowLifecycleTest.kt`, 2 tests): Full lifecycle using FakePlayerRepository + FakeStepRepository + mocked HealthConnectStepReader. Test 1: escrow deducts → release restores (net zero). Test 2: escrow deducts → 3 syncs → discard keeps deduction.
+
+**Decisions:**
+- No instrumented tests (androidTest) — all tests run on JVM via Robolectric.
+- No Room migration objects or migration tests — pre-release app, `fallbackToDestructiveMigration` handles dev/QA installs. Post-release migrations documented in CONSTRAINTS.md.
+- Skipped Hilt-injected service lifecycle tests — StepCounterService is a thin shell around already-tested components.
+
+**Test count:** 388 → 399 (all green).
+
+**Files changed:**
+- `gradle/libs.versions.toml` — added robolectric, androidx-test-core, room-testing
+- `app/build.gradle.kts` — added 3 test dependencies, isIncludeAndroidResources
+- `test/service/StepWidgetProviderTest.kt` — new (3 tests)
+- `test/presentation/DeepLinkRoutingTest.kt` — new (3 tests)
+- `test/data/local/RoomSchemaTest.kt` — new (3 tests)
+- `test/data/integration/EscrowLifecycleTest.kt` — new (2 tests)
+
+**Milestone:** Plan R (Remediation) fully complete. All 12 sub-plans done.
+
+**What's next:** Plan 31: Play Console & Store Publication.

@@ -27,23 +27,22 @@ class StatsViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _selectedPeriod = MutableStateFlow(StatsPeriod.WEEK)
-    private val today = LocalDate.now()
+    private val _today = MutableStateFlow(LocalDate.now())
     private val fmt = DateTimeFormatter.ISO_LOCAL_DATE
 
-    // Observe history reactively based on selected period — use 90 days to cover all periods
-    private val historyFlow = stepRepository.observeHistory(
-        today.minusDays(89).format(fmt), today.format(fmt)
-    )
-
-    val uiState: StateFlow<StatsUiState> = combine(
-        playerRepository.observeProfile(),
-        historyFlow,
-        workshopRepository.observeAllUpgrades(),
-        _selectedPeriod,
-    ) { profile, history, upgrades, period ->
-        val todayRecord = history.find { it.date == today.format(fmt) }
-        val bars = buildBars(history, period)
-        val daysActive = history.count { it.creditedSteps > 0 }
+    val uiState: StateFlow<StatsUiState> = _today.flatMapLatest { today ->
+        val historyFlow = stepRepository.observeHistory(
+            today.minusDays(89).format(fmt), today.format(fmt)
+        )
+        combine(
+            playerRepository.observeProfile(),
+            historyFlow,
+            workshopRepository.observeAllUpgrades(),
+            _selectedPeriod,
+        ) { profile, history, upgrades, period ->
+            val todayRecord = history.find { it.date == today.format(fmt) }
+            val bars = buildBars(history, period, today)
+            val daysActive = history.count { it.creditedSteps > 0 }
 
         StatsUiState(
             todaySteps = todayRecord?.creditedSteps ?: 0,
@@ -67,11 +66,17 @@ class StatsViewModel @Inject constructor(
             averageDailySteps = if (daysActive > 0) profile.totalStepsEarned / daysActive else 0,
             isLoading = false,
         )
+    }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StatsUiState())
 
     fun selectPeriod(period: StatsPeriod) { _selectedPeriod.value = period }
 
-    private fun buildBars(history: List<DailyStepSummary>, period: StatsPeriod): List<DailyBarData> {
+    fun refreshDate() {
+        val now = LocalDate.now()
+        if (now != _today.value) _today.value = now
+    }
+
+    private fun buildBars(history: List<DailyStepSummary>, period: StatsPeriod, today: LocalDate): List<DailyBarData> {
         val byDate = history.associateBy { it.date }
         return when (period) {
             StatsPeriod.WEEK -> (6 downTo 0).map { daysAgo ->

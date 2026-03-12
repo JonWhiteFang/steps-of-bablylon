@@ -17,10 +17,12 @@ import com.whitefang.stepsofbabylon.domain.usecase.GenerateDailyMissions
 import com.whitefang.stepsofbabylon.domain.usecase.CheckMilestones
 import com.whitefang.stepsofbabylon.domain.usecase.TrackDailyLogin
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -39,6 +41,8 @@ class HomeViewModel @Inject constructor(
     private val milestoneNotificationManager: com.whitefang.stepsofbabylon.service.MilestoneNotificationManager,
 ) : ViewModel() {
 
+    private val _currentDate = MutableStateFlow(LocalDate.now().toString())
+
     init {
         viewModelScope.launch {
             playerRepository.ensureProfileExists()
@@ -46,47 +50,55 @@ class HomeViewModel @Inject constructor(
             labRepository.ensureResearchExists()
             CheckResearchCompletion(labRepository)()
 
-            // Trigger daily login streak on app open
-            val today = LocalDate.now().toString()
+            val today = _currentDate.value
             val todaySteps = stepRepository.getDailyRecord(today)?.creditedSteps ?: 0
             val profile0 = playerRepository.observeProfile().first()
             TrackDailyLogin(dailyLoginDao, playerRepository).checkAndAward(today, todaySteps, profile0.seasonPassActive, profile0.seasonPassExpiry)
             GenerateDailyMissions(dailyMissionDao)(today)
 
-            // Notify for newly achievable milestones
             val profile = playerRepository.observeProfile().first()
             val achievable = CheckMilestones(milestoneDao)(profile.totalStepsEarned)
             achievable.firstOrNull()?.let { milestoneNotificationManager.notifyMilestoneAchieved(it.displayName) }
         }
     }
 
-    val uiState: StateFlow<HomeUiState> = combine(
-        playerRepository.observeProfile(),
-        stepRepository.observeTodayRecord(LocalDate.now().toString()),
-        walkingEncounterRepository.countUnclaimed(),
-        dailyMissionDao.countClaimable(LocalDate.now().toString()),
-        milestoneDao.getAll(),
-    ) { profile, stepSummary, unclaimedCount, claimableMissions, milestoneEntities ->
-        val claimedIds = milestoneEntities.filter { it.claimed }.map { it.milestoneId }.toSet()
-        val achievableMilestones = Milestone.entries.count { it.requiredSteps <= profile.totalStepsEarned && it.name !in claimedIds }
-        HomeUiState(
-            todaySteps = stepSummary?.creditedSteps ?: 0,
-            stepBalance = profile.stepBalance,
-            gems = profile.gems,
-            powerStones = profile.powerStones,
-            currentTier = profile.currentTier,
-            highestUnlockedTier = profile.highestUnlockedTier,
-            currentBiome = Biome.forTier(profile.currentTier),
-            bestWave = profile.bestWavePerTier[profile.currentTier] ?: 0,
-            bestWavePerTier = profile.bestWavePerTier,
-            unclaimedDropCount = unclaimedCount,
-            claimableMissionCount = claimableMissions + achievableMilestones,
-            seasonPassActive = profile.seasonPassActive && profile.seasonPassExpiry > System.currentTimeMillis(),
-            isLoading = false,
-        )
+    val uiState: StateFlow<HomeUiState> = _currentDate.flatMapLatest { date ->
+        combine(
+            playerRepository.observeProfile(),
+            stepRepository.observeTodayRecord(date),
+            walkingEncounterRepository.countUnclaimed(),
+            dailyMissionDao.countClaimable(date),
+            milestoneDao.getAll(),
+        ) { profile, stepSummary, unclaimedCount, claimableMissions, milestoneEntities ->
+            val claimedIds = milestoneEntities.filter { it.claimed }.map { it.milestoneId }.toSet()
+            val achievableMilestones = Milestone.entries.count { it.requiredSteps <= profile.totalStepsEarned && it.name !in claimedIds }
+            HomeUiState(
+                todaySteps = stepSummary?.creditedSteps ?: 0,
+                stepBalance = profile.stepBalance,
+                gems = profile.gems,
+                powerStones = profile.powerStones,
+                currentTier = profile.currentTier,
+                highestUnlockedTier = profile.highestUnlockedTier,
+                currentBiome = Biome.forTier(profile.currentTier),
+                bestWave = profile.bestWavePerTier[profile.currentTier] ?: 0,
+                bestWavePerTier = profile.bestWavePerTier,
+                unclaimedDropCount = unclaimedCount,
+                claimableMissionCount = claimableMissions + achievableMilestones,
+                seasonPassActive = profile.seasonPassActive && profile.seasonPassExpiry > System.currentTimeMillis(),
+                isLoading = false,
+            )
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
 
     fun selectTier(tier: Int) {
         viewModelScope.launch { playerRepository.updateTier(tier) }
+    }
+
+    fun refreshDate() {
+        val now = LocalDate.now().toString()
+        if (now != _currentDate.value) {
+            _currentDate.value = now
+            viewModelScope.launch { GenerateDailyMissions(dailyMissionDao)(now) }
+        }
     }
 }

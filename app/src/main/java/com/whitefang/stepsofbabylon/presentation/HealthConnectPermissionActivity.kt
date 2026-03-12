@@ -45,7 +45,7 @@ All game data is stored locally on your device in an encrypted database. Steps o
 
 No data is sold, traded, or shared with third parties.
 
-Contact: <contact-email>
+Contact: support@whitefanggames.com
                     """.trimIndent()
                 )
             }

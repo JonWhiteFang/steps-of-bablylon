@@ -9,6 +9,7 @@ data class StoreUiState(
     val seasonPassExpiry: Long = 0,
     val cosmetics: List<CosmeticDisplayInfo> = emptyList(),
     val isPurchasing: Boolean = false,
+    val userMessage: String? = null,
 )
 
 data class CosmeticDisplayInfo(

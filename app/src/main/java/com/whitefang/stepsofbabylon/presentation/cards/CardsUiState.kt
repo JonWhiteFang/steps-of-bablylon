@@ -25,6 +25,8 @@ data class CardsUiState(
     val freePackAvailable: Boolean = false,
     val adRemoved: Boolean = false,
     val isLoading: Boolean = true,
+    val isProcessing: Boolean = false,
+    val userMessage: String? = null,
 )
 
 data class PackOption(val tier: PackTier, val canAfford: Boolean)

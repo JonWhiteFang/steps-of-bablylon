@@ -330,6 +330,6 @@ graph TD
 - [x] R07: Live Mission Progress
 - [x] R08: Notification & Reminder Fixes
 - [x] R09: Deep-link & Premium State
-- [ ] R10: UX Feedback & Guards
-- [ ] R11: Accessibility & Docs
-- [ ] R12: Integration Test Coverage
+- [x] R10: UX Feedback & Guards
+- [x] R11: Accessibility & Docs
+- [x] R12: Integration Test Coverage

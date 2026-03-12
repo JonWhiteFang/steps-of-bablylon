@@ -3,7 +3,6 @@ package com.whitefang.stepsofbabylon.presentation.labs
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.whitefang.stepsofbabylon.data.local.DailyMissionDao
-import com.whitefang.stepsofbabylon.domain.model.ActiveResearch
 import com.whitefang.stepsofbabylon.domain.model.DailyMissionType
 import com.whitefang.stepsofbabylon.domain.model.ResearchType
 import com.whitefang.stepsofbabylon.domain.repository.LabRepository
@@ -41,6 +40,8 @@ class LabsViewModel @Inject constructor(
     private val checkCompletion = CheckResearchCompletion(labRepository)
 
     private val tick = MutableStateFlow(System.currentTimeMillis())
+    private val _processing = MutableStateFlow(false)
+    private val _userMessage = MutableStateFlow<String?>(null)
 
     init {
         viewModelScope.launch {
@@ -61,7 +62,8 @@ class LabsViewModel @Inject constructor(
         labRepository.observeActiveResearch(),
         playerRepository.observeProfile(),
         tick,
-    ) { levels, activeList, profile, now ->
+        combine(_processing, _userMessage) { p, m -> p to m },
+    ) { levels, activeList, profile, now, (processing, message) ->
         val activeMap = activeList.associateBy { it.type }
         LabsUiState(
             researchList = ResearchType.entries.map { type ->
@@ -75,9 +77,7 @@ class LabsViewModel @Inject constructor(
                     RushResearch.calculateRushCost(it.startedAt, it.completesAt, now)
                 } ?: 0L
                 ResearchDisplayInfo(
-                    type = type,
-                    level = level,
-                    isMaxed = isMaxed,
+                    type = type, level = level, isMaxed = isMaxed,
                     costToStart = cost,
                     canAffordStart = !isMaxed && active == null && profile.stepBalance >= cost,
                     timeToCompleteHours = timeHours,
@@ -94,45 +94,84 @@ class LabsViewModel @Inject constructor(
             canAffordSlotUnlock = profile.labSlotCount < UnlockLabSlot.MAX_SLOTS && profile.gems >= UnlockLabSlot.SLOT_COST_GEMS,
             seasonPassFreeRushAvailable = profile.seasonPassActive && profile.seasonPassExpiry > now && profile.freeLabRushUsedToday != LocalDate.now().toString(),
             isLoading = false,
+            isProcessing = processing,
+            userMessage = message,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LabsUiState())
 
     fun startResearch(type: ResearchType) {
+        if (_processing.value) return
         viewModelScope.launch {
-            val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
-            startResearch(type, profile.toWallet(), profile.labSlotCount)
+            _processing.value = true
+            try {
+                val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
+                val result = startResearch(type, profile.toWallet(), profile.labSlotCount)
+                if (result !is StartResearch.Result.Success) {
+                    _userMessage.value = when (result) {
+                        is StartResearch.Result.InsufficientSteps -> "Not enough Steps"
+                        is StartResearch.Result.NoSlotAvailable -> "No research slot available"
+                        is StartResearch.Result.MaxLevelReached -> "Already at max level"
+                        is StartResearch.Result.AlreadyResearching -> "Already researching"
+                        else -> "Cannot start research"
+                    }
+                }
+            } finally {
+                _processing.value = false
+            }
         }
     }
 
     fun rushResearch(type: ResearchType) {
+        if (_processing.value) return
         viewModelScope.launch {
-            val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
-            val activeList = labRepository.observeActiveResearch().stateIn(viewModelScope).value
-            val active = activeList.find { it.type == type } ?: return@launch
-            rushResearch(type, active, profile.toWallet())
-            updateResearchMission()
+            _processing.value = true
+            try {
+                val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
+                val activeList = labRepository.observeActiveResearch().stateIn(viewModelScope).value
+                val active = activeList.find { it.type == type } ?: return@launch
+                val result = rushResearch(type, active, profile.toWallet())
+                if (result is RushResearch.Result.Rushed) updateResearchMission()
+                else _userMessage.value = "Not enough Gems"
+            } finally {
+                _processing.value = false
+            }
         }
     }
 
     fun freeRush(type: ResearchType) {
+        if (_processing.value) return
         viewModelScope.launch {
-            val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
-            if (!profile.seasonPassActive || profile.seasonPassExpiry <= System.currentTimeMillis()) return@launch
-            if (profile.freeLabRushUsedToday == LocalDate.now().toString()) return@launch
-            val activeList = labRepository.observeActiveResearch().stateIn(viewModelScope).value
-            val active = activeList.find { it.type == type } ?: return@launch
-            labRepository.completeResearch(type)
-            playerRepository.updateFreeLabRushUsed(LocalDate.now().toString())
-            updateResearchMission()
+            _processing.value = true
+            try {
+                val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
+                if (!profile.seasonPassActive || profile.seasonPassExpiry <= System.currentTimeMillis()) return@launch
+                if (profile.freeLabRushUsedToday == LocalDate.now().toString()) return@launch
+                val activeList = labRepository.observeActiveResearch().stateIn(viewModelScope).value
+                activeList.find { it.type == type } ?: return@launch
+                labRepository.completeResearch(type)
+                playerRepository.updateFreeLabRushUsed(LocalDate.now().toString())
+                updateResearchMission()
+            } finally {
+                _processing.value = false
+            }
         }
     }
 
     fun unlockSlot() {
+        if (_processing.value) return
         viewModelScope.launch {
-            val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
-            unlockLabSlot(profile.labSlotCount, profile.gems)
+            _processing.value = true
+            try {
+                val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
+                val result = unlockLabSlot(profile.labSlotCount, profile.gems)
+                if (result !is UnlockLabSlot.Result.Unlocked) _userMessage.value = "Not enough Gems or max slots reached"
+            } finally {
+                _processing.value = false
+            }
         }
     }
+
+    fun clearMessage() { _userMessage.value = null }
 
     private suspend fun updateResearchMission() {
         try {
@@ -140,6 +179,6 @@ class LabsViewModel @Inject constructor(
             val missions = dailyMissionDao.getByDateOnce(today)
             val m = missions.find { it.missionType == DailyMissionType.COMPLETE_RESEARCH.name && !it.claimed && !it.completed }
             if (m != null) dailyMissionDao.updateProgress(m.id, 1, true)
-        } catch (_: Exception) { /* best-effort */ }
+        } catch (_: Exception) { }
     }
 }

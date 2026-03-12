@@ -61,7 +61,7 @@ All notable changes to Steps of Babylon are documented here.
 - 12-screen Compose navigation with bottom nav bar
 
 ### Testing
-- 381 JVM unit tests covering all use cases, domain models, balance validation, ViewModels, anti-cheat, effects, step ingestion coordination, widget balance, and walking mission progress
+- 399 JVM unit tests covering all use cases, domain models, balance validation, ViewModels, anti-cheat, effects, step ingestion coordination, widget balance, walking mission progress, currency guards, UX feedback, and integration tests
 
 ### Remediation (R01–R05)
 - Fixed step double-crediting between StepCounterService and StepSyncWorker via heartbeat + Room baseline coordination
@@ -79,6 +79,22 @@ All notable changes to Steps of Babylon are documented here.
 - Fixed deep-link navigation when app is already open (warm-start intent handling)
 - Fixed Season Pass expiry check in Store screen (was ignoring expiry timestamp)
 - Fixed adRemoved state lost on Play Again in battle
+
+### Remediation (R10–R11)
+- Added user feedback messages (snackbar) for failed purchases across Workshop, Cards, Labs, Store
+- Added double-tap guards on all purchase/ad actions — prevents overlapping coroutines
+- Added DAO-level non-negative guards on gems, power stones, and card dust (MAX(0, ...))
+- Fixed midnight date staleness in Missions, Home, and Stats screens
+- Added content descriptions to all symbol-only battle controls for TalkBack accessibility
+- Added semantics to Ultimate Weapon bar slots
+- Replaced placeholder contact emails with real address in privacy policy, store listing, and Health Connect activity
+- Fixed README instrumented test reference (deferred, not available)
+
+### Remediation (R12)
+- Added Robolectric integration tests for widget SharedPreferences round-trip
+- Added deep-link intent routing tests
+- Added Room v7 schema round-trip tests (PlayerProfile, DailyStepRecord, WorkshopUpgrade)
+- Added end-to-end escrow lifecycle integration tests (escrow→release and escrow→discard)
 
 ### Release Prep
 - R8/ProGuard rules hardened for Room, Hilt, SQLCipher, Health Connect, sensors, WorkManager

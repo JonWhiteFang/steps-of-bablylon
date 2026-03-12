@@ -27,6 +27,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -103,22 +105,26 @@ fun BattleScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 listOf(1f, 2f, 4f).forEach { speed ->
+                    val desc = "Speed ${speed.toInt()}x"
                     if (state.speedMultiplier == speed) {
-                        Button(onClick = {}) { Text("${speed.toInt()}x") }
+                        Button(onClick = {}, modifier = Modifier.semantics { contentDescription = desc }) { Text("${speed.toInt()}x") }
                     } else {
                         FilledTonalButton(onClick = { viewModel.setSpeed(speed) },
                             colors = ButtonDefaults.filledTonalButtonColors(containerColor = Color.White.copy(alpha = 0.2f)),
+                            modifier = Modifier.semantics { contentDescription = desc },
                         ) { Text("${speed.toInt()}x", color = Color.White) }
                     }
                 }
                 FilledTonalButton(onClick = { viewModel.togglePause() },
                     colors = ButtonDefaults.filledTonalButtonColors(
                         containerColor = if (state.isPaused) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.2f)),
+                    modifier = Modifier.semantics { contentDescription = if (state.isPaused) "Resume" else "Pause" },
                 ) { Text(if (state.isPaused) "▶" else "⏸", color = Color.White) }
 
                 FilledTonalButton(onClick = { viewModel.toggleUpgradeMenu() },
                     colors = ButtonDefaults.filledTonalButtonColors(
                         containerColor = if (state.showUpgradeMenu) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.2f)),
+                    modifier = Modifier.semantics { contentDescription = "Upgrades" },
                 ) { Text("⬆", color = Color.White) }
 
                 // Overdrive button
@@ -128,6 +134,7 @@ fun BattleScreen(
                     colors = ButtonDefaults.filledTonalButtonColors(
                         containerColor = if (state.showOverdriveMenu) Color(0xFFFF9800) else Color.White.copy(alpha = 0.2f),
                         disabledContainerColor = Color.White.copy(alpha = 0.05f)),
+                    modifier = Modifier.semantics { contentDescription = "Step Overdrive" },
                 ) { Text("⚡", color = if (state.overdriveUsed) Color.Gray else Color.White) }
             }
         }

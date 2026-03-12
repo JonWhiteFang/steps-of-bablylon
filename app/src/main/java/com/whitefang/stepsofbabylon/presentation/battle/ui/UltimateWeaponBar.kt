@@ -15,6 +15,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -28,7 +30,11 @@ fun UltimateWeaponBar(slots: List<UWSlotInfo>, onActivate: (Int) -> Unit) {
             Box(
                 modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp))
                     .background(if (slot.isReady) Color(0xFF6A5ACD) else Color(0xFF2A2A3E))
-                    .clickable(enabled = slot.isReady) { onActivate(index) },
+                    .clickable(enabled = slot.isReady) { onActivate(index) }
+                    .semantics {
+                        contentDescription = if (slot.isReady) "Activate ${slot.typeName}"
+                        else "${slot.typeName} on cooldown, ${slot.cooldownRemaining.toInt()} seconds"
+                    },
                 contentAlignment = Alignment.Center,
             ) {
                 if (slot.isReady) {

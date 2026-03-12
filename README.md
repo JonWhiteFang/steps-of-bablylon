@@ -29,8 +29,8 @@ An Android idle tower defense game where real-world walking drives all progressi
 # Unit tests
 ./gradlew test
 
-# Instrumented tests (requires device/emulator)
-./gradlew connectedAndroidTest
+# Note: Instrumented tests (connectedAndroidTest) are planned but not yet implemented.
+# See AGENTS.md for current test coverage.
 
 # Lint
 ./gradlew lint
