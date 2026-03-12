@@ -6,7 +6,7 @@
 ## What works
 - Plans 01–30 + 10b: All foundation layers, battle system, full round lifecycle, tier/biome progression, all progression systems, notifications & widget, anti-cheat, monetization (stub), polish & VFX, balancing, testing, release prep complete.
 - Plan R (Remediation): All 12 sub-plans (R01–R12) complete. All bugs and UX issues from external review resolved.
-- DB version 7: 12 entities. 399 JVM tests, all green. Release APK builds (26MB).
+- DB version 7: 12 entities. 401 JVM tests, all green. Release APK builds (26MB).
 
 ## Known issues / debt
 - Billing/ads use stub implementations — real SDK integration deferred to Plan 31.
@@ -36,4 +36,4 @@
 - Balance report: docs/balance/balance-report.md
 - Release docs: docs/release/
 - Critical path: 01→…→30→R→31
-- Last run: 2026-03-12 (R12 Integration Test Coverage)
+- Last run: 2026-03-12 (Documentation Sweep & Corrections)

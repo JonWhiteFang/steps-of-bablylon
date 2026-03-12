@@ -2,6 +2,10 @@
 
 All notable changes to Steps of Babylon are documented here.
 
+## [Unreleased]
+
+- Plan 31: Play Console & Store Publication (in progress)
+
 ## [1.0.0] — 2026-03-10
 
 ### Core Gameplay
@@ -61,7 +65,7 @@ All notable changes to Steps of Babylon are documented here.
 - 12-screen Compose navigation with bottom nav bar
 
 ### Testing
-- 399 JVM unit tests covering all use cases, domain models, balance validation, ViewModels, anti-cheat, effects, step ingestion coordination, widget balance, walking mission progress, currency guards, UX feedback, and integration tests
+- 401 JVM unit tests covering all use cases, domain models, balance validation, ViewModels, anti-cheat, effects, step ingestion coordination, widget balance, walking mission progress, currency guards, UX feedback, and integration tests
 
 ### Remediation (R01–R05)
 - Fixed step double-crediting between StepCounterService and StepSyncWorker via heartbeat + Room baseline coordination
@@ -101,37 +105,10 @@ All notable changes to Steps of Babylon are documented here.
 - Release signing configuration with gitignored keystore.properties
 - Privacy policy and Play Store listing text
 
-## [Unreleased]
-
-### Documentation — All Plan Files Written
-
-- Written detailed plan files for Plans 02–30 in `docs/plans/`
-- Each plan includes: objective, task breakdown, file summary, completion criteria
-- Updated `AGENTS.md`, `.kiro/steering/structure.md` to reflect Plan 01 completion
-
-### Plan 01 — Domain Models & Currency System (Complete)
-
-- Added `Currency` enum (STEPS, CASH, GEMS, POWER_STONES)
-- Added `PlayerWallet` data class
-- Added all 23 `UpgradeType` entries with config (Attack/Defense/Utility)
-- Added `UpgradeCategory` enum
-- Added `Tier`, `TierConfig` with full tier table (1–10) matching GDD
-- Added `BattleCondition` enum (7 conditions)
-- Added `Biome` enum with `forTier()` mapping
-- Added `EnemyType` enum with speed/health/damage multipliers
-- Added `UltimateWeaponType` enum and `UltimateWeaponLoadout` (max 3)
-- Added `OverdriveType` enum with step costs and durations
-- Added `ResearchType` enum with 10 lab research types
-- Added `CardRarity`, `CardType` (9 cards), `CardLoadout` (max 3)
-- Added `RoundState` transient battle state model
-- Added `CalculateUpgradeCost` use case: `baseCost * (scaling ^ level)`
-- Added `CanAffordUpgrade` use case
-
-### Scaffold (Complete)
-
+### Scaffold & Foundation
 - Gradle 9.3.1 project with Kotlin DSL and version catalog
 - Hilt DI setup with `@HiltAndroidApp`
-- Room database skeleton (`AppDatabase`, `PlayerProfileEntity`)
-- Compose theme (Color, Theme)
-- Single Activity with HomeScreen placeholder
-- `DatabaseModule` Hilt provider
+- Room database skeleton, Compose theme, single Activity
+- Written detailed plan files for Plans 02–30 in `docs/plans/`
+- All core domain models (Plan 01): Currency, PlayerWallet, UpgradeType (23), TierConfig (1–10), BattleCondition (7), Biome (5), EnemyType (6), UltimateWeaponType (6), OverdriveType (4), ResearchType (10), CardType (9), CardRarity (3)
+- CalculateUpgradeCost and CanAffordUpgrade use cases

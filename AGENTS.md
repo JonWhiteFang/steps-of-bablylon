@@ -49,7 +49,7 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 ├── domain/         # Pure Kotlin — no Android imports
 │   ├── model/      # Currency, PlayerWallet, PlayerProfile, BattleConditionEffects, and all game domain models
 │   ├── repository/ # Repository interfaces
-│   └── usecase/    # CalculateUpgradeCost, CanAffordUpgrade, ResolveStats, CalculateDamage, CalculateDefense, PurchaseUpgrade, QuickInvest, UpdateBestWave, CheckTierUnlock, ActivateOverdrive, UnlockUltimateWeapon, UpgradeUltimateWeapon, CalculateResearchCost, CalculateResearchTime, StartResearch, CompleteResearch, RushResearch, UnlockLabSlot, CheckResearchCompletion, OpenCardPack, UpgradeCard, ApplyCardEffects, ManageCardLoadout, GenerateSupplyDrop, ClaimSupplyDrop, TrackWeeklyChallenge, TrackDailyLogin, AwardWaveMilestone, CheckMilestones, ClaimMilestone, GenerateDailyMissions
+│   └── usecase/    # CalculateUpgradeCost, CanAffordUpgrade, ResolveStats, CalculateDamage, CalculateDefense, PurchaseUpgrade, QuickInvest, UpdateBestWave, CheckTierUnlock, ActivateOverdrive, UnlockUltimateWeapon, UpgradeUltimateWeapon, CalculateResearchCost, CalculateResearchTime, StartResearch, CompleteResearch, RushResearch, UnlockLabSlot, CheckResearchCompletion, OpenCardPack, UpgradeCard, ApplyCardEffects, ManageCardLoadout, GenerateSupplyDrop, ClaimSupplyDrop, TrackWeeklyChallenge, TrackDailyLogin, AwardWaveMilestone, CheckMilestones, ClaimMilestone, GenerateDailyMissions, PurchaseGemPack
 ├── presentation/   # ViewModels, Compose screens, SurfaceView battle renderer
 │   ├── navigation/ # Screen routes, BottomNavBar
 │   ├── home/       # HomeScreen, TierSelector
@@ -79,14 +79,14 @@ See `.kiro/steering/source-files.md` for the full source file index.
 
 ## Plans & Roadmap
 
-Development follows a 31-plan master plan. See `docs/plans/master-plan.md` for the full index, dependency graph, and status tracker.
+Development follows a master plan with 33 entries (Plans 01–31, 10b, and R). See `docs/plans/master-plan.md` for the full index, dependency graph, and status tracker.
 
 ### Key Documents
 
 | Document | Path |
 |---|---|
 | Game Design Document | `docs/StepsOfBabylon_GDD.md` |
-| Master Plan (30 plans) | `docs/plans/master-plan.md` |
+| Master Plan (33 entries) | `docs/plans/master-plan.md` |
 | Plan 01: Domain Models | `docs/plans/plan-01-domain-models.md` |
 | Plan 02: Database & DAOs | `docs/plans/plan-02-database.md` |
 | Battle Formulas | `docs/battle-formulas.md` |
@@ -272,7 +272,7 @@ The battle screen uses a custom `SurfaceView` with a game loop (not Compose). Ke
 - **Run tests:** `./run-gradle.sh testDebugUnitTest`
 - **Test source:** `app/src/test/java/com/whitefang/stepsofbabylon/`
 - **Fakes:** `test/fakes/` — FakePlayerRepository, FakeWorkshopRepository, FakeUltimateWeaponRepository, FakeLabRepository, FakeCardRepository, FakeWalkingEncounterRepository, FakeStepRepository, FakeCosmeticRepository, FakeBillingManager, FakeRewardAdManager, FakeMilestoneDao, FakeDailyMissionDao, FakeDailyLoginDao, FakeWeeklyChallengeDao, FakeDailyStepDao (in-memory StateFlow-backed).
-- **Current coverage:** 399 JVM tests — all use cases, domain models with validation logic, battle condition effects, tier unlock logic, biome themes, EnemyScaler, StepRateLimiter, StepVelocityAnalyzer, StepCrossValidator, ActivityMinuteValidator, StepIngestionPreferences (heartbeat/day-start counter), StepIngestion (service/worker coordination, no double-credit), DailyStepManager (widget balance, walking mission progress), Labs research (cost/time/start/complete/rush/unlock/auto-complete), Cards (pack opening/upgrade/effects/loadout), Walking Encounters (supply drop generation/claiming), Wave Milestones (PS awards), Milestones (check/claim), Daily Missions (generation/types), ParticlePool (acquire/release/recycle/expire), ScreenShake (trigger/decay/override), DeathEffect (particle counts per enemy type), Balance validation (step economy, cost curves, enemy scaling, tier progression, cash economy, card balance, UW/overdrive balance, supply drop economy), ViewModel tests (Stats, UltimateWeapon, Supplies, Workshop, Cards, Labs, Home, Battle, Missions, Economy, Store), TrackDailyLogin, TrackWeeklyChallenge, Currency guards (non-negative clamp), UX feedback (user messages on failed actions), Integration tests (widget SharedPreferences, deep-link routing, Room v7 schema round-trip, escrow lifecycle).
+- **Current coverage:** 401 JVM tests — all use cases, domain models with validation logic, battle condition effects, tier unlock logic, biome themes, EnemyScaler, StepRateLimiter, StepVelocityAnalyzer, StepCrossValidator, ActivityMinuteValidator, StepIngestionPreferences (heartbeat/day-start counter), StepIngestion (service/worker coordination, no double-credit), DailyStepManager (widget balance, walking mission progress), Labs research (cost/time/start/complete/rush/unlock/auto-complete), Cards (pack opening/upgrade/effects/loadout), Walking Encounters (supply drop generation/claiming), Wave Milestones (PS awards), Milestones (check/claim), Daily Missions (generation/types), ParticlePool (acquire/release/recycle/expire), ScreenShake (trigger/decay/override), DeathEffect (particle counts per enemy type), Balance validation (step economy, cost curves, enemy scaling, tier progression, cash economy, card balance, UW/overdrive balance, supply drop economy), ViewModel tests (Stats, UltimateWeapon, Supplies, Workshop, Cards, Labs, Home, Battle, Missions, Economy, Store), TrackDailyLogin, TrackWeeklyChallenge, Currency guards (non-negative clamp), UX feedback (user messages on failed actions), Integration tests (widget SharedPreferences, deep-link routing, Room v7 schema round-trip, escrow lifecycle).
 
 ## Important Notes
 

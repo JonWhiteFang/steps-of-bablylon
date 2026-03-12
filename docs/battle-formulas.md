@@ -268,6 +268,8 @@ Research effects are additive per level (e.g., Damage Research: +5% per level).
 
 ## Step Multiplier
 
+> **Note:** STEP_MULTIPLIER is currently hidden from the Workshop UI (see Remediation R04). The formula is documented here for future implementation.
+
 ```
 bonusSteps = rawSteps × min(stepMultiplierLevel × 0.01, 1.00)
 totalSteps = rawSteps + bonusSteps

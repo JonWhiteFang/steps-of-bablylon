@@ -1174,3 +1174,50 @@ Full codebase documentation audit after R01–R05 remediation. Find and fix stal
 **Milestone:** Plan R (Remediation) fully complete. All 12 sub-plans done.
 
 **What's next:** Plan 31: Play Console & Store Publication.
+
+## 2026-03-12 — Documentation Sweep & Corrections
+
+**Objective:** Full codebase sweep for outdated/incorrect documentation.
+
+**What was done:**
+
+1. **AGENTS.md — Plan count fixed**: "31-plan master plan" → "33 entries (Plans 01–31, 10b, and R)". Key documents table: "30 plans" → "33 entries".
+
+2. **AGENTS.md — Missing use case**: Added `PurchaseGemPack` to architecture tree use case list (was 31, now 32 — matches codebase).
+
+3. **README.md — Plan count fixed**: "30-plan development roadmap" → "33-entry development roadmap".
+
+4. **structure.md — Test tree updated**: Added 16 missing test directories (data/healthconnect, data/local, data/integration, presentation/home, presentation/workshop, presentation/labs, presentation/cards, presentation/weapons, presentation/supplies, presentation/economy, presentation/missions, presentation/stats, presentation/store, presentation/ux, DeepLinkRoutingTest, service). Updated domain model/usecase descriptions.
+
+5. **tech.md — Missing libraries added**: mockito-kotlin 5.4.0, robolectric 4.14.1, androidx-test-core 1.6.1, hilt-work 1.3.0, compose-material-icons.
+
+6. **CHANGELOG.md — Structure fixed**: Moved [Unreleased] to top (for Plan 31 tracking). Folded historical scaffold/Plan 01 entries into v1.0.0 section.
+
+7. **battle-formulas.md — Step Multiplier note**: Added note that STEP_MULTIPLIER is currently hidden from Workshop UI (R04 remediation).
+
+8. **plan-05 filename renamed**: `plan-05-google-fit.md` → `plan-05-health-connect.md`. Updated master-plan.md link.
+
+9. **Version catalog cleanup**: Removed unused `kotlin-android` plugin from `libs.versions.toml`.
+
+10. **PurchaseGemPackTest added**: 2 tests (success delegation, error forwarding). Closes the only use case without test coverage. Updated source-files.md.
+
+11. **Test count updated**: 399 → 401 across AGENTS.md, CHANGELOG.md, STATE.md, release-checklist.md.
+
+**Test count:** 399 → 401 (all green).
+
+**Files changed:**
+- `AGENTS.md` — plan count (×2), use case list, test count
+- `README.md` — plan count
+- `.kiro/steering/structure.md` — test tree
+- `.kiro/steering/tech.md` — library table
+- `.kiro/steering/source-files.md` — added PurchaseGemPackTest
+- `CHANGELOG.md` — section order, test count
+- `docs/battle-formulas.md` — Step Multiplier note
+- `docs/plans/master-plan.md` — plan-05 link
+- `docs/plans/plan-05-health-connect.md` — renamed from plan-05-google-fit.md
+- `docs/release/release-checklist.md` — test count
+- `docs/agent/STATE.md` — test count
+- `gradle/libs.versions.toml` — removed unused kotlin-android plugin
+- `test/domain/usecase/PurchaseGemPackTest.kt` — new (2 tests)
+
+**What's next:** Plan 31: Play Console & Store Publication.

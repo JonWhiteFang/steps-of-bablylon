@@ -79,7 +79,7 @@ See [docs/architecture.md](docs/architecture.md) for layer rules and data flow.
 |---|---|
 | [Game Design Document](docs/StepsOfBabylon_GDD.md) | Full game design spec |
 | [Architecture](docs/architecture.md) | Clean Architecture layers and conventions |
-| [Master Plan](docs/plans/master-plan.md) | 30-plan development roadmap |
+| [Master Plan](docs/plans/master-plan.md) | 33-entry development roadmap |
 | [Battle Formulas](docs/battle-formulas.md) | All combat and economy math |
 | [Database Schema](docs/database-schema.md) | Room entities and migration strategy |
 | [Step Tracking](docs/step-tracking.md) | Sensor stack, anti-cheat, background service |

@@ -30,6 +30,11 @@ All versions managed in `gradle/libs.versions.toml`. Never hardcode versions in 
 | SQLite KTX | 2.4.0 | SQLite support library |
 | Core KTX | 1.17.0 | Kotlin extensions for Android |
 | Activity Compose | 1.12.3 | Compose Activity integration |
+| Hilt Work | 1.3.0 | Hilt WorkManager + Navigation Compose integration |
+| Compose Material Icons | (BOM) | Material icon set for Compose |
+| Mockito Kotlin | 5.4.0 | Kotlin-friendly mocking for tests |
+| Robolectric | 4.14.1 | Android framework simulation for JVM tests |
+| AndroidX Test Core | 1.6.1 | Test utilities for Android components |
 
 ## Gradle Plugins
 

@@ -326,6 +326,7 @@ domain/usecase/AwardWaveMilestoneTest.kt          # Wave milestone PS: 1/2/5 at 
 domain/usecase/CheckMilestonesTest.kt             # Milestone detection: threshold, claimed exclusion
 domain/usecase/ClaimMilestoneTest.kt              # Claim flow: reward crediting, idempotent guard
 domain/usecase/GenerateDailyMissionsTest.kt       # Mission generation: deterministic, one per category
+domain/usecase/PurchaseGemPackTest.kt             # Gem pack purchase: delegates to billing, error forwarding
 domain/model/MilestoneTest.kt                     # 6 milestones: thresholds, rewards, sorting
 domain/model/DailyMissionTypeTest.kt              # 6 mission types: targets, rewards, categories
 domain/model/TierConfigTest.kt                    # All 10 tiers, battle conditions, invalid tier

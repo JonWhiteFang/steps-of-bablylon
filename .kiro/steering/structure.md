@@ -42,15 +42,32 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 app/src/test/java/com/whitefang/stepsofbabylon/
 ├── fakes/              # In-memory fake repositories (FakePlayerRepository, FakeWorkshopRepository, FakeUltimateWeaponRepository, FakeLabRepository, FakeCardRepository, FakeWalkingEncounterRepository, FakeStepRepository, FakeCosmeticRepository, FakeBillingManager, FakeRewardAdManager, FakeMilestoneDao, FakeDailyMissionDao, FakeDailyLoginDao, FakeWeeklyChallengeDao, FakeDailyStepDao)
 ├── domain/
-│   ├── model/          # Domain model invariant tests (TierConfig, Biome, Loadouts, UpgradeType, EnemyType)
-│   └── usecase/        # Use case tests (cost, damage, defense, stats, purchase, best wave)
+│   ├── model/          # Domain model invariant tests (TierConfig, Biome, Loadouts, UpgradeType, EnemyType, Milestone, DailyMissionType, BattleConditionEffects)
+│   └── usecase/        # All 32 use case tests
 ├── presentation/
-│   └── battle/
-│       ├── engine/     # EnemyScaler tests
-│       └── biome/      # BiomeTheme tests
-│       └── effects/    # ParticlePool, ScreenShake, DeathEffect tests
-└── data/sensor/        # StepRateLimiter tests
-└── balance/            # Step economy, cost curves, enemy scaling, tier progression, cash, cards, UW, supply drops
+│   ├── battle/
+│   │   ├── engine/     # EnemyScaler tests
+│   │   ├── biome/      # BiomeTheme tests
+│   │   └── effects/    # ParticlePool, ScreenShake, DeathEffect tests
+│   ├── home/           # HomeViewModel tests
+│   ├── workshop/       # WorkshopViewModel tests
+│   ├── labs/           # LabsViewModel tests
+│   ├── cards/          # CardsViewModel tests
+│   ├── weapons/        # UltimateWeaponViewModel tests
+│   ├── supplies/       # UnclaimedSuppliesViewModel tests
+│   ├── economy/        # CurrencyDashboardViewModel tests
+│   ├── missions/       # MissionsViewModel tests
+│   ├── stats/          # StatsViewModel tests
+│   ├── store/          # StoreViewModel tests
+│   ├── ux/             # CurrencyGuard, UserFeedback tests
+│   └── DeepLinkRoutingTest.kt
+├── data/
+│   ├── sensor/         # StepRateLimiter, StepVelocityAnalyzer, StepIngestionPreferences, StepIngestion, DailyStepManager tests
+│   ├── healthconnect/  # StepCrossValidator, ActivityMinuteValidator tests
+│   ├── local/          # RoomSchema round-trip tests
+│   └── integration/    # Escrow lifecycle tests
+├── balance/            # Step economy, cost curves, enemy scaling, tier progression, cash, cards, UW, supply drops
+└── service/            # StepWidgetProvider tests
 ```
 
 ## Layer Rules
