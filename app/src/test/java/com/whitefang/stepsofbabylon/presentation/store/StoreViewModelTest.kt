@@ -75,3 +75,41 @@ class StoreViewModelTest {
         assertTrue(vm.uiState.value.cosmetics.first().isOwned)
     }
 }
+
+// Additional tests for R09 fixes
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class StoreViewModelSeasonPassTest {
+
+    private val dispatcher = StandardTestDispatcher()
+
+    @BeforeEach
+    fun setup() { Dispatchers.setMain(dispatcher) }
+
+    @AfterEach
+    fun tearDown() { Dispatchers.resetMain() }
+
+    @Test
+    fun `expired season pass shows as inactive`() = runTest(dispatcher) {
+        val playerRepo = FakePlayerRepository(PlayerProfile(
+            seasonPassActive = true,
+            seasonPassExpiry = System.currentTimeMillis() - 1000, // expired 1s ago
+        ))
+        val vm = StoreViewModel(playerRepo, FakeBillingManager(), FakeCosmeticRepository())
+        backgroundScope.launch { vm.uiState.collect {} }
+        advanceUntilIdle()
+        assertFalse(vm.uiState.value.seasonPassActive)
+    }
+
+    @Test
+    fun `active season pass with future expiry shows as active`() = runTest(dispatcher) {
+        val playerRepo = FakePlayerRepository(PlayerProfile(
+            seasonPassActive = true,
+            seasonPassExpiry = System.currentTimeMillis() + 86_400_000, // expires tomorrow
+        ))
+        val vm = StoreViewModel(playerRepo, FakeBillingManager(), FakeCosmeticRepository())
+        backgroundScope.launch { vm.uiState.collect {} }
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.seasonPassActive)
+    }
+}

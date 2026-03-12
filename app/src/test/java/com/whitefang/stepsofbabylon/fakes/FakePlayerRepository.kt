@@ -40,5 +40,7 @@ class FakePlayerRepository(
     override suspend fun updateSeasonPass(active: Boolean, expiry: Long) { profile.update { it.copy(seasonPassActive = active, seasonPassExpiry = expiry) } }
     override suspend fun updateFreeLabRushUsed(date: String) { profile.update { it.copy(freeLabRushUsedToday = date) } }
     override suspend fun updateFreeCardPackAdUsed(date: String) { profile.update { it.copy(freeCardPackAdUsedToday = date) } }
+    override suspend fun updateLastActiveAt(timestamp: Long) { profile.update { it.copy(lastActiveAt = timestamp) } }
+    override suspend fun getStepBalance(): Long = profile.value.stepBalance
     override suspend fun ensureProfileExists() {}
 }

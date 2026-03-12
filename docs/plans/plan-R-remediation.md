@@ -326,10 +326,10 @@ graph TD
 - [x] R03: Battle Workshop Wiring
 - [x] R04: Dead Upgrade Cleanup
 - [x] R05: Database Safety
-- [ ] R06: Widget Fix
-- [ ] R07: Live Mission Progress
-- [ ] R08: Notification & Reminder Fixes
-- [ ] R09: Deep-link & Premium State
+- [x] R06: Widget Fix
+- [x] R07: Live Mission Progress
+- [x] R08: Notification & Reminder Fixes
+- [x] R09: Deep-link & Premium State
 - [ ] R10: UX Feedback & Guards
 - [ ] R11: Accessibility & Docs
 - [ ] R12: Integration Test Coverage

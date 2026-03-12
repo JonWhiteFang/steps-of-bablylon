@@ -341,6 +341,7 @@ data/sensor/StepRateLimiterTest.kt                # Normal/burst caps, window ex
 data/sensor/StepVelocityAnalyzerTest.kt           # Natural/constant/jump patterns, window eviction
 data/sensor/StepIngestionPreferencesTest.kt        # Heartbeat write/read, day-start counter, day rollover
 data/sensor/StepIngestionTest.kt                   # Worker/service coordination: no double-credit, gap recovery, heartbeat gating
+data/sensor/DailyStepManagerTest.kt                 # Widget balance, walking mission progress updates
 data/healthconnect/StepCrossValidatorTest.kt      # Graduated response levels, offense tracking, escrow
 data/healthconnect/ActivityMinuteValidatorTest.kt # Duration/type/micro-session filtering
 presentation/battle/effects/ParticlePoolTest.kt   # Acquire/release/recycle/expire/clear/reset

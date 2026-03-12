@@ -50,6 +50,13 @@ import com.whitefang.stepsofbabylon.presentation.ui.theme.StepsOfBabylonTheme
 import com.whitefang.stepsofbabylon.presentation.weapons.UltimateWeaponScreen
 import com.whitefang.stepsofbabylon.presentation.workshop.WorkshopScreen
 import com.whitefang.stepsofbabylon.service.StepCounterService
+import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -57,6 +64,10 @@ import javax.inject.Inject
 class MainActivity : ComponentActivity() {
 
     @Inject lateinit var healthConnectWrapper: HealthConnectClientWrapper
+    @Inject lateinit var playerRepository: PlayerRepository
+
+    private val activityScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val pendingNavigation = MutableStateFlow<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -109,12 +120,21 @@ class MainActivity : ComponentActivity() {
                         permissionLauncher.launch(needed.toTypedArray())
                     }
 
-                    // Deep-link from notifications
-                    when (intent?.getStringExtra("navigate_to")) {
-                        "supplies" -> navController.navigate(Screen.Supplies.route)
-                        "workshop" -> navController.navigate(Screen.Workshop.route)
-                        "battle" -> navController.navigate(Screen.Battle.route)
-                        "missions" -> navController.navigate(Screen.Missions.route)
+                    // Push initial intent deep-link
+                    intent?.getStringExtra("navigate_to")?.let { pendingNavigation.value = it }
+                }
+
+                LaunchedEffect(Unit) {
+                    pendingNavigation.collect { route ->
+                        if (route != null) {
+                            when (route) {
+                                "supplies" -> navController.navigate(Screen.Supplies.route)
+                                "workshop" -> navController.navigate(Screen.Workshop.route)
+                                "battle" -> navController.navigate(Screen.Battle.route)
+                                "missions" -> navController.navigate(Screen.Missions.route)
+                            }
+                            pendingNavigation.value = null
+                        }
                     }
                 }
 
@@ -193,6 +213,23 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        activityScope.launch(Dispatchers.IO) {
+            playerRepository.updateLastActiveAt(System.currentTimeMillis())
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        intent.getStringExtra("navigate_to")?.let { pendingNavigation.value = it }
+    }
+
+    override fun onDestroy() {
+        activityScope.cancel()
+        super.onDestroy()
     }
 }
 

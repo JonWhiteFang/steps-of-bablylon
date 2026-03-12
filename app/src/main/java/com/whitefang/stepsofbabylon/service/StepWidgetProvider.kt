@@ -36,7 +36,7 @@ class StepWidgetProvider : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.widget_step_counter).apply {
                 setTextViewText(R.id.widget_daily_steps, "${fmt.format(steps)} steps")
                 setTextViewText(R.id.widget_balance, "Balance: ${fmt.format(balance)}")
-                setOnClickPendingIntent(android.R.id.background, PendingIntent.getActivity(
+                setOnClickPendingIntent(R.id.widget_root, PendingIntent.getActivity(
                     context, 0, Intent(context, MainActivity::class.java),
                     PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
                 ))

@@ -60,6 +60,11 @@ class PlayerRepositoryImpl @Inject constructor(
         dao.updateBestWavePerTier(updated)
     }
 
+    override suspend fun updateLastActiveAt(timestamp: Long) = dao.updateLastActiveAt(timestamp)
+
+    override suspend fun getStepBalance(): Long =
+        dao.get().first()?.currentStepBalance ?: 0
+
     override suspend fun ensureProfileExists() {
         if (dao.get().first() == null) {
             dao.upsert(PlayerProfileEntity())

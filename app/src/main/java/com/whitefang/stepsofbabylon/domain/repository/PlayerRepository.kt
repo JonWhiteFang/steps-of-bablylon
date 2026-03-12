@@ -26,5 +26,7 @@ interface PlayerRepository {
     suspend fun updateSeasonPass(active: Boolean, expiry: Long)
     suspend fun updateFreeLabRushUsed(date: String)
     suspend fun updateFreeCardPackAdUsed(date: String)
+    suspend fun getStepBalance(): Long
+    suspend fun updateLastActiveAt(timestamp: Long)
     suspend fun ensureProfileExists()
 }

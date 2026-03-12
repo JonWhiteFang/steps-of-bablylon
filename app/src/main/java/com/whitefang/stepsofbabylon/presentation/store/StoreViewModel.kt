@@ -32,7 +32,7 @@ class StoreViewModel @Inject constructor(
         StoreUiState(
             gems = profile.gems,
             adRemoved = profile.adRemoved,
-            seasonPassActive = profile.seasonPassActive,
+            seasonPassActive = profile.seasonPassActive && profile.seasonPassExpiry > System.currentTimeMillis(),
             seasonPassExpiry = profile.seasonPassExpiry,
             cosmetics = cosmetics.map {
                 CosmeticDisplayInfo(it.cosmeticId, it.category.name, it.name, it.description, it.priceGems, it.isOwned, it.isEquipped)

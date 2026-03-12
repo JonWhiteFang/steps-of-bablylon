@@ -1013,3 +1013,70 @@ Full codebase documentation audit after R01–R05 remediation. Find and fix stal
 
 ### Commands/tests run: N/A (documentation-only changes)
 ### Memory updated: STATE ✅ / RUN_LOG ✅
+
+## 2026-03-12 — R06 Widget Fix + R07 Live Mission Progress
+
+**Objective:** Fix two Tier 2 High-severity bugs from external code review.
+
+**R06 — Widget Fix (3 changes):**
+- `DailyStepManager.recordSteps()`: replaced hardcoded `0` balance with `playerRepository.getStepBalance()` call.
+- `widget_step_counter.xml`: added `android:id="@+id/widget_root"` to root LinearLayout.
+- `StepWidgetProvider.updateAllWidgets()`: changed click PendingIntent target from `android.R.id.background` to `R.id.widget_root`.
+- Added `getStepBalance()` to `PlayerRepository` interface, `PlayerRepositoryImpl`, and `FakePlayerRepository`.
+
+**R07 — Live Mission Progress (2 changes):**
+- Added `DailyMissionDao` as constructor dependency to `DailyStepManager`.
+- Added `updateWalkingMissions()` private method called after economy rewards in `recordSteps()`. Queries today's missions, filters to unclaimed/incomplete WALKING missions, updates progress based on `dailyCreditedTotal`.
+- Hilt auto-resolves the new dependency (DailyMissionDao already provided by DatabaseModule).
+
+**Tests added:** 6 new tests in `DailyStepManagerTest.kt`:
+- Widget receives real step balance after crediting
+- Widget balance accumulates across multiple credits
+- Walking mission progress updates on step credit
+- Walking mission completes when target reached
+- Battle mission is not updated by step credits
+- Already completed mission is not re-updated
+
+**Test count:** 373 → 379 (all green).
+
+**Files changed:**
+- `domain/repository/PlayerRepository.kt` — added `getStepBalance()`
+- `data/repository/PlayerRepositoryImpl.kt` — implemented `getStepBalance()`
+- `data/sensor/DailyStepManager.kt` — real widget balance, DailyMissionDao dep, walking mission updates
+- `service/StepWidgetProvider.kt` — fixed click target to `R.id.widget_root`
+- `res/layout/widget_step_counter.xml` — added `android:id` to root
+- `test/fakes/FakePlayerRepository.kt` — added `getStepBalance()`
+- `test/data/sensor/DailyStepManagerTest.kt` — new test file (6 tests)
+
+**What's next:** R08 (Notification & Reminder Fixes) + R09 (Deep-link & Premium State), parallelizable.
+
+## 2026-03-12 — R08 Notification & Reminder Fixes + R09 Deep-link & Premium State
+
+**Objective:** Fix two Tier 2 Medium-severity issues from external code review.
+
+**R08 — Notification & Reminder Fixes (2 changes):**
+- `NotificationSettingsScreen.kt`: Renamed "Step Counter" / "Persistent notification with daily steps" to "Step Count Updates" / "Show step count and balance in the notification" — accurately describes what the toggle controls.
+- Added `updateLastActiveAt(timestamp)` to `PlayerRepository` interface, `PlayerRepositoryImpl`, and `FakePlayerRepository`. Called from `MainActivity.onResume()` so `SmartReminderManager` has a fresh timestamp.
+
+**R09 — Deep-link & Premium State (3 changes):**
+- `MainActivity`: Added `pendingNavigation: MutableStateFlow<String?>`, `onNewIntent()` override, and a `LaunchedEffect` that collects the flow. Consolidates cold-start and warm-start deep-link handling. Supply drop notifications now navigate correctly when app is already open.
+- `StoreViewModel`: Added expiry check — `seasonPassActive = profile.seasonPassActive && profile.seasonPassExpiry > System.currentTimeMillis()` — matching HomeViewModel's logic.
+- `BattleViewModel.playAgain()`: Added `adRemoved = it.adRemoved` to the new `BattleUiState` constructor, preserving ad-free state across replays.
+
+**Tests added:** 2 new tests in `StoreViewModelSeasonPassTest`:
+- Expired season pass shows as inactive
+- Active season pass with future expiry shows as active
+
+**Test count:** 379 → 381 (all green).
+
+**Files changed:**
+- `domain/repository/PlayerRepository.kt` — added `updateLastActiveAt()`
+- `data/repository/PlayerRepositoryImpl.kt` — implemented `updateLastActiveAt()`
+- `presentation/MainActivity.kt` — onResume, onNewIntent, pendingNavigation flow, onDestroy
+- `presentation/settings/NotificationSettingsScreen.kt` — renamed toggle label
+- `presentation/store/StoreViewModel.kt` — season pass expiry check
+- `presentation/battle/BattleViewModel.kt` — preserve adRemoved on playAgain
+- `test/fakes/FakePlayerRepository.kt` — added `updateLastActiveAt()`
+- `test/presentation/store/StoreViewModelTest.kt` — 2 new season pass tests
+
+**What's next:** R10 (UX Feedback & Guards) + R11 (Accessibility & Docs), parallelizable.

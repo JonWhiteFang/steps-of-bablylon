@@ -1,10 +1,13 @@
 package com.whitefang.stepsofbabylon.data.sensor
 
 import com.whitefang.stepsofbabylon.data.anticheat.AntiCheatPreferences
+import com.whitefang.stepsofbabylon.data.local.DailyMissionDao
 import com.whitefang.stepsofbabylon.data.local.DailyLoginDao
 import com.whitefang.stepsofbabylon.data.local.DailyStepDao
 import com.whitefang.stepsofbabylon.data.local.WeeklyChallengeDao
 import com.whitefang.stepsofbabylon.domain.model.DropGeneratorState
+import com.whitefang.stepsofbabylon.domain.model.DailyMissionType
+import com.whitefang.stepsofbabylon.domain.model.MissionCategory
 import com.whitefang.stepsofbabylon.domain.model.SupplyDropTrigger
 import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
 import com.whitefang.stepsofbabylon.domain.repository.StepRepository
@@ -34,6 +37,7 @@ class DailyStepManager @Inject constructor(
     private val dailyLoginDao: DailyLoginDao,
     private val weeklyChallengeDao: WeeklyChallengeDao,
     private val dailyStepDao: DailyStepDao,
+    private val dailyMissionDao: DailyMissionDao,
     private val widgetUpdateHelper: WidgetUpdateHelper,
 ) {
     companion object {
@@ -115,7 +119,10 @@ class DailyStepManager @Inject constructor(
         }
 
         // Widget update
-        try { widgetUpdateHelper.update(dailyCreditedTotal, 0) } catch (_: Exception) {}
+        try {
+            val balance = playerRepository.getStepBalance()
+            widgetUpdateHelper.update(dailyCreditedTotal, balance)
+        } catch (_: Exception) {}
 
         // Supply drop generation
         val prevSteps = dropState.lastCheckSteps
@@ -136,6 +143,9 @@ class DailyStepManager @Inject constructor(
             trackDailyLogin.checkAndAward(currentDate, dailyCreditedTotal)
             trackWeeklyChallenge.checkAndAward()
         } catch (_: Exception) { /* best-effort */ }
+
+        // Walking mission progress
+        try { updateWalkingMissions() } catch (_: Exception) { /* best-effort */ }
     }
 
     suspend fun recordActivityMinutes(activityMinutes: Map<String, Int>, stepEquivalents: Long) {
@@ -170,5 +180,16 @@ class DailyStepManager @Inject constructor(
 
         stepRepository.updateActivityMinutes(currentDate, activityMinutes, credited)
         playerRepository.addSteps(credited)
+    }
+
+    private suspend fun updateWalkingMissions() {
+        val missions = dailyMissionDao.getByDateOnce(currentDate)
+        for (m in missions) {
+            if (m.claimed || m.completed) continue
+            val type = DailyMissionType.entries.find { it.name == m.missionType } ?: continue
+            if (type.category != MissionCategory.WALKING) continue
+            val progress = dailyCreditedTotal.toInt().coerceAtMost(m.target)
+            dailyMissionDao.updateProgress(m.id, progress, progress >= m.target)
+        }
     }
 }

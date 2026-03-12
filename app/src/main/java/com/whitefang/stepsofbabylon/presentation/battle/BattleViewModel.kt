@@ -187,7 +187,7 @@ class BattleViewModel @Inject constructor(
         cardCashBonus = cardResult.cashBonusPercent
         cardSecondWind = cardResult.secondWindHpPercent
         _uiState.update { BattleUiState(maxHp = resolvedStats.maxHealth, currentHp = resolvedStats.maxHealth,
-            speedMultiplier = it.speedMultiplier, isLoading = false, stepBalance = it.stepBalance) }
+            speedMultiplier = it.speedMultiplier, isLoading = false, stepBalance = it.stepBalance, adRemoved = it.adRemoved) }
         surfaceView?.configure(resolvedStats, tier, workshopLevels)
         engine?.initUWs(equippedWeapons)
         engine?.secondWindHpPercent = cardSecondWind; engine?.cashBonusPercent = cardCashBonus
