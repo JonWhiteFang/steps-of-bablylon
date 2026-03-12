@@ -208,7 +208,7 @@ graph TD
 - [x] **Plan 28: Balancing & Tuning** ✓
 - [x] **Plan 29: Testing & QA** ✓
 - [x] **Plan 30: Release Prep** ✓
-- [ ] **Plan R: Remediation** (external review fixes — Tier 1 blocks release)
+- [ ] **Plan R: Remediation** (R01–R09 complete; R10–R12 remaining — Tier 3)
 - [ ] **Plan 31: Play Console & Store Publication**
 
 ### Parallelizable Branches (after dependencies met)

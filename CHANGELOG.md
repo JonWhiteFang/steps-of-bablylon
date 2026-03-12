@@ -61,7 +61,7 @@ All notable changes to Steps of Babylon are documented here.
 - 12-screen Compose navigation with bottom nav bar
 
 ### Testing
-- 373 JVM unit tests covering all use cases, domain models, balance validation, ViewModels, anti-cheat, effects, and step ingestion coordination
+- 381 JVM unit tests covering all use cases, domain models, balance validation, ViewModels, anti-cheat, effects, step ingestion coordination, widget balance, and walking mission progress
 
 ### Remediation (R01–R05)
 - Fixed step double-crediting between StepCounterService and StepSyncWorker via heartbeat + Room baseline coordination
@@ -69,6 +69,16 @@ All notable changes to Steps of Babylon are documented here.
 - Fixed battle engine receiving empty workshop utility levels (CASH_BONUS/CASH_PER_WAVE/INTEREST)
 - Hidden unimplemented STEP_MULTIPLIER and RECOVERY_PACKAGES from Workshop UI
 - Disabled backup, added SQLCipher key recovery on keystore mismatch
+
+### Remediation (R06–R09)
+- Fixed widget showing 0 balance — now displays real step balance after crediting
+- Fixed widget click target not responding (missing android:id on root layout)
+- Walking missions now update live on step credit, not only when screen opens
+- Fixed notification settings label to accurately describe toggle behavior
+- lastActiveAt now updated on app resume for smart reminder accuracy
+- Fixed deep-link navigation when app is already open (warm-start intent handling)
+- Fixed Season Pass expiry check in Store screen (was ignoring expiry timestamp)
+- Fixed adRemoved state lost on Play Again in battle
 
 ### Release Prep
 - R8/ProGuard rules hardened for Room, Hilt, SQLCipher, Health Connect, sensors, WorkManager

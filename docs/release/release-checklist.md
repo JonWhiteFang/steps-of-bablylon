@@ -29,7 +29,7 @@
 - [ ] All notification channels work
 - [ ] Widget renders correctly
 - [ ] Battery usage acceptable (< 5% per day for step counting)
-- [ ] All 373 unit tests pass
+- [ ] All 381 unit tests pass
 
 ## Play Store Assets (Plan 31)
 
