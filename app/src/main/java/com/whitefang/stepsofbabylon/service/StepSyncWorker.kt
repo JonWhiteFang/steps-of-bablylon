@@ -52,12 +52,14 @@ class StepSyncWorker @AssistedInject constructor(
                 val result = activityMinuteConverter.convert(validSessions, sensorStepsPerMinute)
                 dailyStepManager.recordActivityMinutes(result.activityMinutes, result.stepEquivalents)
             }
-        } catch (_: Exception) {
-            // HC unavailable or error — skip gracefully
+        } catch (e: Exception) {
+            android.util.Log.w("StepSyncWorker", "HC sync failed", e)
         }
 
         // Smart reminders
-        try { smartReminderManager.checkAndNotify() } catch (_: Exception) {}
+        try { smartReminderManager.checkAndNotify() } catch (e: Exception) {
+            android.util.Log.w("StepSyncWorker", "Smart reminder failed", e)
+        }
 
         return Result.success()
     }

@@ -317,10 +317,10 @@ The two plans are complementary. Plan R focused on sensor-step double-crediting,
 - [x] R2-03: Hot Flow Cleanup
 - [x] R2-04: Battle Exit Navigation
 - [x] R2-05: Notification Setting Alignment
-- [ ] R2-06: Destructive Migration Removal
-- [ ] R2-07: Worker Error Observability
-- [ ] R2-08: Milestone Domain Hardening
-- [ ] R2-09: Silent Action Feedback
-- [ ] R2-10: Reactive Economy Dashboard
-- [ ] R2-11: Cosmetics UX Guard
-- [ ] R2-12: Activity-Minute Test Coverage
+- [x] R2-06: Destructive Migration Removal
+- [x] R2-07: Worker Error Observability
+- [x] R2-08: Milestone Domain Hardening
+- [x] R2-09: Silent Action Feedback
+- [x] R2-10: Reactive Economy Dashboard
+- [x] R2-11: Cosmetics UX Guard
+- [x] R2-12: Activity-Minute Test Coverage

@@ -87,6 +87,7 @@ data/healthconnect/ExerciseSessionReader.kt        # Reads exercise sessions for
 data/healthconnect/ActivityMinuteConverter.kt      # Converts exercise minutes to step-equivalents with caps
 data/healthconnect/ActivityMinuteValidator.kt      # Filters suspicious exercise sessions (duration/type/micro caps)
 data/BiomePreferences.kt                          # SharedPreferences wrapper for first-seen biome tracking
+data/MilestoneNotificationPreferences.kt           # SharedPreferences wrapper for milestone notification dedup
 data/NotificationPreferences.kt                   # SharedPreferences wrapper for 4 notification toggles
 data/SoundPreferences.kt                          # SharedPreferences wrapper for sound mute/volume
 data/anticheat/AntiCheatPreferences.kt            # SharedPreferences wrapper for anti-cheat counters + CV offense tracking

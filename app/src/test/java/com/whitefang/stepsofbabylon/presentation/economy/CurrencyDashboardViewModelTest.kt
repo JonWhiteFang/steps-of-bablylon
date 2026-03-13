@@ -76,4 +76,16 @@ class CurrencyDashboardViewModelTest {
         assertTrue(state.todayPsClaimed)
         assertTrue(state.todayGemsClaimed)
     }
+
+    @Test
+    fun `balances update reactively when profile changes`() = runTest(dispatcher) {
+        val vm = CurrencyDashboardViewModel(playerRepo, weeklyChallengeDao, dailyLoginDao, dailyStepDao)
+        backgroundScope.launch { vm.uiState.collect {} }
+        advanceUntilIdle()
+        assertEquals(100, vm.uiState.value.gems)
+
+        playerRepo.profile.value = playerRepo.profile.value.copy(gems = 250)
+        advanceUntilIdle()
+        assertEquals(250, vm.uiState.value.gems)
+    }
 }

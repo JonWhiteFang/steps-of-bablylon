@@ -2,6 +2,7 @@ package com.whitefang.stepsofbabylon.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.whitefang.stepsofbabylon.data.MilestoneNotificationPreferences
 import com.whitefang.stepsofbabylon.data.local.DailyLoginDao
 import com.whitefang.stepsofbabylon.data.local.DailyMissionDao
 import com.whitefang.stepsofbabylon.data.local.MilestoneDao
@@ -39,6 +40,7 @@ class HomeViewModel @Inject constructor(
     private val dailyMissionDao: DailyMissionDao,
     private val milestoneDao: MilestoneDao,
     private val milestoneNotificationManager: com.whitefang.stepsofbabylon.service.MilestoneNotificationManager,
+    private val milestoneNotificationPrefs: MilestoneNotificationPreferences,
 ) : ViewModel() {
 
     private val _currentDate = MutableStateFlow(LocalDate.now().toString())
@@ -58,7 +60,10 @@ class HomeViewModel @Inject constructor(
 
             val profile = playerRepository.observeProfile().first()
             val achievable = CheckMilestones(milestoneDao)(profile.totalStepsEarned)
-            achievable.firstOrNull()?.let { milestoneNotificationManager.notifyMilestoneAchieved(it.displayName) }
+            achievable.firstOrNull { !milestoneNotificationPrefs.hasNotified(it) }?.let {
+                milestoneNotificationManager.notifyMilestoneAchieved(it.displayName)
+                milestoneNotificationPrefs.markNotified(it)
+            }
         }
     }
 

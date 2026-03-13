@@ -1367,3 +1367,25 @@ Full codebase documentation audit after R01–R05 remediation. Find and fix stal
 - `service/StepCounterService.kt` — injected NotificationPreferences, preference-aware initial notification
 
 **What's next:** R2-06 (Destructive Migration Removal), then R2-07, R2-12.
+
+## 2026-03-13 — R2-06 through R2-12 (Final Remediation)
+
+**Objective:** Complete all remaining R2 sub-plans.
+
+**What was done:**
+- R2-06: Replaced `.fallbackToDestructiveMigration()` with `.fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)` in `DatabaseModule.kt`. Schema upgrades without explicit Migration now crash (fail-fast) instead of silently wiping data.
+- R2-07: Added `Log.w("StepSyncWorker", ...)` to both silent catch blocks in `StepSyncWorker.kt` (HC sync and smart reminders).
+- R2-09: Added user messages to all 3 silent early-return paths in `LabsViewModel.freeRush()`: "Season Pass required", "Free rush already used today", "No active research to rush".
+- R2-11: Disabled cosmetic purchase buttons in `StoreScreen.kt` — unowned cosmetics show disabled "Coming Soon" button. Updated description text. Equip/Unequip still works for owned items.
+- R2-08: (a) Added step-threshold validation to `ClaimMilestone` — reads `totalStepsEarned` and returns `false` if below `milestone.requiredSteps`. (b) Created `MilestoneNotificationPreferences` (SharedPreferences wrapper) for notification dedup. Wired into `HomeViewModel` — milestone notifications now fire at most once per milestone.
+- R2-10: Rewrote `CurrencyDashboardViewModel` with hybrid reactive approach — `combine()` of live `observeProfile()` flow + `MutableStateFlow<SnapshotData>` for weekly/login data. Added `refresh()` method. Added `LaunchedEffect(Unit)` in `CurrencyDashboardScreen` for refresh on entry.
+- R2-12: Added 2 remaining activity-minute tests (walking mission progress + widget updates). 4 of 6 tests already existed from R2-01.
+
+**Tests:** 401 JVM tests, all green (was 397). Added: 1 ClaimMilestone threshold test, 1 CurrencyDashboard reactive test, 2 activity-minute pipeline tests.
+
+**Decisions:**
+- Used SharedPreferences (not Room column) for milestone notification dedup — it's a UI concern, not game state. Avoids schema v8 migration.
+- Used `dropAllTables = true` parameter on `fallbackToDestructiveMigrationOnDowngrade()` to avoid Room deprecation warning.
+- Hybrid reactive approach for economy dashboard: live profile flow for balances, one-shot refresh for weekly/login data.
+
+**What remains:** Plan R2 fully complete. Plan 31 (Play Console & Store Publication) is unblocked.

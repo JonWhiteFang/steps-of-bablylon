@@ -110,7 +110,7 @@ fun StoreScreen(viewModel: StoreViewModel = hiltViewModel()) {
         item {
             Spacer(Modifier.height(8.dp))
             Text("Cosmetics", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Text("Visual application coming soon", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            Text("Cosmetic visuals are being finalized. Purchases are disabled until ready.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
         }
         items(state.cosmetics) { cosmetic ->
             Card(Modifier.fillMaxWidth()) {
@@ -124,9 +124,9 @@ fun StoreScreen(viewModel: StoreViewModel = hiltViewModel()) {
                         cosmetic.isEquipped -> OutlinedButton(onClick = { viewModel.unequipCosmetic(cosmetic.cosmeticId) }) { Text("Unequip") }
                         cosmetic.isOwned -> Button(onClick = { viewModel.equipCosmetic(cosmetic.cosmeticId) }) { Text("Equip") }
                         else -> Button(
-                            onClick = { viewModel.purchaseCosmetic(cosmetic.cosmeticId) },
-                            enabled = state.gems >= cosmetic.priceGems,
-                        ) { Text("${cosmetic.priceGems} 💎") }
+                            onClick = { },
+                            enabled = false,
+                        ) { Text("Coming Soon") }
                     }
                 }
             }

@@ -20,11 +20,10 @@ object DatabaseModule {
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
         val passphrase = DatabaseKeyManager.getPassphrase(context)
         val factory = SupportOpenHelperFactory(passphrase)
-        // Pre-release: destructive fallback handles dev/QA schema mismatches.
-        // Post-release: MUST add explicit Migration objects for every schema change.
+        // Downgrades (dev/QA only) reset gracefully; upgrades require explicit Migration objects.
         return Room.databaseBuilder(context, AppDatabase::class.java, "steps_of_babylon.db")
             .openHelperFactory(factory)
-            .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
             .build()
     }
 

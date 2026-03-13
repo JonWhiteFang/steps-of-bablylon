@@ -135,5 +135,5 @@ graph TD
 - [x] Plan 29: Testing & QA
 - [x] Plan 30: Release Prep
 - [x] Plan R: Remediation (R01–R12 complete)
-- [ ] Plan R2: Remediation 2 (R2-01–R2-12)
+- [x] Plan R2: Remediation 2 (R2-01–R2-12)
 - [ ] Plan 31: Play Console & Store Publication

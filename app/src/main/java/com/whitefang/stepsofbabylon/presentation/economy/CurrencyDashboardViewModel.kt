@@ -9,10 +9,10 @@ import com.whitefang.stepsofbabylon.data.local.WeeklyChallengeEntity
 import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -28,36 +28,51 @@ class CurrencyDashboardViewModel @Inject constructor(
     private val dailyStepDao: DailyStepDao,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(EconomyUiState())
-    val uiState: StateFlow<EconomyUiState> = _uiState.asStateFlow()
+    private data class SnapshotData(
+        val weeklySteps: Long = 0,
+        val weeklyClaimedTier: Int = 0,
+        val todayPsClaimed: Boolean = false,
+        val todayGemsClaimed: Boolean = false,
+    )
 
-    init {
-        viewModelScope.launch { loadState() }
-    }
+    private val snapshot = MutableStateFlow(SnapshotData())
 
-    private suspend fun loadState() {
-        val today = LocalDate.now()
-        val todayStr = today.format(DateTimeFormatter.ISO_LOCAL_DATE)
-        val monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-        val sunday = monday.plusDays(6)
-        val weekStart = monday.format(DateTimeFormatter.ISO_LOCAL_DATE)
-        val weekEnd = sunday.format(DateTimeFormatter.ISO_LOCAL_DATE)
+    init { viewModelScope.launch { refresh() } }
 
-        val profile = playerRepository.observeProfile().first()
-        val weeklySteps = dailyStepDao.sumCreditedSteps(weekStart, weekEnd)
-        val weekly = weeklyChallengeDao.getByWeek(weekStart) ?: WeeklyChallengeEntity(weekStartDate = weekStart)
-        val login = dailyLoginDao.getByDate(todayStr)
+    val uiState: StateFlow<EconomyUiState> = combine(
+        playerRepository.observeProfile(),
+        snapshot,
+    ) { profile, snap ->
+        EconomyUiState(
+            gems = profile.gems,
+            powerStones = profile.powerStones,
+            weeklySteps = snap.weeklySteps,
+            weeklyClaimedTier = snap.weeklyClaimedTier,
+            currentStreak = profile.currentStreak,
+            todayPsClaimed = snap.todayPsClaimed,
+            todayGemsClaimed = snap.todayGemsClaimed,
+            isLoading = false,
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), EconomyUiState())
 
-        _uiState.update {
-            EconomyUiState(
-                gems = profile.gems,
-                powerStones = profile.powerStones,
+    fun refresh() {
+        viewModelScope.launch {
+            val today = LocalDate.now()
+            val todayStr = today.format(DateTimeFormatter.ISO_LOCAL_DATE)
+            val monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+            val sunday = monday.plusDays(6)
+            val weekStart = monday.format(DateTimeFormatter.ISO_LOCAL_DATE)
+            val weekEnd = sunday.format(DateTimeFormatter.ISO_LOCAL_DATE)
+
+            val weeklySteps = dailyStepDao.sumCreditedSteps(weekStart, weekEnd)
+            val weekly = weeklyChallengeDao.getByWeek(weekStart) ?: WeeklyChallengeEntity(weekStartDate = weekStart)
+            val login = dailyLoginDao.getByDate(todayStr)
+
+            snapshot.value = SnapshotData(
                 weeklySteps = weeklySteps,
                 weeklyClaimedTier = weekly.claimedTier,
-                currentStreak = profile.currentStreak,
                 todayPsClaimed = login?.powerStoneClaimed ?: false,
                 todayGemsClaimed = login?.gemsClaimed ?: false,
-                isLoading = false,
             )
         }
     }

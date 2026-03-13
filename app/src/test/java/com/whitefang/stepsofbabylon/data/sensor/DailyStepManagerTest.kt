@@ -204,7 +204,28 @@ class DailyStepManagerTest {
         assertEquals(500L, playerRepo.getStepBalance())
     }
 
-    // --- R07: Walking mission progress ---
+    // --- R2-12: Activity-minute follow-on pipeline ---
+
+    @Test
+    fun `activity-minute credits trigger walking mission progress`() = runTest {
+        val today = manager.todayDate()
+        dailyMissionDao.insert(DailyMissionEntity(
+            date = today, missionType = DailyMissionType.WALK_5000.name,
+            target = 5000, rewardGems = 5,
+        ))
+
+        manager.recordActivityMinutes(mapOf("cycling" to 10), 500)
+
+        val missions = dailyMissionDao.getByDateOnce(today)
+        assertEquals(500, missions[0].progress)
+    }
+
+    @Test
+    fun `activity-minute credits trigger widget updates`() = runTest {
+        manager.recordActivityMinutes(mapOf("cycling" to 10), 500)
+
+        verify(widgetHelper, atLeastOnce()).update(org.mockito.kotlin.any(), org.mockito.kotlin.any())
+    }
 
     @Test
     fun `already completed mission is not re-updated`() = runTest {

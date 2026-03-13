@@ -145,10 +145,19 @@ class LabsViewModel @Inject constructor(
             _processing.value = true
             try {
                 val profile = playerRepository.observeProfile().first()
-                if (!profile.seasonPassActive || profile.seasonPassExpiry <= System.currentTimeMillis()) return@launch
-                if (profile.freeLabRushUsedToday == LocalDate.now().toString()) return@launch
+                if (!profile.seasonPassActive || profile.seasonPassExpiry <= System.currentTimeMillis()) {
+                    _userMessage.value = "Season Pass required"
+                    return@launch
+                }
+                if (profile.freeLabRushUsedToday == LocalDate.now().toString()) {
+                    _userMessage.value = "Free rush already used today"
+                    return@launch
+                }
                 val activeList = labRepository.observeActiveResearch().first()
-                activeList.find { it.type == type } ?: return@launch
+                if (activeList.find { it.type == type } == null) {
+                    _userMessage.value = "No active research to rush"
+                    return@launch
+                }
                 labRepository.completeResearch(type)
                 playerRepository.updateFreeLabRushUsed(LocalDate.now().toString())
                 updateResearchMission()

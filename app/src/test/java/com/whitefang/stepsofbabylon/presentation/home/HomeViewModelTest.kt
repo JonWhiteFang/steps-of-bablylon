@@ -1,5 +1,6 @@
 package com.whitefang.stepsofbabylon.presentation.home
 
+import com.whitefang.stepsofbabylon.data.MilestoneNotificationPreferences
 import com.whitefang.stepsofbabylon.domain.model.Biome
 import com.whitefang.stepsofbabylon.domain.model.DailyStepSummary
 import com.whitefang.stepsofbabylon.domain.model.PlayerProfile
@@ -34,6 +35,7 @@ class HomeViewModelTest {
     private val dailyMissionDao = FakeDailyMissionDao()
     private val dailyLoginDao = mock<com.whitefang.stepsofbabylon.data.local.DailyLoginDao>()
     private val milestoneNotificationManager = mock<MilestoneNotificationManager>()
+    private val milestoneNotificationPrefs = mock<MilestoneNotificationPreferences>()
 
     @BeforeEach
     fun setup() = runTest(dispatcher) {
@@ -56,6 +58,7 @@ class HomeViewModelTest {
     private fun createVm() = HomeViewModel(
         playerRepo, stepRepo, workshopRepo, labRepo, encounterRepo,
         dailyLoginDao, dailyMissionDao, milestoneDao, milestoneNotificationManager,
+        milestoneNotificationPrefs,
     )
 
     @Test

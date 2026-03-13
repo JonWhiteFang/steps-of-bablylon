@@ -2,6 +2,7 @@ package com.whitefang.stepsofbabylon.domain.usecase
 
 import com.whitefang.stepsofbabylon.data.local.MilestoneEntity
 import com.whitefang.stepsofbabylon.domain.model.Milestone
+import com.whitefang.stepsofbabylon.domain.model.PlayerProfile
 import com.whitefang.stepsofbabylon.fakes.FakeMilestoneDao
 import com.whitefang.stepsofbabylon.fakes.FakePlayerRepository
 import kotlinx.coroutines.flow.first
@@ -19,8 +20,17 @@ class ClaimMilestoneTest {
     @BeforeEach
     fun setup() {
         dao = FakeMilestoneDao()
-        playerRepo = FakePlayerRepository()
+        playerRepo = FakePlayerRepository(PlayerProfile(totalStepsEarned = 10_000_000))
         useCase = ClaimMilestone(dao, playerRepo)
+    }
+
+    @Test
+    fun `claiming milestone without reaching step threshold returns false`() = runTest {
+        val lowStepsRepo = FakePlayerRepository(PlayerProfile(totalStepsEarned = 500))
+        val uc = ClaimMilestone(dao, lowStepsRepo)
+        val result = uc(Milestone.MORNING_JOGGER) // requires 10,000
+        assertFalse(result)
+        assertEquals(0, lowStepsRepo.observeWallet().first().gems)
     }
 
     @Test
