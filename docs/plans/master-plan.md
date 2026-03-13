@@ -41,8 +41,9 @@ See `docs/StepsOfBabylon_GDD.md` for the full game design document.
 | 28 | [Balancing & Tuning](./plan-28-balancing.md) | Step economy tuning across player profiles, Workshop cost curves, enemy HP/damage scaling, tier difficulty curves, cash multiplier validation, Card balance pass. | Plan 27 |
 | 29 | [Testing & QA](./plan-29-testing.md) | Unit tests for domain logic (cost calcs, damage formulas, tier progression), ViewModel tests with fakes, Room DAO instrumented tests, step sensor integration tests, UI tests. | Plan 28 |
 | 30 | [Release Prep](./plan-30-release.md) | ProGuard/R8 config, app signing, Play Store listing assets, privacy policy, final build verification, AAB generation. | Plan 29 |
-| 31 | [Play Console & Store Publication](./plan-31-play-console.md) | Play Console setup, store listing upload, IAP/ad SDK integration, test tracks, pre-launch report, production release. | Plan 30, Plan R (Tier 1) |
+| 31 | [Play Console & Store Publication](./plan-31-play-console.md) | Play Console setup, store listing upload, IAP/ad SDK integration, test tracks, pre-launch report, production release. | Plan 30, Plan R (Tier 1), Plan R2 (Tier 1) |
 | R | [Remediation](./plan-R-remediation.md) | Bug and UX fixes from external code review. 12 sub-plans (R01–R12) across 3 priority tiers. Tier 1 blocks release. | Plan 30 |
+| R2 | [Remediation 2](./plan-R2-remediation.md) | Bug and UX fixes from second external review. 12 sub-plans (R2-01–R2-12) across 3 priority tiers. Tier 1 blocks release. | Plan R |
 
 ---
 
@@ -81,7 +82,8 @@ graph TD
     P28 --> P29[29: Testing & QA]
     P29 --> P30[30: Release Prep]
     P30 --> PR[R: Remediation]
-    PR --> P31[31: Play Console]
+    PR --> PR2[R2: Remediation 2]
+    PR2 --> P31[31: Play Console]
 ```
 
 ---
@@ -90,8 +92,9 @@ graph TD
 
 - Each plan will have its own detailed markdown file (e.g., `plan-01-domain-models.md`) created when that plan is ready to be worked on.
 - Plans can be worked on in parallel where dependencies allow (e.g., Plans 14, 15 can run in parallel since both depend on Plan 12).
-- The critical path runs: 01 → 02 → 03 → 06 → 08 → 09 → 10 → 11 → 12 → 13 → 18 → 27 → 28 → 29 → 30 → R (Tier 1) → 31.
+- The critical path runs: 01 → 02 → 03 → 06 → 08 → 09 → 10 → 11 → 12 → 13 → 18 → 27 → 28 → 29 → 30 → R (Tier 1) → R2 (Tier 1) → 31.
 - Plan R (Remediation) was added after an external code review. Tier 1 sub-plans (R01–R05) block production release. Tier 2 (R06–R09) should complete before release. Tier 3 (R10–R12) can follow shortly after.
+- Plan R2 (Remediation 2) was added after a second external code review. Tier 1 sub-plans (R2-01, R2-02, R2-06) block production release.
 - Plans 04/05, 16/17, 19/20/21, 22, 23 are feature branches that can be parallelized after their dependencies are met.
 
 ---
@@ -132,4 +135,5 @@ graph TD
 - [x] Plan 29: Testing & QA
 - [x] Plan 30: Release Prep
 - [x] Plan R: Remediation (R01–R12 complete)
+- [ ] Plan R2: Remediation 2 (R2-01–R2-12)
 - [ ] Plan 31: Play Console & Store Publication

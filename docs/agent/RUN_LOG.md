@@ -1221,3 +1221,37 @@ Full codebase documentation audit after R01–R05 remediation. Find and fix stal
 - `test/domain/usecase/PurchaseGemPackTest.kt` — new (2 tests)
 
 **What's next:** Plan 31: Play Console & Store Publication.
+
+---
+
+## 2026-03-13 — R2 Remediation Plan Creation
+
+**Trigger:** Second external code review (`docs/external-reviews/REPO_ANALYSIS_BUGS_AND_UX_2.md`).
+
+**What I did:**
+1. Read the full second external review (10 sections, 8 high-priority findings, ~30 total findings).
+2. Cross-referenced every finding against Plan R (first remediation, R01–R12, all complete) to identify what's genuinely new vs. already addressed.
+3. Verified current code state for all key findings: `DailyStepManager.recordActivityMinutes()`, `ClaimMilestone`, `stateIn(viewModelScope).value` pattern (12 occurrences), `PostRoundOverlay` button text, `NotificationSettingsScreen` wording, `DatabaseModule` migration config, `LabsViewModel.freeRush()`, `StoreScreen` cosmetics, `CurrencyDashboardViewModel`.
+4. Created `docs/plans/plan-R2-remediation.md` with 12 sub-plans (R2-01 through R2-12), organized by severity and dependency.
+5. Updated `docs/agent/STATE.md` with new objective, priorities, and references.
+
+**Key findings confirmed as genuinely new/unresolved:**
+- Activity-minute crediting is non-idempotent (Critical) — `recordActivityMinutes()` re-credits on process restart because `dailyCreditedTotal` initializes from `creditedSteps` (sensor-only), not including prior `stepEquivalents`.
+- Activity-minute pipeline bypasses widget/mission/drop/economy updates (High).
+- 12 `stateIn(viewModelScope).value` occurrences still present across 4 ViewModels (High).
+- "Return to Workshop" label still present (High).
+- Notification setting wording unchanged (High).
+- `.fallbackToDestructiveMigration()` still in DatabaseModule (High).
+- `freeRush()` still has silent returns (Medium).
+- `ClaimMilestone` still lacks step-threshold check (Medium).
+- Cosmetics still purchasable with "coming soon" label (Medium).
+- CurrencyDashboard still snapshot-based (Medium).
+
+**Files created:**
+- `docs/plans/plan-R2-remediation.md`
+
+**Files updated:**
+- `docs/agent/STATE.md`
+- `docs/agent/RUN_LOG.md`
+
+**What's next:** Begin R2-01 (Activity-Minute Idempotency), then R2-02, R2-06, R2-03 in priority order.

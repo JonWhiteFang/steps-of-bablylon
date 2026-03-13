@@ -4,7 +4,8 @@ All notable changes to Steps of Babylon are documented here.
 
 ## [Unreleased]
 
-- Plan 31: Play Console & Store Publication (in progress)
+- Plan R2: Remediation 2 — 12 sub-plans from second external review (R2-01–R2-12)
+- Plan 31: Play Console & Store Publication (blocked until R2 Tier 1 complete)
 
 ## [1.0.0] — 2026-03-10
 

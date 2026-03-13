@@ -79,14 +79,14 @@ See `.kiro/steering/source-files.md` for the full source file index.
 
 ## Plans & Roadmap
 
-Development follows a master plan with 33 entries (Plans 01–31, 10b, and R). See `docs/plans/master-plan.md` for the full index, dependency graph, and status tracker.
+Development follows a master plan with 34 entries (Plans 01–31, 10b, R, and R2). See `docs/plans/master-plan.md` for the full index, dependency graph, and status tracker.
 
 ### Key Documents
 
 | Document | Path |
 |---|---|
 | Game Design Document | `docs/StepsOfBabylon_GDD.md` |
-| Master Plan (33 entries) | `docs/plans/master-plan.md` |
+| Master Plan (34 entries) | `docs/plans/master-plan.md` |
 | Plan 01: Domain Models | `docs/plans/plan-01-domain-models.md` |
 | Plan 02: Database & DAOs | `docs/plans/plan-02-database.md` |
 | Battle Formulas | `docs/battle-formulas.md` |
@@ -129,8 +129,9 @@ Development follows a master plan with 33 entries (Plans 01–31, 10b, and R). S
 | 28 | Balancing & Tuning | Step economy, Workshop cost curves, enemy scaling, Card balance. | Plan 27 |
 | 29 | Testing & QA | Unit tests, ViewModel tests, DAO tests, sensor tests, UI tests. | Plan 28 |
 | 30 | Release Prep | ProGuard/R8, signing, Play Store assets, privacy policy, AAB. | Plan 29 |
-| 31 | Play Console & Store Publication | Console setup, store listing upload, IAP/ad SDK integration, test tracks, publication. | Plan 30, Plan R (Tier 1) |
+| 31 | Play Console & Store Publication | Console setup, store listing upload, IAP/ad SDK integration, test tracks, publication. | Plan 30, Plan R (Tier 1), Plan R2 (Tier 1) |
 | R | Remediation | Bug and UX fixes from external code review. 12 sub-plans (R01–R12), 3 priority tiers. | Plan 30 |
+| R2 | Remediation 2 | Bug and UX fixes from second external review. 12 sub-plans (R2-01–R2-12), 3 priority tiers. | Plan R |
 
 ### Dependency Graph
 
@@ -167,12 +168,13 @@ graph TD
     P28 --> P29[29: Testing & QA]
     P29 --> P30[30: Release Prep]
     P30 --> PR[R: Remediation]
-    PR --> P31[31: Play Console]
+    PR --> PR2[R2: Remediation 2]
+    PR2 --> P31[31: Play Console]
 ```
 
 ### Critical Path
 
-01 → 02 → 03 → 06 → 08 → 09 → 10 → 11 → 12 → 13 → 18 → 27 → 28 → 29 → 30 → R (Tier 1) → 31
+01 → 02 → 03 → 06 → 08 → 09 → 10 → 11 → 12 → 13 → 18 → 27 → 28 → 29 → 30 → R (Tier 1) → R2 (Tier 1) → 31
 
 ### Current Status
 
@@ -209,6 +211,7 @@ graph TD
 - [x] **Plan 29: Testing & QA** ✓
 - [x] **Plan 30: Release Prep** ✓
 - [x] **Plan R: Remediation** (R01–R12 complete)
+- [ ] **Plan R2: Remediation 2** (R2-01–R2-12)
 - [ ] **Plan 31: Play Console & Store Publication**
 
 ### Parallelizable Branches (after dependencies met)
