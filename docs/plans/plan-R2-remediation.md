@@ -313,7 +313,7 @@ The two plans are complementary. Plan R focused on sensor-step double-crediting,
 ## Status
 
 - [x] R2-01: Activity-Minute Idempotency
-- [ ] R2-02: Activity-Minute Pipeline Unification
+- [x] R2-02: Activity-Minute Pipeline Unification
 - [ ] R2-03: Hot Flow Cleanup
 - [ ] R2-04: Battle Exit Navigation
 - [ ] R2-05: Notification Setting Alignment

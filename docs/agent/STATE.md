@@ -8,6 +8,7 @@
 - Plans 01–30 + 10b: All foundation layers, battle system, full round lifecycle, tier/biome progression, all progression systems, notifications & widget, anti-cheat, monetization (stub), polish & VFX, balancing, testing, release prep complete.
 - Plan R (Remediation): All 12 sub-plans (R01–R12) complete. All bugs and UX issues from external review resolved.
 - R2-01 (Activity-Minute Idempotency): Complete. Delta-based crediting, shared ensureInitialized(), combined 50k ceiling.
+- R2-02 (Activity-Minute Pipeline Unification): Complete. Extracted runFollowOnPipeline(), called from both recordSteps() and recordActivityMinutes().
 - DB version 7: 12 entities. 397 JVM tests, all green. Release APK builds (26MB).
 
 ## Known issues / debt
@@ -15,25 +16,23 @@
 - Cosmetic visual application not implemented (R2-11 gates purchases).
 - Sound assets are placeholder sine wave tones.
 - No app icon resources.
-- Activity-minute pipeline bypasses widget/mission/drop/economy updates (R2-02).
 - 12 `stateIn(viewModelScope).value` occurrences in action handlers (R2-03).
 - `.fallbackToDestructiveMigration()` still in production DB config (R2-06).
 
 ## Top priorities (next 5)
-1. R2-02: Activity-Minute Pipeline Unification (High)
-2. R2-06: Destructive Migration Removal (High)
-3. R2-03: Hot Flow Cleanup (High)
-4. R2-04, R2-05, R2-07: Quick UX/observability fixes (High)
-5. R2-12: Activity-Minute Test Coverage (High, depends on R2-02)
+1. R2-06: Destructive Migration Removal (High)
+2. R2-03: Hot Flow Cleanup (High)
+3. R2-04, R2-05, R2-07: Quick UX/observability fixes (High)
+4. R2-12: Activity-Minute Test Coverage (High, R2-01+R2-02 done)
+5. R2-08 through R2-11: Tier 3 polish (Medium)
 
 ## Next actions (explicit order)
-1. Implement R2-02 (unify activity-minute pipeline with recordSteps follow-ons)
-2. Implement R2-06 (replace fallbackToDestructiveMigration)
-3. Implement R2-03 (replace stateIn().value with first())
-4. Implement R2-04, R2-05, R2-07 (quick UX/observability fixes)
-5. Implement R2-12 (activity-minute tests)
-6. Implement R2-08 through R2-11 (Tier 3 polish)
-7. Plan 31: Play Console & Store Publication
+1. Implement R2-06 (replace fallbackToDestructiveMigration)
+2. Implement R2-03 (replace stateIn().value with first())
+3. Implement R2-04, R2-05, R2-07 (quick UX/observability fixes)
+4. Implement R2-12 (activity-minute tests)
+5. Implement R2-08 through R2-11 (Tier 3 polish)
+6. Plan 31: Play Console & Store Publication
 
 ## Do-not-touch / fragile zones
 - `domain/model/` — stable, all constants validated by balance tests.
@@ -53,4 +52,4 @@
 - Balance report: docs/balance/balance-report.md
 - Release docs: docs/release/
 - Critical path: 01→…→30→R→R2→31
-- Last run: 2026-03-13 (R2-01 Activity-Minute Idempotency)
+- Last run: 2026-03-13 (R2-02 Activity-Minute Pipeline Unification)

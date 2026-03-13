@@ -1284,3 +1284,23 @@ Full codebase documentation audit after R01–R05 remediation. Find and fix stal
 - `test/data/sensor/DailyStepManagerTest.kt` — 5 new tests
 
 **What's next:** R2-02 (Activity-Minute Pipeline Unification), then R2-06, R2-03.
+
+## 2026-03-13 — R2-02: Activity-Minute Pipeline Unification
+
+**Objective:** Route activity-minute credits through the same follow-on pipeline as sensor steps (widget, supply drops, economy, missions).
+
+**Root cause:** `recordActivityMinutes()` only called `stepRepository.updateActivityMinutes()` and `playerRepository.addSteps()`. It skipped widget updates, supply drop generation, economy rewards (daily login, weekly challenge), and walking mission progress that `recordSteps()` performs.
+
+**What was done:**
+1. Extracted the follow-on pipeline (widget update, supply drop generation, economy rewards, walking mission progress) from `recordSteps()` into `private suspend fun runFollowOnPipeline(timestampMs: Long)`.
+2. `recordSteps()` now calls `runFollowOnPipeline(timestampMs)` instead of inlining the pipeline.
+3. `recordActivityMinutes()` now accepts `timestampMs: Long = System.currentTimeMillis()` and calls `runFollowOnPipeline(timestampMs)` after crediting steps.
+4. Each pipeline section wrapped in try/catch for best-effort consistency (supply drop generation was previously unwrapped — now consistent).
+5. No changes needed to `StepSyncWorker.kt` — the new `timestampMs` parameter has a default value.
+
+**Files changed:**
+- `data/sensor/DailyStepManager.kt` — extracted `runFollowOnPipeline()`, called from both methods
+
+**Test count:** 397 JVM tests — all green, 0 failures. No new tests (R2-12 adds coverage).
+
+**What's next:** R2-06 (Destructive Migration Removal), then R2-03, R2-04/05/07, R2-12.

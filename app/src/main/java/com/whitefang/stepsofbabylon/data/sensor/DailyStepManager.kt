@@ -129,37 +129,14 @@ class DailyStepManager @Inject constructor(
             stepsPerMinute.remove(oldest)
         }
 
-        // Widget update
-        try {
-            val balance = playerRepository.getStepBalance()
-            widgetUpdateHelper.update(dailyCreditedTotal, balance)
-        } catch (_: Exception) {}
-
-        // Supply drop generation
-        val prevSteps = dropState.lastCheckSteps
-        val unclaimedCount = walkingEncounterRepository.getUnclaimedCount()
-        val drop = generateSupplyDrop(dailyCreditedTotal, prevSteps, timestampMs, unclaimedCount)
-        if (drop != null) {
-            walkingEncounterRepository.enforceInboxCap(GenerateSupplyDrop.MAX_INBOX)
-            val id = walkingEncounterRepository.createDrop(drop.trigger, drop.reward, drop.rewardAmount)
-            supplyDropNotificationManager.notify(drop.copy(id = id.toInt()))
-        }
-        dropState = dropState.copy(
-            lastCheckSteps = dailyCreditedTotal,
-            milestoneTriggered = dropState.milestoneTriggered || (drop?.trigger == SupplyDropTrigger.DAILY_MILESTONE),
-        )
-
-        // Economy rewards
-        try {
-            trackDailyLogin.checkAndAward(currentDate, dailyCreditedTotal)
-            trackWeeklyChallenge.checkAndAward()
-        } catch (_: Exception) { /* best-effort */ }
-
-        // Walking mission progress
-        try { updateWalkingMissions() } catch (_: Exception) { /* best-effort */ }
+        runFollowOnPipeline(timestampMs)
     }
 
-    suspend fun recordActivityMinutes(activityMinutes: Map<String, Int>, stepEquivalents: Long) {
+    suspend fun recordActivityMinutes(
+        activityMinutes: Map<String, Int>,
+        stepEquivalents: Long,
+        timestampMs: Long = System.currentTimeMillis(),
+    ) {
         if (stepEquivalents <= 0) return
 
         ensureInitialized()
@@ -176,6 +153,41 @@ class DailyStepManager @Inject constructor(
 
         stepRepository.updateActivityMinutes(currentDate, activityMinutes, dailyActivityMinuteTotal)
         playerRepository.addSteps(credited)
+
+        runFollowOnPipeline(timestampMs)
+    }
+
+    private suspend fun runFollowOnPipeline(timestampMs: Long) {
+        // Widget update
+        try {
+            val balance = playerRepository.getStepBalance()
+            widgetUpdateHelper.update(dailyCreditedTotal, balance)
+        } catch (_: Exception) {}
+
+        // Supply drop generation
+        try {
+            val prevSteps = dropState.lastCheckSteps
+            val unclaimedCount = walkingEncounterRepository.getUnclaimedCount()
+            val drop = generateSupplyDrop(dailyCreditedTotal, prevSteps, timestampMs, unclaimedCount)
+            if (drop != null) {
+                walkingEncounterRepository.enforceInboxCap(GenerateSupplyDrop.MAX_INBOX)
+                val id = walkingEncounterRepository.createDrop(drop.trigger, drop.reward, drop.rewardAmount)
+                supplyDropNotificationManager.notify(drop.copy(id = id.toInt()))
+            }
+            dropState = dropState.copy(
+                lastCheckSteps = dailyCreditedTotal,
+                milestoneTriggered = dropState.milestoneTriggered || (drop?.trigger == SupplyDropTrigger.DAILY_MILESTONE),
+            )
+        } catch (_: Exception) {}
+
+        // Economy rewards
+        try {
+            trackDailyLogin.checkAndAward(currentDate, dailyCreditedTotal)
+            trackWeeklyChallenge.checkAndAward()
+        } catch (_: Exception) {}
+
+        // Walking mission progress
+        try { updateWalkingMissions() } catch (_: Exception) {}
     }
 
     private suspend fun updateWalkingMissions() {
