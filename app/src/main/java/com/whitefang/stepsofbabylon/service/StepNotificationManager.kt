@@ -63,6 +63,22 @@ class StepNotificationManager @Inject constructor(
             .build()
     }
 
+    fun buildMinimalNotification(): Notification {
+        val tapIntent = PendingIntent.getActivity(
+            context, 0,
+            Intent(context, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        return NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_menu_directions)
+            .setContentTitle("Steps of Babylon")
+            .setContentText("Step tracking active")
+            .setContentIntent(tapIntent)
+            .setOngoing(true)
+            .setSilent(true)
+            .build()
+    }
+
     fun updateNotification(dailySteps: Long, balance: Long) {
         if (!notificationPreferences.isPersistentEnabled()) return
         val now = System.currentTimeMillis()

@@ -8,6 +8,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.IBinder
+import com.whitefang.stepsofbabylon.data.NotificationPreferences
 import com.whitefang.stepsofbabylon.data.sensor.DailyStepManager
 import com.whitefang.stepsofbabylon.data.sensor.StepIngestionPreferences
 import com.whitefang.stepsofbabylon.data.sensor.StepSensorDataSource
@@ -33,12 +34,17 @@ class StepCounterService : Service() {
     @Inject lateinit var playerRepository: PlayerRepository
     @Inject lateinit var stepIngestionPrefs: StepIngestionPreferences
     @Inject lateinit var sensorManager: SensorManager
+    @Inject lateinit var notificationPreferences: NotificationPreferences
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
         super.onCreate()
-        val notification = notificationManager.buildNotification(0, 0)
+        val notification = if (notificationPreferences.isPersistentEnabled()) {
+            notificationManager.buildNotification(0, 0)
+        } else {
+            notificationManager.buildMinimalNotification()
+        }
         startForeground(
             StepNotificationManager.NOTIFICATION_ID,
             notification,

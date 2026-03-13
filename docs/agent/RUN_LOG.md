@@ -1345,3 +1345,25 @@ Full codebase documentation audit after R01–R05 remediation. Find and fix stal
 - `presentation/battle/BattleScreen.kt` — call site named argument
 
 **What's next:** R2-06 (Destructive Migration Removal), then R2-05/07, R2-12.
+
+## 2026-03-13 — R2-05: Notification Setting Alignment
+
+**Objective:** Fix misleading "Step Count Updates" toggle that implies users can hide the foreground notification entirely. Android requires a visible notification for foreground services.
+
+**What was done:**
+1. Renamed toggle title "Step Count Updates" → "Live Step Updates" in `NotificationSettingsScreen.kt`.
+2. Updated description to: "Update notification with live step count and balance. A minimal tracking notification is always shown while step counting is active."
+3. Added `buildMinimalNotification()` to `StepNotificationManager.kt` — shows "Step tracking active" with no counts/balance/action buttons.
+4. Injected `NotificationPreferences` into `StepCounterService.kt` and added preference check in `onCreate()` to choose full vs minimal notification at startup.
+
+**Verification:**
+- Build successful, all 397 JVM tests pass
+- Toggle ON → full notification with live counts + Workshop/Battle buttons
+- Toggle OFF → clean "Step tracking active" notification, no frozen zeroes
+
+**Files changed:**
+- `presentation/settings/NotificationSettingsScreen.kt` — toggle title + description text
+- `service/StepNotificationManager.kt` — added `buildMinimalNotification()`
+- `service/StepCounterService.kt` — injected NotificationPreferences, preference-aware initial notification
+
+**What's next:** R2-06 (Destructive Migration Removal), then R2-07, R2-12.

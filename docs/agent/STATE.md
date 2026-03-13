@@ -11,6 +11,7 @@
 - R2-02 (Activity-Minute Pipeline Unification): Complete. Extracted runFollowOnPipeline(), called from both recordSteps() and recordActivityMinutes().
 - R2-03 (Hot Flow Cleanup): Complete. Replaced 12 stateIn(viewModelScope).value with first() or uiState.value reads.
 - R2-04 (Battle Exit Navigation): Complete. Renamed "Return to Workshop" → "Leave Battle", parameter onReturnToWorkshop → onExitBattle.
+- R2-05 (Notification Setting Alignment): Complete. Renamed toggle "Step Count Updates" → "Live Step Updates", clarified description, added minimal notification variant for when live updates disabled.
 - DB version 7: 12 entities. 397 JVM tests, all green. Release APK builds (26MB).
 
 ## Known issues / debt
@@ -22,14 +23,14 @@
 
 ## Top priorities (next 5)
 1. R2-06: Destructive Migration Removal (High)
-2. R2-05, R2-07: Quick UX/observability fixes (High)
+2. R2-07: Worker Error Observability (High)
 3. R2-12: Activity-Minute Test Coverage (High, R2-01+R2-02 done)
 4. R2-08 through R2-11: Tier 3 polish (Medium)
 5. Plan 31: Play Console & Store Publication
 
 ## Next actions (explicit order)
 1. Implement R2-06 (replace fallbackToDestructiveMigration)
-2. Implement R2-05, R2-07 (quick UX/observability fixes)
+2. Implement R2-07 (worker error observability)
 3. Implement R2-12 (activity-minute tests)
 4. Implement R2-08 through R2-11 (Tier 3 polish)
 5. Plan 31: Play Console & Store Publication
@@ -52,4 +53,4 @@
 - Balance report: docs/balance/balance-report.md
 - Release docs: docs/release/
 - Critical path: 01→…→30→R→R2→31
-- Last run: 2026-03-13 (R2-04 Battle Exit Navigation)
+- Last run: 2026-03-13 (R2-05 Notification Setting Alignment)

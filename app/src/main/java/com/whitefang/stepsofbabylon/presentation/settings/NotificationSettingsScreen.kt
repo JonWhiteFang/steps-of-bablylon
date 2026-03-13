@@ -18,7 +18,7 @@ fun NotificationSettingsScreen(viewModel: NotificationSettingsViewModel = hiltVi
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Notification Settings", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
-        ToggleRow("Step Count Updates", "Show step count and balance in the notification", state.persistentSteps, viewModel::setPersistent)
+        ToggleRow("Live Step Updates", "Update notification with live step count and balance. A minimal tracking notification is always shown while step counting is active.", state.persistentSteps, viewModel::setPersistent)
         ToggleRow("Supply Drops", "Notifications for walking rewards", state.supplyDrops, viewModel::setSupplyDrops)
         ToggleRow("Smart Reminders", "Upgrade proximity reminders", state.smartReminders, viewModel::setSmartReminders)
         ToggleRow("Milestone Alerts", "Wave records and step milestones", state.milestoneAlerts, viewModel::setMilestoneAlerts)
