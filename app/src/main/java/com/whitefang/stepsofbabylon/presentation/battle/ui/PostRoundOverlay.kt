@@ -31,7 +31,7 @@ import com.whitefang.stepsofbabylon.presentation.battle.RoundEndState
 fun PostRoundOverlay(
     state: RoundEndState,
     onPlayAgain: () -> Unit,
-    onReturnToWorkshop: () -> Unit,
+    onExitBattle: () -> Unit,
     onWatchGemAd: () -> Unit = {},
     onWatchPsAd: () -> Unit = {},
 ) {
@@ -107,8 +107,8 @@ fun PostRoundOverlay(
                     Text("Play Again")
                 }
                 Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = onReturnToWorkshop, modifier = Modifier.fillMaxWidth()) {
-                    Text("Return to Workshop")
+                OutlinedButton(onClick = onExitBattle, modifier = Modifier.fillMaxWidth()) {
+                    Text("Leave Battle")
                 }
             }
         }

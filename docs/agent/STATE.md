@@ -10,6 +10,7 @@
 - R2-01 (Activity-Minute Idempotency): Complete. Delta-based crediting, shared ensureInitialized(), combined 50k ceiling.
 - R2-02 (Activity-Minute Pipeline Unification): Complete. Extracted runFollowOnPipeline(), called from both recordSteps() and recordActivityMinutes().
 - R2-03 (Hot Flow Cleanup): Complete. Replaced 12 stateIn(viewModelScope).value with first() or uiState.value reads.
+- R2-04 (Battle Exit Navigation): Complete. Renamed "Return to Workshop" → "Leave Battle", parameter onReturnToWorkshop → onExitBattle.
 - DB version 7: 12 entities. 397 JVM tests, all green. Release APK builds (26MB).
 
 ## Known issues / debt
@@ -21,14 +22,14 @@
 
 ## Top priorities (next 5)
 1. R2-06: Destructive Migration Removal (High)
-2. R2-04, R2-05, R2-07: Quick UX/observability fixes (High)
+2. R2-05, R2-07: Quick UX/observability fixes (High)
 3. R2-12: Activity-Minute Test Coverage (High, R2-01+R2-02 done)
 4. R2-08 through R2-11: Tier 3 polish (Medium)
 5. Plan 31: Play Console & Store Publication
 
 ## Next actions (explicit order)
 1. Implement R2-06 (replace fallbackToDestructiveMigration)
-2. Implement R2-04, R2-05, R2-07 (quick UX/observability fixes)
+2. Implement R2-05, R2-07 (quick UX/observability fixes)
 3. Implement R2-12 (activity-minute tests)
 4. Implement R2-08 through R2-11 (Tier 3 polish)
 5. Plan 31: Play Console & Store Publication
@@ -51,4 +52,4 @@
 - Balance report: docs/balance/balance-report.md
 - Release docs: docs/release/
 - Critical path: 01→…→30→R→R2→31
-- Last run: 2026-03-13 (R2-03 Hot Flow Cleanup)
+- Last run: 2026-03-13 (R2-04 Battle Exit Navigation)

@@ -1326,3 +1326,22 @@ Full codebase documentation audit after R01–R05 remediation. Find and fix stal
 - `presentation/store/StoreViewModel.kt` — 1 fix
 
 **What's next:** R2-06 (Destructive Migration Removal), then R2-04/05/07, R2-12.
+
+## 2026-03-13 — R2-04: Battle Exit Navigation
+
+**Objective:** Fix "Return to Workshop" button label/behavior mismatch in PostRoundOverlay. The button calls `navController.popBackStack()` which returns to whatever screen preceded battle, not necessarily Workshop.
+
+**What was done:**
+1. Renamed parameter `onReturnToWorkshop` → `onExitBattle` in `PostRoundOverlay.kt` (matches `BattleScreen`'s existing `onExitBattle` naming).
+2. Changed button text from "Return to Workshop" → "Leave Battle".
+3. Updated named argument at call site in `BattleScreen.kt` from `onReturnToWorkshop =` → `onExitBattle =`.
+
+**Verification:**
+- `grep onReturnToWorkshop|Return to Workshop` across `app/src/` returns 0 matches
+- Build successful, all 397 JVM tests pass
+
+**Files changed:**
+- `presentation/battle/ui/PostRoundOverlay.kt` — parameter rename + button text
+- `presentation/battle/BattleScreen.kt` — call site named argument
+
+**What's next:** R2-06 (Destructive Migration Removal), then R2-05/07, R2-12.
