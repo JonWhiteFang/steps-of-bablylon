@@ -1304,3 +1304,25 @@ Full codebase documentation audit after R01–R05 remediation. Find and fix stal
 **Test count:** 397 JVM tests — all green, 0 failures. No new tests (R2-12 adds coverage).
 
 **What's next:** R2-06 (Destructive Migration Removal), then R2-03, R2-04/05/07, R2-12.
+
+## 2026-03-13 — R2-03: Hot Flow Cleanup
+
+**Objective:** Replace 12 `observeX().stateIn(viewModelScope).value` calls in ViewModel action handlers with `first()` or `uiState.value` reads. Each leaked call created a hot StateFlow tied to the ViewModel scope that was never cancelled.
+
+**What was done:**
+1. **WorkshopViewModel** (2 occurrences): Replaced `observeWallet().stateIn(viewModelScope).value` with `observeWallet().first()` in `purchase()` and `quickInvest()`. Use cases require full `PlayerWallet` not available in `uiState`. Removed unused `import kotlinx.coroutines.flow.update`.
+2. **CardsViewModel** (3 occurrences): Replaced `observeProfile().stateIn(viewModelScope).value` with `uiState.value` reads in `openPack()` (`.gems`), `upgradeCard()` (`.cardDust`), and `watchFreePackAd()` (`.gems`). All values already materialized in UI state.
+3. **LabsViewModel** (6 occurrences): 5 replaced with `first()` — `startResearch()`, `rushResearch()` (profile + activeList), `freeRush()` (profile + activeList) — needed full domain objects (`profile.toWallet()`, season pass fields). 1 replaced with `uiState.value` — `unlockSlot()` only needed `totalSlots` and `gems`.
+4. **StoreViewModel** (1 occurrence): Replaced `observeProfile().stateIn(viewModelScope).value` with `uiState.value.gems` in `purchaseCosmetic()`.
+
+**Verification:**
+- `grep stateIn(viewModelScope).value` across presentation/ returns 0 matches
+- All 397 JVM tests pass, 0 failures
+
+**Files changed:**
+- `presentation/workshop/WorkshopViewModel.kt` — 2 fixes + 1 unused import removed
+- `presentation/cards/CardsViewModel.kt` — 3 fixes
+- `presentation/labs/LabsViewModel.kt` — 6 fixes + `first` import added
+- `presentation/store/StoreViewModel.kt` — 1 fix
+
+**What's next:** R2-06 (Destructive Migration Removal), then R2-04/05/07, R2-12.

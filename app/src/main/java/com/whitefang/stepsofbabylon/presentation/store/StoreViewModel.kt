@@ -75,9 +75,8 @@ class StoreViewModel @Inject constructor(
         viewModelScope.launch {
             _purchasing.value = true
             try {
-                val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
                 val cosmetic = uiState.value.cosmetics.find { it.cosmeticId == cosmeticId } ?: return@launch
-                if (profile.gems >= cosmetic.priceGems) {
+                if (uiState.value.gems >= cosmetic.priceGems) {
                     playerRepository.spendGems(cosmetic.priceGems)
                     cosmeticRepository.purchase(cosmeticId)
                 } else {

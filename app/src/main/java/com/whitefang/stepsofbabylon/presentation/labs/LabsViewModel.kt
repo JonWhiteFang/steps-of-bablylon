@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -104,7 +105,7 @@ class LabsViewModel @Inject constructor(
         viewModelScope.launch {
             _processing.value = true
             try {
-                val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
+                val profile = playerRepository.observeProfile().first()
                 val result = startResearch(type, profile.toWallet(), profile.labSlotCount)
                 if (result !is StartResearch.Result.Success) {
                     _userMessage.value = when (result) {
@@ -126,8 +127,8 @@ class LabsViewModel @Inject constructor(
         viewModelScope.launch {
             _processing.value = true
             try {
-                val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
-                val activeList = labRepository.observeActiveResearch().stateIn(viewModelScope).value
+                val profile = playerRepository.observeProfile().first()
+                val activeList = labRepository.observeActiveResearch().first()
                 val active = activeList.find { it.type == type } ?: return@launch
                 val result = rushResearch(type, active, profile.toWallet())
                 if (result is RushResearch.Result.Rushed) updateResearchMission()
@@ -143,10 +144,10 @@ class LabsViewModel @Inject constructor(
         viewModelScope.launch {
             _processing.value = true
             try {
-                val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
+                val profile = playerRepository.observeProfile().first()
                 if (!profile.seasonPassActive || profile.seasonPassExpiry <= System.currentTimeMillis()) return@launch
                 if (profile.freeLabRushUsedToday == LocalDate.now().toString()) return@launch
-                val activeList = labRepository.observeActiveResearch().stateIn(viewModelScope).value
+                val activeList = labRepository.observeActiveResearch().first()
                 activeList.find { it.type == type } ?: return@launch
                 labRepository.completeResearch(type)
                 playerRepository.updateFreeLabRushUsed(LocalDate.now().toString())
@@ -162,8 +163,7 @@ class LabsViewModel @Inject constructor(
         viewModelScope.launch {
             _processing.value = true
             try {
-                val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
-                val result = unlockLabSlot(profile.labSlotCount, profile.gems)
+                val result = unlockLabSlot(uiState.value.totalSlots, uiState.value.gems)
                 if (result !is UnlockLabSlot.Result.Unlocked) _userMessage.value = "Not enough Gems or max slots reached"
             } finally {
                 _processing.value = false

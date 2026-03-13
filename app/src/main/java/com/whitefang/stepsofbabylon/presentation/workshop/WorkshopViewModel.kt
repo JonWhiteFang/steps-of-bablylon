@@ -16,8 +16,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
@@ -80,7 +80,7 @@ class WorkshopViewModel @Inject constructor(
                     _userMessage.value = "Already at max level"
                     return@launch
                 }
-                val wallet = playerRepository.observeWallet().stateIn(viewModelScope).value
+                val wallet = playerRepository.observeWallet().first()
                 val cost = calculateCost(type, level)
                 val success = purchaseUpgrade(type, level, wallet)
                 if (success) {
@@ -107,7 +107,7 @@ class WorkshopViewModel @Inject constructor(
         viewModelScope.launch {
             _processing.value = true
             try {
-                val wallet = playerRepository.observeWallet().stateIn(viewModelScope).value
+                val wallet = playerRepository.observeWallet().first()
                 val target = quickInvest(allUpgrades, wallet)
                 if (target == null) {
                     _userMessage.value = "No affordable upgrades"

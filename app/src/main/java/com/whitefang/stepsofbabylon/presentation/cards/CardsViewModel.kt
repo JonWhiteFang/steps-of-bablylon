@@ -78,8 +78,7 @@ class CardsViewModel @Inject constructor(
         viewModelScope.launch {
             _processing.value = true
             try {
-                val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
-                val result = openCardPack(packTier, profile.gems, allCards)
+                val result = openCardPack(packTier, uiState.value.gems, allCards)
                 if (result is OpenCardPack.Result.Opened) {
                     _lastPackResult.value = result.cards
                 } else {
@@ -101,13 +100,12 @@ class CardsViewModel @Inject constructor(
                     _userMessage.value = "Card already at max level"
                     return@launch
                 }
-                val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
                 val dustCost = card.level * card.type.rarity.upgradeDustPerLevel
-                if (profile.cardDust < dustCost) {
+                if (uiState.value.cardDust < dustCost) {
                     _userMessage.value = "Not enough Card Dust"
                     return@launch
                 }
-                upgradeCard(card, profile.cardDust)
+                upgradeCard(card, uiState.value.cardDust)
             } finally {
                 _processing.value = false
             }
@@ -134,8 +132,7 @@ class CardsViewModel @Inject constructor(
             try {
                 val result = rewardAdManager.showRewardAd(AdPlacement.DAILY_FREE_CARD_PACK)
                 if (result is AdResult.Rewarded) {
-                    val profile = playerRepository.observeProfile().stateIn(viewModelScope).value
-                    val packResult = openCardPack(PackTier.COMMON, profile.gems, allCards, isFree = true)
+                    val packResult = openCardPack(PackTier.COMMON, uiState.value.gems, allCards, isFree = true)
                     if (packResult is OpenCardPack.Result.Opened) _lastPackResult.value = packResult.cards
                     playerRepository.updateFreeCardPackAdUsed(LocalDate.now().toString())
                 }
