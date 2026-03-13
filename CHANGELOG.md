@@ -66,7 +66,7 @@ All notable changes to Steps of Babylon are documented here.
 - 12-screen Compose navigation with bottom nav bar
 
 ### Testing
-- 401 JVM unit tests covering all use cases, domain models, balance validation, ViewModels, anti-cheat, effects, step ingestion coordination, widget balance, walking mission progress, currency guards, UX feedback, and integration tests
+- 397 JVM unit tests covering all use cases, domain models, balance validation, ViewModels, anti-cheat, effects, step ingestion coordination, widget balance, walking mission progress, activity-minute idempotency, currency guards, UX feedback, and integration tests
 
 ### Remediation (R01–R05)
 - Fixed step double-crediting between StepCounterService and StepSyncWorker via heartbeat + Room baseline coordination

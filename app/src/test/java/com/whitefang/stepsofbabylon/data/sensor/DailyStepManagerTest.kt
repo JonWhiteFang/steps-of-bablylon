@@ -135,6 +135,77 @@ class DailyStepManagerTest {
         assertFalse(missions[0].completed)
     }
 
+    // --- R2-01: Activity-minute idempotency ---
+
+    @Test
+    fun `activity minutes credit correct step-equivalents`() = runTest {
+        manager.recordActivityMinutes(mapOf("cycling" to 10), 500)
+        assertEquals(500L, playerRepo.getStepBalance())
+    }
+
+    @Test
+    fun `duplicate activity-minute call produces zero additional credits`() = runTest {
+        val minutes = mapOf("cycling" to 10)
+        manager.recordActivityMinutes(minutes, 500)
+        manager.recordActivityMinutes(minutes, 500)
+        assertEquals(500L, playerRepo.getStepBalance())
+    }
+
+    @Test
+    fun `incremental activity-minute call credits only delta`() = runTest {
+        manager.recordActivityMinutes(mapOf("cycling" to 10), 500)
+        manager.recordActivityMinutes(mapOf("cycling" to 20), 900)
+        assertEquals(900L, playerRepo.getStepBalance())
+    }
+
+    @Test
+    fun `combined sensor and activity-minute credits respect 50k ceiling`() = runTest {
+        // Credit 49,900 sensor steps (alternate 150/250 to avoid velocity penalty)
+        var total = 0L
+        var i = 0
+        while (total < 49_900) {
+            val delta = if (i % 2 == 0) 150L else 250L
+            manager.recordSteps(delta, baseTime + i * minuteGap)
+            total += delta
+            i++
+        }
+        val sensorBalance = playerRepo.getStepBalance()
+
+        manager.recordActivityMinutes(mapOf("cycling" to 10), 500)
+
+        val finalBalance = playerRepo.getStepBalance()
+        val activityCredited = finalBalance - sensorBalance
+        assertEquals(DailyStepManager.DAILY_CEILING, finalBalance)
+        assertTrue(activityCredited <= 100, "Activity credits should be capped by ceiling, got $activityCredited")
+    }
+
+    @Test
+    fun `process restart does not re-credit activity minutes`() = runTest {
+        val minutes = mapOf("cycling" to 10)
+        manager.recordActivityMinutes(minutes, 500)
+        assertEquals(500L, playerRepo.getStepBalance())
+
+        // Simulate process restart: new manager, same repos
+        val manager2 = DailyStepManager(
+            stepRepository = stepRepo,
+            playerRepository = playerRepo,
+            rateLimiter = StepRateLimiter(),
+            velocityAnalyzer = StepVelocityAnalyzer(),
+            antiCheatPrefs = mock<AntiCheatPreferences>(),
+            walkingEncounterRepository = FakeWalkingEncounterRepository(),
+            supplyDropNotificationManager = mock<SupplyDropNotificationManager>(),
+            dailyLoginDao = FakeDailyLoginDao(),
+            weeklyChallengeDao = FakeWeeklyChallengeDao(),
+            dailyStepDao = FakeDailyStepDao(),
+            dailyMissionDao = FakeDailyMissionDao(),
+            widgetUpdateHelper = mock<WidgetUpdateHelper>(),
+        )
+        manager2.recordActivityMinutes(minutes, 500)
+        assertEquals(500L, playerRepo.getStepBalance())
+    }
+
+    // --- R07: Walking mission progress ---
+
     @Test
     fun `already completed mission is not re-updated`() = runTest {
         val today = manager.todayDate()

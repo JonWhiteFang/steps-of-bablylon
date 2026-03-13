@@ -105,6 +105,10 @@ For non-ambulatory activities tracked by Health Connect:
 
 Step-equivalents from Activity Minutes are only credited when the step sensor records <50 steps/min during that period. Per-minute sensor step counts are tracked in `DailyStepManager` and passed to `ActivityMinuteConverter` for minute-level overlap deduction.
 
+### Idempotent Crediting
+
+Activity-minute crediting is delta-based. `DailyStepManager` tracks the previously credited `stepEquivalents` (persisted in Room) and only credits the positive delta on each worker run. This prevents double-crediting when the worker runs multiple times with the same Health Connect sessions. The 50,000 daily ceiling applies to the combined total of sensor steps and activity-minute step-equivalents.
+
 ### Activity Minute Validation
 
 Sessions are filtered by `ActivityMinuteValidator` before conversion:

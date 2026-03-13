@@ -1255,3 +1255,32 @@ Full codebase documentation audit after R01–R05 remediation. Find and fix stal
 - `docs/agent/RUN_LOG.md`
 
 **What's next:** Begin R2-01 (Activity-Minute Idempotency), then R2-02, R2-06, R2-03 in priority order.
+
+## 2026-03-13 — R2-01: Activity-Minute Idempotency
+
+**Objective:** Fix double-crediting of activity-minute step-equivalents on process restart.
+
+**Root cause:** `recordActivityMinutes()` initialized `dailyCreditedTotal` from `existing.creditedSteps` (sensor-only), ignoring previously credited `stepEquivalents`. The worker passes cumulative `stepEquivalents` from `ActivityMinuteConverter`, and the manager called `playerRepository.addSteps(credited)` with the full amount each time instead of just the delta.
+
+**What was done:**
+1. Extracted shared `ensureInitialized()` method from duplicated init blocks in `recordSteps()` and `recordActivityMinutes()`. Initialization now sets `dailyCreditedTotal = creditedSteps + stepEquivalents` (combined ceiling).
+2. Added `dailySensorCredited` field to track sensor-only credits for Room's `creditedSteps` field (prevents writing combined total into sensor-only column).
+3. Added `dailyActivityMinuteTotal` field initialized from `existing.stepEquivalents` during init.
+4. Made `recordActivityMinutes()` delta-based: computes `delta = stepEquivalents - dailyActivityMinuteTotal`, only credits positive delta. Stores `dailyActivityMinuteTotal` (actual credited, respecting ceiling) to Room, not raw input.
+
+**Bug caught during implementation:** Initial version wrote `dailyCreditedTotal` (now combined sensor + activity) to Room's `creditedSteps` field via `updateDailySteps()`. This would have caused double-counting on next init since `ensureInitialized()` reads `creditedSteps + stepEquivalents`. Fixed by adding `dailySensorCredited` to track sensor credits separately for the Room write.
+
+**Tests added (5):**
+- Activity minutes credit correct step-equivalents (baseline)
+- Duplicate call produces zero additional credits (idempotency)
+- Incremental call credits only delta
+- Combined sensor + activity-minute credits respect 50k ceiling
+- Process restart does not re-credit activity minutes (new manager instance, same repos)
+
+**Test count:** 397 JVM tests — all green, 0 failures.
+
+**Files changed:**
+- `data/sensor/DailyStepManager.kt` — extracted `ensureInitialized()`, added `dailySensorCredited` + `dailyActivityMinuteTotal`, delta-based `recordActivityMinutes()`
+- `test/data/sensor/DailyStepManagerTest.kt` — 5 new tests
+
+**What's next:** R2-02 (Activity-Minute Pipeline Unification), then R2-06, R2-03.

@@ -47,7 +47,9 @@ class DailyStepManager @Inject constructor(
 
     private var currentDate: String = todayDate()
     private var dailySensorTotal: Long = 0L
+    private var dailySensorCredited: Long = 0L
     private var dailyCreditedTotal: Long = 0L
+    private var dailyActivityMinuteTotal: Long = 0L
     private var initialized = false
 
     private val generateSupplyDrop = GenerateSupplyDrop()
@@ -64,14 +66,14 @@ class DailyStepManager @Inject constructor(
 
     fun todayDate(): String = LocalDate.now().format(DATE_FMT)
 
-    suspend fun recordSteps(rawDelta: Long, timestampMs: Long) {
-        if (rawDelta <= 0) return
-
+    private suspend fun ensureInitialized() {
         val today = todayDate()
         if (today != currentDate) {
             currentDate = today
             dailySensorTotal = 0L
+            dailySensorCredited = 0L
             dailyCreditedTotal = 0L
+            dailyActivityMinuteTotal = 0L
             dropState = DropGeneratorState()
             stepsPerMinute.clear()
             initialized = false
@@ -82,11 +84,19 @@ class DailyStepManager @Inject constructor(
             val existing = stepRepository.getDailyRecord(currentDate)
             if (existing != null) {
                 dailySensorTotal = existing.sensorSteps
-                dailyCreditedTotal = existing.creditedSteps
+                dailySensorCredited = existing.creditedSteps
+                dailyActivityMinuteTotal = existing.stepEquivalents
+                dailyCreditedTotal = existing.creditedSteps + existing.stepEquivalents
                 dropState = dropState.copy(lastCheckSteps = dailyCreditedTotal)
             }
             initialized = true
         }
+    }
+
+    suspend fun recordSteps(rawDelta: Long, timestampMs: Long) {
+        if (rawDelta <= 0) return
+
+        ensureInitialized()
 
         val rateLimited = rateLimiter.credit(rawDelta, timestampMs)
         val rateRejected = rawDelta - rateLimited
@@ -107,7 +117,8 @@ class DailyStepManager @Inject constructor(
         dailySensorTotal += rawDelta
         dailyCreditedTotal += credited
 
-        stepRepository.updateDailySteps(currentDate, dailySensorTotal, dailyCreditedTotal)
+        stepRepository.updateDailySteps(currentDate, dailySensorTotal, dailySensorCredited + credited)
+        dailySensorCredited += credited
         playerRepository.addSteps(credited)
 
         // Per-minute tracking for overlap deduction
@@ -151,34 +162,19 @@ class DailyStepManager @Inject constructor(
     suspend fun recordActivityMinutes(activityMinutes: Map<String, Int>, stepEquivalents: Long) {
         if (stepEquivalents <= 0) return
 
-        val today = todayDate()
-        if (today != currentDate) {
-            currentDate = today
-            dailySensorTotal = 0L
-            dailyCreditedTotal = 0L
-            dropState = DropGeneratorState()
-            stepsPerMinute.clear()
-            initialized = false
-            antiCheatPrefs.resetDailyCounters(today)
-        }
+        ensureInitialized()
 
-        if (!initialized) {
-            val existing = stepRepository.getDailyRecord(currentDate)
-            if (existing != null) {
-                dailySensorTotal = existing.sensorSteps
-                dailyCreditedTotal = existing.creditedSteps
-                dropState = dropState.copy(lastCheckSteps = dailyCreditedTotal)
-            }
-            initialized = true
-        }
+        val delta = stepEquivalents - dailyActivityMinuteTotal
+        if (delta <= 0) return
 
         val remainingCeiling = (DAILY_CEILING - dailyCreditedTotal).coerceAtLeast(0)
-        val credited = stepEquivalents.coerceAtMost(remainingCeiling)
+        val credited = delta.coerceAtMost(remainingCeiling)
         if (credited <= 0) return
 
+        dailyActivityMinuteTotal += credited
         dailyCreditedTotal += credited
 
-        stepRepository.updateActivityMinutes(currentDate, activityMinutes, credited)
+        stepRepository.updateActivityMinutes(currentDate, activityMinutes, dailyActivityMinuteTotal)
         playerRepository.addSteps(credited)
     }
 
