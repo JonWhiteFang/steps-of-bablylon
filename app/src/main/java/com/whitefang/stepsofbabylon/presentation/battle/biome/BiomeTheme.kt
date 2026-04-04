@@ -27,7 +27,7 @@ data class BiomeTheme(
                 groundColor = 0xFFC2A060.toInt(),
                 zigguratColors = listOf(0xFF8B4513.toInt(), 0xFFA0522D.toInt(), 0xFFB8742C.toInt(), 0xFFCD853F.toInt(), 0xFFFF8C00.toInt()),
                 enemyTint = 0xFFD4843A.toInt(),
-                particleColor = 0x66DEB887.toInt(), particleDriftX = 40f, particleDriftY = 5f, particleCount = 40,
+                particleColor = 0x66DEB887, particleDriftX = 40f, particleDriftY = 5f, particleCount = 40,
             )
             Biome.FROZEN_ZIGGURATS -> BiomeTheme(
                 skyColorTop = 0xFF1A3A5C.toInt(), skyColorBottom = 0xFF4682B4.toInt(),

@@ -266,7 +266,7 @@ class GameEngine {
 
         // Chrono field overlay
         if (chronoActive) {
-            val p = android.graphics.Paint().apply { color = 0x222196F3.toInt(); style = android.graphics.Paint.Style.FILL }
+            val p = android.graphics.Paint().apply { color = 0x222196F3; style = android.graphics.Paint.Style.FILL }
             canvas.drawRect(0f, 0f, screenWidth, screenHeight, p)
         }
 

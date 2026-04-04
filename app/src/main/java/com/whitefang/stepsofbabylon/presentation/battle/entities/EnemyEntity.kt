@@ -97,7 +97,7 @@ class EnemyEntity(
             EnemyType.TANK to 0xFF8B0000.toInt(), EnemyType.RANGED to 0xFF9C27B0.toInt(),
             EnemyType.BOSS to 0xFF4A0000.toInt(), EnemyType.SCATTER to 0xFF4CAF50.toInt(),
         )
-        private val ARMOR_PAINT = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x5500BCD4.toInt(); style = Paint.Style.STROKE; strokeWidth = 2f }
+        private val ARMOR_PAINT = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x5500BCD4; style = Paint.Style.STROKE; strokeWidth = 2f }
         private val HP_BG = Paint().apply { color = 0xFF2A1A10.toInt() }
         private val HP_FILL = Paint()
 

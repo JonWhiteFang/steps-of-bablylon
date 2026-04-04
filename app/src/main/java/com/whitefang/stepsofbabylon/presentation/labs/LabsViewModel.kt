@@ -113,7 +113,7 @@ class LabsViewModel @Inject constructor(
                         is StartResearch.Result.NoSlotAvailable -> "No research slot available"
                         is StartResearch.Result.MaxLevelReached -> "Already at max level"
                         is StartResearch.Result.AlreadyResearching -> "Already researching"
-                        else -> "Cannot start research"
+                        is StartResearch.Result.Success -> null
                     }
                 }
             } finally {

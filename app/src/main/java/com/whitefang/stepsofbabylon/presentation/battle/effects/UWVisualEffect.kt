@@ -102,7 +102,7 @@ class UWVisualEffect(
                 canvas.drawCircle(cx, cy, 60f, fallbackPaint)
             }
             UltimateWeaponType.CHRONO_FIELD -> {
-                fallbackPaint.color = 0x332196F3.toInt(); fallbackPaint.style = Paint.Style.FILL
+                fallbackPaint.color = 0x332196F3; fallbackPaint.style = Paint.Style.FILL
                 canvas.drawRect(0f, 0f, screenWidth, screenHeight, fallbackPaint)
             }
             UltimateWeaponType.POISON_SWAMP -> {
