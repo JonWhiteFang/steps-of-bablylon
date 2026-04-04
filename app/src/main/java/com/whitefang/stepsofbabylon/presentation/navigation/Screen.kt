@@ -23,6 +23,6 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     data object Store : Screen("store", "Store", Icons.Default.Star)
 
     companion object {
-        val items = listOf(Home, Workshop, Battle, Labs, Stats)
+        val items by lazy { listOf(Home, Workshop, Battle, Labs, Stats) }
     }
 }
