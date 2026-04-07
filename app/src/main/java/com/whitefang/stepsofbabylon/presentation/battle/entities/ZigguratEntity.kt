@@ -38,7 +38,7 @@ class ZigguratEntity(
 
     init {
         width = baseWidth; height = totalHeight
-        x = screenWidth / 2f; y = screenHeight - totalHeight * 0.1f
+        x = screenWidth / 2f; y = screenHeight * 0.45f + totalHeight
     }
 
     val originX: Float get() = x

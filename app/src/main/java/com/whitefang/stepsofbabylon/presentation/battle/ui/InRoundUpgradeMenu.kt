@@ -48,7 +48,7 @@ fun InRoundUpgradeMenu(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(360.dp)
+            .height(280.dp)
             .background(Color.Black.copy(alpha = 0.85f), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             .padding(8.dp),
     ) {
