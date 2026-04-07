@@ -38,9 +38,9 @@ class ResolveStatsTest {
     }
 
     @Test
-    fun `combined workshop and in-round multiply`() {
+    fun `combined workshop and in-round add levels`() {
         val stats = sut(mapOf(UpgradeType.DAMAGE to 10), mapOf(UpgradeType.DAMAGE to 5))
-        assertEquals(10.0 * 1.2 * 1.1, stats.damage, eps) // 13.2
+        assertEquals(10.0 * (1 + 15 * 0.02), stats.damage, eps) // 13.0
     }
 
     @Test

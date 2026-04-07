@@ -124,7 +124,7 @@ class GameEngine {
 
         waveSpawner = WaveSpawner(
             onSpawnEnemy = { pendingAdd.add(it) },
-            zigguratX = zig.x, zigguratY = zig.y,
+            zigguratX = zig.originX, zigguratY = zig.originY,
             onEnemyDeath = ::handleEnemyDeath,
             onMeleeHit = { dmg -> applyDamageToZiggurat(dmg, null) },
             onEnemyFireProjectile = { sx, sy, tx, ty, dmg ->
@@ -405,7 +405,7 @@ class GameEngine {
         for (i in 0 until count) {
             val angle = (2.0 * PI / count * i).toFloat()
             entities.add(OrbEntity(
-                zigX = zig.x, zigY = zig.y, orbitRadius = radius,
+                zigX = zig.originX, zigY = zig.originY, orbitRadius = radius,
                 angle = angle, damage = damage,
                 getEnemies = ::getAliveEnemies,
                 onHitEnemy = ::onOrbHitEnemy,
@@ -420,7 +420,7 @@ class GameEngine {
         enemy.takeDamage(damage)
         val zig = ziggurat ?: return
         if (stats.knockbackForce > 0f) {
-            val dx = enemy.x - zig.x; val dy = enemy.y - zig.y
+            val dx = enemy.x - zig.originX; val dy = enemy.y - zig.originY
             val d = hypot(dx, dy).coerceAtLeast(1f)
             val kb = stats.knockbackForce * 0.5f * conditions.knockbackMultiplier
             enemy.applyKnockback(dx / d * kb, dy / d * kb)
@@ -458,7 +458,7 @@ class GameEngine {
         soundManager?.play(SoundEffect.HIT)
 
         if (stats.knockbackForce > 0f) {
-            val dx = enemy.x - zig.x; val dy = enemy.y - zig.y
+            val dx = enemy.x - zig.originX; val dy = enemy.y - zig.originY
             val d = hypot(dx, dy).coerceAtLeast(1f)
             val kb = stats.knockbackForce * conditions.knockbackMultiplier
             enemy.applyKnockback(dx / d * kb, dy / d * kb)
@@ -519,8 +519,8 @@ class GameEngine {
         val zig = ziggurat ?: return emptyList()
         return entities.asSequence()
             .filterIsInstance<EnemyEntity>()
-            .filter { it.isAlive && hypot(it.x - zig.x, it.y - zig.y) <= zig.attackRange }
-            .sortedBy { hypot(it.x - zig.x, it.y - zig.y) }
+            .filter { it.isAlive && hypot(it.x - zig.originX, it.y - zig.originY) <= zig.attackRange }
+            .sortedBy { hypot(it.x - zig.originX, it.y - zig.originY) }
             .take(n)
             .toList()
     }
@@ -557,7 +557,7 @@ class GameEngine {
                     currentHp = enemy.maxHp * 0.5, maxHp = enemy.maxHp * 0.5,
                     speed = EnemyScaler.scaleSpeed(EnemyType.SCATTER) * conditions.enemySpeedMultiplier,
                     damage = enemy.damage * 0.5,
-                    targetX = zig.x, targetY = zig.y,
+                    targetX = zig.originX, targetY = zig.originY,
                     onDeath = ::handleEnemyDeath,
                     onMeleeHit = { dmg -> applyDamageToZiggurat(dmg, null) },
                 ).apply {

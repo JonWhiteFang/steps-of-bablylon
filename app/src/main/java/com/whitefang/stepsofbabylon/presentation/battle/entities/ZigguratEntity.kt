@@ -31,6 +31,8 @@ class ZigguratEntity(
 
     private val layerPaints = layerColors.map { Paint(Paint.ANTI_ALIAS_FLAG).apply { color = it } }.toTypedArray()
     private val originPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFD700.toInt() }
+    private val rangePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x22FFFFFF; style = Paint.Style.FILL }
+    private val rangeStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x44FFFFFF; style = Paint.Style.STROKE; strokeWidth = 1.5f }
     private val timerBgPaint = Paint().apply { color = 0x66000000 }
     private val timerFillPaint = Paint()
 
@@ -56,6 +58,9 @@ class ZigguratEntity(
     }
 
     override fun render(canvas: Canvas) {
+        // Attack range circle
+        canvas.drawCircle(originX, originY, attackRange, rangePaint)
+        canvas.drawCircle(originX, originY, attackRange, rangeStrokePaint)
         // Ziggurat layers (aura now handled by EffectEngine)
         for (i in 0 until layerCount) {
             val wf = 1f - (i.toFloat() / layerCount) * 0.6f
