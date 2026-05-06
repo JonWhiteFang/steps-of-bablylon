@@ -1,5 +1,101 @@
 # Run Log
 
+## 2026-05-06 — Standard Analysis Phase 14: refactoring opportunities + implementation roadmap
+
+- Goal: Produce two deliverables per the Phase 14 prompt. (a) `devdocs/evolution/refactoring_opportunities.md` — highest-ROI refactors with current pattern + file paths, proposed abstraction, benefits, effort, risk+mitigation, ROI, first safe step, verification, rollback. (b) `devdocs/evolution/implementation_roadmap.md` — phased plan (A Foundation, B Core Refactoring, C Gap Filling, D Integration & Polish) combining critical cleanup from cleanup inventory, essential unblocking refactors, smoke-report fixes, gap closure, and doc sync; each item carries files / dependencies / success criteria / risk / verification / PR size / rollback / owner role.
+- Preflight: read `START_HERE`, `STATE`, `CONSTRAINTS`, head of `RUN_LOG`; `git status` showed only modified STATE/RUN_LOG + untracked `devdocs/` + `smoke_tests/` (expected). Confirmed no prior `refactoring_opportunities.md` or `implementation_roadmap.md` existed via directory listing of `devdocs/evolution/`.
+- Inputs used (all cited inline in the deliverables; no new findings introduced per global rule #3): Phase 4 `5_things_or_not.md` (5 PR-sized proposals with full risk/rollback/verify); Phase 8 `architecture_analysis.md` + `module_discovery.md` (structural critique + module boundaries); Phase 10 `gap_analysis.md` (release-gate split, architecture changes §2, tech debt §3, rewrite-rejection §5); Phase 11 `gap_closure_plan.md` (Q1–Q8 quick wins, I1–I7 incremental, M1–M4 major, MR1 cosmetic pipeline, §5 non-goals); Phase 12 `smoke_tests/check_what_is_working/report.md` (412 tests green, junit-vintage gap); Phase 13 `devdocs/archaeology/cleanup_inventory.md` (§A removals, §B quarantines, §C test gaps, §D config, §E docs, §F dynamic-risk register). Cross-checked against `docs/plans/plan-31-play-console.md` and `docs/agent/DECISIONS/ADR-0003-battle-step-rewards.md`.
+- Changes made:
+  - Created `devdocs/evolution/refactoring_opportunities.md` (~1296 lines, 10 ROI-ranked refactors + deferred appendix + meta cross-refs): TL;DR table; RO-01 TimeProvider narrow migration; RO-02 @Transaction for 5 multi-write sites; RO-03 Resilient BattleViewModel.endRound; RO-04 FollowOnPipeline extraction; RO-05 UpdateMissionProgress use case; RO-06 Screen.fromRoute deep-link coverage; RO-07 Cosmetic rendering pipeline contract; RO-08 Configurable fake failure modes; RO-09 junit-vintage-engine on classpath; RO-10 PreferencesStore consolidation. Each entry has: current pattern with file:line citations, proposed abstraction (with code sketch), benefits, effort (XS/S/M/L scale), risk+mitigation, ROI justification, first safe step, verification strategy, rollback plan, non-goals. Deferred appendix lists 10 lower-ROI items (GameEngine snapshot stack, StepCrossValidator dedup, release/discardEscrow merge, PlayerWallet.cardDust, typed-loadout collapse, Reward sealed unification, multi-module split, typed routes, HealthConnectModule delete, DataStore migration) with source citations + defer rationale.
+  - Created `devdocs/evolution/implementation_roadmap.md` (~1319 lines, 4 phases × avg 7 items each): Phase A Foundation (A.1 doc drift, A.2 junit-vintage, A.3 DB decrypt recovery, A.4 fake failure modes, A.5 deep-link coverage, A.6 Season Pass leak, A.7 float-text guard, A.8 PlaceholderScreen, A.9 STEP_BURST decision, plus A.10 rollout order + exit criteria); Phase B Core Refactoring (B.1–B.5 map 1:1 to RO-01 through RO-05, plus B.6 rollout order + exit criteria); Phase C Gap Filling (C.1 anti-cheat visibility, C.2 cosmetic pipeline multi-PR, C.3 Settings rename + privacy link, C.4 ClaimMilestone.Cosmetic fix, C.5 real Billing SDK, C.6 real Ad SDK, C.7 PreferencesStore, C.8 rollout + exit criteria); Phase D Integration & Polish (D.1 privacy URL hosting, D.2 Play Console setup, D.3 store listing + icon, D.4 audio assets, D.5 AAB track promotion, D.6 Firebase pre-launch, D.7 rollout + exit criteria). Each item carries files / dependencies / success criteria / risk label / verification commands / PR size / rollback / suggested owner role. Added aggregate critical path diagram, mermaid dependency graph for release-blocking subset, doc-updates table (11 entries), 17-item Non-goals list lifted from Phase 11 §5 + Phase 14 Part 1 deferred appendix, memory-update checklist, and source-phase cross-reference table.
+  - Updated `docs/agent/STATE.md` References list (added two bullets for Phase 14 Part 1 and Part 2) + last-run line.
+- Code changes: **none** (evolution/documentation only).
+- Commands/tests run: filesystem reads + directory listings only — no build, no tests. Per Phase 10/11 convention, evolution deliverables do not require a green test run because they do not change behaviour.
+- Open questions / blockers: none for the deliverables. The two unknowns explicitly surfaced for future decision-making are (a) which cosmetic ships first in C.2 PR 2 (proposed default: jade ziggurat recolour per gap_analysis §5.2); and (b) delete-vs-wire for `SupplyDropTrigger.STEP_BURST` in A.9 (proposed default: delete with documented intent per Phase 11 Q6). Both are flagged as prerequisites inside the roadmap, not new findings.
+- Follow-ups created: none new. The roadmap schedules every scheduled follow-up from Phases 4, 10, 11, 13 into A/B/C/D; rejected candidates from Phase 10 §5 and Phase 11 §4 stay in §Non-goals.
+- Memory updated: STATE ✅ / RUN_LOG ✅
+- ADR: not warranted — no architectural decision was made; this phase ranks already-proposed refactors by ROI and sequences already-scheduled Phase 11 items into release-criticality buckets. New ADRs are named as prerequisites inside the roadmap itself (ADR-0004 FollowOnPipeline, ADR-0005 Billing SDK, ADR-0006 Ad SDK) to be written *before* the corresponding code PRs.
+
+## 2026-05-05 — Standard Analysis Phase 12: baseline smoke tests
+- Goal: Establish a baseline smoke-test suite per the Phase 12 prompt. Deliverables: `smoke_tests/check_what_is_working/README.md` (strategy + prerequisites + commands), `smoke_tests/check_what_is_working/test_plan.md` (5 areas × 5 cases = 25 total), `smoke_tests/check_what_is_working/report.md` (results of running the easiest subset). Constraint: reuse the existing JUnit 5 harness — no new framework, no new top-level architecture, no mocks beyond existing fakes.
+- Preflight: read `START_HERE`, `STATE`, `CONSTRAINTS`, and RUN_LOG head; `git status` clean apart from modified STATE/RUN_LOG + untracked `devdocs/` (normal per recent archaeology phases). Confirmed no prior `smoke_tests/` directory via `glob '**/smoke*'` and `glob '**/*SmokeTest*'` — both empty.
+- Survey: Framework is JUnit 5 Jupiter via `testOptions { unitTests.all { it.useJUnitPlatform() } }` in `app/build.gradle.kts`, complemented by kotlinx-coroutines-test, Mockito-Kotlin, Robolectric, room-testing, androidx.test.core. Existing test tree: 94 Kotlin files across `fakes/` (15), `balance/` (8), `data/sensor/` (5), `data/healthconnect/` (2), `data/local/` (RoomSchemaTest), `data/integration/` (EscrowLifecycleTest), `domain/model/` (9), `domain/usecase/` (~33), `presentation/*/` (≥13 VMs + ux + DeepLinkRoutingTest), `service/` (StepWidgetProviderTest).
+- Deliverables:
+  - Created `smoke_tests/check_what_is_working/README.md` (152 lines): strategy (reuse/real-components/offline/removable), how the existing harness is organised, prerequisites (JDK 17 / AndroidSDK 36 / no env vars or emulators), commands (full suite, compile-only, lintDebug, assembleDebug, per-area targeted runs), outputs (JUnit HTML/XML, lint HTML/XML, APK path), non-goals (no connectedAndroidTest, no Play Billing/AdMob, no prod creds).
+  - Created `smoke_tests/check_what_is_working/test_plan.md` (143 lines): 5 areas × 5 cases = 25 total. Area 1 Build & Packaging (compile Kotlin main/test, KSP, schema export v8 present, assembleDebug APK). Area 2 Domain Formulas (CalculateUpgradeCost, CalculateDamage with seeded Random, CalculateDefense, CheckTierUnlock, AwardBattleSteps). Area 3 Anti-Cheat & Ingestion (StepRateLimiter, StepVelocityAnalyzer, StepCrossValidator, StepIngestion worker/service coord, DailyStepManager). Area 4 Persistence Round-Trip (RoomSchemaTest player profile, RoomSchemaTest daily step record escrow fields, EscrowLifecycleTest, StepWidgetProviderTest, StepIngestionPreferencesTest). Area 5 Presentation (HomeViewModel, WorkshopViewModel, BattleViewModel, MissionsViewModel, DeepLinkRouting). Each case mapped to an existing test file plus a targeted command.
+- Checks executed (easiest subset, using `./run-gradle.sh` per project convention):
+  1. `./run-gradle.sh testDebugUnitTest --rerun-tasks` → BUILD SUCCESSFUL in 55s, 36 tasks executed. 77 JUnit XML reports, **412 tests, 0 failures, 0 errors, 0 skipped** (confirmed via XML aggregation).
+  2. `./run-gradle.sh lintDebug` → BUILD SUCCESSFUL in 51s. Lint XML: **0 errors, 47 Warning entries** (pre-existing advisory warnings; no regressions).
+  3. `./run-gradle.sh assembleDebug` → BUILD SUCCESSFUL in 5s (mostly cached from step 1). **`app-debug.apk` 61 MB** at `app/build/outputs/apk/debug/`.
+  4. Classpath audit via `./run-gradle.sh :app:dependencies --configuration debugUnitTestRuntimeClasspath | grep -iE 'junit-vintage|junit.*4\.1[0-9]|launcher'` → confirmed `junit-platform-launcher:1.11.4` present and `junit:junit:4.13.2` transitively via `org.robolectric:junit:4.14.1`, but **no `junit-vintage-engine` entry anywhere in the tree**.
+- Key finding (documented in report.md as "broken but acceptable"): Under `useJUnitPlatform()` with only the Jupiter engine on the classpath, JUnit 4-style tests annotated with `@RunWith(RobolectricTestRunner::class)` are silently not discovered. Affects `RoomSchemaTest.kt` (3 @Test methods) and `StepWidgetProviderTest.kt` (3 @Test methods) — total 6 tests never run. `EscrowLifecycleTest` is unaffected because it uses `org.junit.jupiter.api.Test`. Per-package test counts confirm this: `data.local` yields 0 test cases despite having 3 in source; `service` yields 0 despite having 3 in source; `data.integration` yields 2 correctly. Sum across all packages = 412, matches STATE.md claim — the claim was always based on what runs, not what exists.
+- Why "acceptable" not "blocker": schema correctness is re-validated at build time (`copyRoomSchemas` task + v8 JSON in `app/schemas/`) and at app startup (Room throws `IllegalStateException` on mismatch); widget SharedPreferences is a thin key/value surface exercised in practice; the JUnit 5 `EscrowLifecycleTest` independently covers the more complex escrow lifecycle; expansion of the gap is bounded by the two existing files.
+- Non-destructive fix path documented in report.md for a future PR (not this run): add `testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.11.4")` to `app/build.gradle.kts` — one-line additive change, rollback is a trivial revert, verification is a rerun that should yield 412 → 418 tests all green. Alternative long-term cleanup: port the two files to JUnit 5 + `@ExtendWith(RobolectricExtension::class)` so the suite is stylistically uniform.
+- Code changes: **none**. Smoke-test directory is documentation only.
+- Git state at end of run: `smoke_tests/check_what_is_working/` untracked (3 new files, 152 + 143 + 186 lines), STATE.md + RUN_LOG.md modified. No other tree changes.
+- Open questions / blockers: none. The junit-vintage-engine gap is documented with a fix path; decision deferred to the next code-change PR.
+- Follow-ups created: none new. If adopted, the fix path in report.md §"What is broken but acceptable" is one trivial PR.
+- Memory updated: STATE ✅ / RUN_LOG ✅
+- ADR: not warranted — no architectural decision was made; this phase documents and runs existing smoke surfaces and records one classpath-configuration finding.
+
+## 2026-05-05 — Evolution Phase 10: gap analysis
+- Goal: Produce `devdocs/evolution/gap_analysis.md` per Standard Analysis Phase 10 prompt. Compare current state (Phases 1–9 archaeology) to desired state implied by docs, roadmap, ADRs, tests, STATE.md known issues, and direction ("next is Plan 31"). Must include: concepts needing implementation, architecture changes required, tech debt blocking progress, incremental improvements, rewrite justification if any. Must separate known/inferred gaps, avoid inventing requirements not supported by artifacts, propose smallest next step where desired state is unclear.
+- Preflight: read `START_HERE`, `STATE`, `CONSTRAINTS`, head of `RUN_LOG`; `git status` modified STATE/RUN_LOG + untracked `devdocs/` (expected). Reviewed existing Phase 1–9 outputs; confirmed no `devdocs/evolution/` directory existed yet.
+- Inputs used (all cited inline in the deliverable): Phase 9 concept_mappings (25-concept coverage %, divergence rationale, Appendix A cross-concept risks, Appendix B coverage roll-up); Phase 4 5_things_or_not (5 PR-sized improvement bets with risk/rollback/verify); Phase 5 missing_concepts_list (intentionally deferred vs unintended vs compliance/privacy); Phase 8 architecture_analysis + module_discovery (12 forbidden-direction imports, fat modules, overlapping reward vocabularies); Phase 7 doc-inferred known_requirements (R-STEP/R-AC/R-ECO/R-BAT numbered shalls); master-plan.md current status + Plan 31 task list; STATE.md known issues/priorities; CONSTRAINTS.md invariants; grep of `app/src/main` for TODO/FIXME/XXX/HACK markers (0 matches — no in-code tracking).
+- Changes made:
+  - Created `devdocs/evolution/gap_analysis.md` (993 lines, 44 KB, 8 top-level sections + appendix): TL;DR (no rewrite needed; Plan 31 is the only release-blocker; cosmetic rendering pipeline is the one structural refactor blocking a shipped-but-disabled feature); §1 Concepts needing implementation (12 entries, known vs inferred labels, smallest next step for each ambiguity); §2 Architecture changes required (6 items: @Transaction, TimeProvider, deep-link coverage, MissionProgressTracker extraction, FollowOnPipeline extraction, plus explicit "non-changes" list); §3 Technical debt blocking progress (12 items ordered by leverage); §4 Incremental improvements (Phase 4 5-item cross-reference + 7 additional PR-sized items including DB-file wipe on decrypt failure, configurable fake failure modes, ClaimMilestone.Cosmetic drop bug); §5 What requires a rewrite (nothing — argues each candidate explicitly; names cosmetic pipeline as "required change short of rewrite" with smallest-step ship-one-cosmetic proposal); §6 Risks and unknowns (7 known risks, 8 explicit unknowns where desired state is ambiguous with smallest clarifying step per item, 4 explicit non-unknowns); §7 Aggregated posture (coverage x release-gate table + critical path to v1.0); appendix relating deliverable to prior phases.
+  - Updated `docs/agent/STATE.md` References list + last-run line.
+- Code changes: none (archaeology/evolution only).
+- Commands/tests run: filesystem reads + grep only — no build. Confirmed 0 TODO/FIXME/XXX/HACK markers in `app/src/main`.
+- Open questions / blockers: none for the deliverable. The 8 unknowns enumerated in §6.2 are surfaced with proposed smallest next steps; none require a decision before the next planning session.
+- Follow-ups created: none new. The deliverable synthesises existing Phase 4/5/8/9 proposals and aligns them to release-gate / quality-improvement / out-of-scope categories without scheduling new work. If adopted, the critical-path order in §7 is (1) ship one cosmetic end-to-end, (2) Plan 31, (3) optional post-release Phase 4 five-item list.
+- Memory updated: STATE ✅ / RUN_LOG ✅
+- ADR: not warranted — no architectural decision was made; this phase synthesises already-documented decisions and gaps into a single release-gated view.
+
+## 2026-05-05 — Archaeology Phase 8: architecture reconstruction + module discovery
+- Goal: Reconstruct architecture from code per Standard Analysis Phase 8 prompt. Two deliverables: (a) `devdocs/archaeology/architecture_analysis.md` — entry points, data-model inventory, duplicated/overlapping models, contracts, architectural patterns, what doesn't make sense, implied-but-not-enforced invariants; (b) `devdocs/archaeology/module_discovery.md` — natural module boundaries, coupling/cohesion, dependency relationships, shared utilities, cross-cutting concerns, violated boundaries, missing boundaries.
+- Preflight: read `START_HERE`, `STATE`, `CONSTRAINTS`, `RUN_LOG` head; `git status` clean except modified STATE/RUN_LOG + untracked `devdocs/` (expected). Reviewed existing Phase 1–7 outputs to avoid duplication.
+- Code read (no docs used as primary source per global rule #1): `AndroidManifest.xml`, `StepsOfBabylonApp.kt`, `MainActivity.kt`, all 6 `di/*` modules, `AppDatabase.kt` + 12 entities + 12 DAOs (sampled), `Converters.kt`, `DatabaseKeyManager.kt`, `Migrations.kt`, all 8 `data/repository/*Impl.kt`, `data/sensor/` (5 files), `data/healthconnect/` (4 files), `data/anticheat/AntiCheatPreferences.kt`, 5 SharedPreferences wrapper files in `data/`, both billing/ads stubs, all 36 `domain/model/*.kt` (reviewed en bloc for overlap), key `domain/usecase/*.kt` (AwardBattleSteps, GenerateSupplyDrop, ResolveStats, CalculateDamage, PurchaseUpgrade, TrackDailyLogin, TrackWeeklyChallenge, OpenCardPack, GenerateDailyMissions, StartResearch, PurchaseGemPack, ClaimMilestone, CalculateUpgradeCost), `domain/repository/PlayerRepository.kt` + StepRepository + WorkshopRepository + BillingManager + RewardAdManager, all 12 VMs under `presentation/*/`, `Screen.kt` + `BottomNavBar.kt`, `BattleScreen.kt` + `BattleUiState.kt` + `GameSurfaceView.kt` + `GameLoopThread.kt` + `GameEngine.kt` + `Entity.kt` + `WaveSpawner.kt` + `EnemyScaler.kt` + `CollisionSystem.kt`, all 9 `service/*` files.
+- Quantitative validation via grep: 53 `System.currentTimeMillis|LocalDate.now|Instant.now` in 33 files (matches Phase 4); 83 `Random` references in 15 files of which only 7 use cases are seamed; 6 `domain/` + 6 `presentation/` files import `data.local.*Dao` (12 architectural violations); 10 distinct SharedPreferences files with 4 different access patterns; 0 `@Transaction`/`withTransaction` calls in `app/src/main` (no multi-statement atomicity anywhere); daily-mission progress-update logic duplicated across 5 sites (BattleVM, LabsVM, WorkshopVM, MissionsVM, DailyStepManager).
+- Key findings documented with file:line citations: `SupplyDropTrigger.STEP_BURST` declared (`SupplyDropTrigger.kt:5`) but never produced; `ClaimMilestone.kt:25` silently drops `MilestoneReward.Cosmetic` despite cosmetics system being wired (3 declared milestone cosmetics never minted, IDs don't match `SEED_COSMETICS`); `MainActivity.PlaceholderScreen:237` is dead code; `Screen.items by lazy` is a documented workaround for sealed-class init-order NPE (commit `1872af9`); `StepRepositoryImpl.releaseEscrow`/`discardEscrow` are line-for-line identical delegations to `clearEscrow`, semantic difference only in caller; `CosmeticEntity` has double key (`id` autoGenerate + `cosmeticId` String); `GameSurfaceView.kt:26` bypasses `SoundPreferences` to read `sound_prefs` inline; `Currency`/`SupplyDropReward`/`MilestoneReward` are three overlapping reward vocabularies; `PlayerWallet` omits `cardDust`; `CardLoadout` and `UltimateWeaponLoadout` are near-identical (neither exercised at runtime); `GameEngine` has two pre-stat snapshots (`preOverdriveStats`, `preGoldenStats`) with implicit restore order; `StepCrossValidator` Level 0/1 branches duplicate ~20 lines (only `MAX_ESCROW_SYNCS` differs); loadout max-3 enforced only in VMs (`CardsViewModel.kt:114`, `UltimateWeaponViewModel.kt:82`), no DAO guard; currency non-negative clamp lives in SQL (`MAX(0, col + :delta)`) not in Kotlin interface; `DailyStepManager.runFollowOnPipeline` has 4 pokemon-catch blocks; `DailyStepManager` has 12 constructor deps and constructs use cases inline; `TrackDailyLogin` call path from `DailyStepManager` never passes Season Pass flags, so walking-streak Gems lose +10 Gems bonus; `HealthConnectModule` is an empty organisational placeholder.
+- Changes made:
+  - Created `devdocs/archaeology/architecture_analysis.md` (∼650 lines, 8 top-level sections): TL;DR + sources, entry points & flows, data models (persistence/domain/UI state/commands & events), duplicated/overlapping models (6 categories with file pointers), contracts (repository interfaces, use cases, Hilt modules, Android framework contracts, battle-layer callback contracts, notification managers), architectural patterns (11 patterns: Clean Architecture partial, MVVM with StateFlow, Repository with Flow, Enum-as-balance-sheet, Seeded randomness partial, Default-parameter time sparse, Fixed-timestep game loop, Offline-first, Read-modify-write via `first()`, Stub-then-swap, Plain-Kotlin use cases), 13 "what doesn't make sense" items, 9 implied-but-not-enforced invariants, prioritised summary.
+  - Created `devdocs/archaeology/module_discovery.md` (∼800 lines, 8 top-level sections): 16 natural module boundaries (M1 core-domain, M2 core-usecases, M3 persistence, M4 repositories, M5 sensor, M6 healthconnect, M7 anticheat, M8 prefs — virtual, M9 billing-ads, M10 service, M11 navigation, M12 screens, M13 battle-engine, M14 audio, M15 theme, M16 di), coupling/cohesion summary table, "fat" modules (DailyStepManager, GameEngine, HomeViewModel), "thin" modules (HealthConnectModule, theme), cross-screen coupling, fan-out of PlayerRepository (23 methods, universal dependency), ASCII dependency graph, zero package-import cycles confirmed, table of 12 forbidden-direction imports with file:line, shared utilities inventory, 10 cross-cutting concerns (time, randomness, prefs, notifications, anti-cheat, currency clamp, logging, coroutine scoping, error handling, HC availability), 8 boundary violations with file pointers, 10 missing boundaries that would help, prioritised summary (6 payback items ordered by effort/payback).
+  - Updated `docs/agent/STATE.md` References list + last-run line.
+- Code changes: none (archaeology only).
+- Commands/tests run: filesystem reads + grep only — no build.
+- Open questions: none. Phase 8 deliverables are strictly documentation. The 12 "forbidden-direction imports" are enumerated for future refactoring; none are newly introduced and all are already documented in Phase 4 + the foundations docs as tolerated gaps. The proposed `TimeProvider`, `RandomSource`, `MissionProgressTracker`, `FollowOnPipeline`, `Reward` sealed hierarchy, and `PreferencesStore` consolidations remain unscheduled — they are cross-references to Phase 4 item 1, 4, 5 and to new proposals here.
+- Follow-ups created: none new. Phase 8 synthesises existing findings into two distinct views (architectural critique + module boundaries); it does not schedule work. If adopted, the prioritised list in `module_discovery.md` §8 gives a natural ordering.
+- Memory updated: STATE ✅ / RUN_LOG ✅
+- ADR: not warranted — no architectural decision was made; this phase describes decisions already evident in the code plus the gaps around them.
+
+## 2026-05-05 — Archaeology Phase 6: code-inferred foundations docs
+- Goal: Extract `project_description`, `philosophy`, and `known_requirements` foundations docs under `devdocs/archaeology/foundations/`, grounded in the actual codebase, synthesising (not duplicating) Phases 1–5.
+- Input review: read `small_summary.md`, `intro2codebase.md`, `intro2deployment.md`, all 4 Phase 5 concept docs (`technical`, `design`, `business`, `missing`), plus memory spine. Spot-checked code: `AndroidManifest.xml`, `StepsOfBabylonApp.kt`, `AppDatabase.kt`, `DatabaseModule.kt`, `DatabaseKeyManager.kt`, `Migrations.kt`, `AwardBattleSteps.kt`, `StepCrossValidator.kt`, `DailyStepManager.kt`, `StepCounterService.kt`, `GameLoopThread.kt`, `StubBillingManager.kt`, `StubRewardAdManager.kt`, `Currency.kt`, `UpgradeType.kt`, `PlayerProfileEntity.kt`, `BillingProduct.kt`, `app/build.gradle.kts`, `app/proguard-rules.pro`, `network_security_config.xml`.
+- Changes made:
+  - Created `devdocs/archaeology/foundations/project_description.md` (334 lines): what the system actually does (5 core behaviours), current use cases, actor types (player + platform services + dev/tester; no operator/SRE/account role), actual problems solved (walk-gated economy, reliable background counting, client-only anti-cheat, inclusive-fitness via exercise minutes, encrypted offline persistence, 60 UPS SurfaceView game loop embedded in Compose), runtime/delivery model (single AAB to Play Store, user-initiated updates, no backend, no CI, v7→v8 migrations), and explicit unknowns.
+  - Created `devdocs/archaeology/foundations/philosophy.md` (523 lines): observed design principles (Steps-are-sacred, enum-as-balance-sheet, offline-first, Room-as-truth, encrypted-by-default, domain-is-pure-Kotlin, geometric cost curves, fail-fast-schema vs fail-soft-pipeline, seamed randomness, default-param time, one Activity + one SurfaceView, stub-then-swap SDKs, `@Volatile` polling across threads); consistent patterns (coding, architectural, testing, operational, deployment); architectural decisions evident in structure; deliberate tradeoffs (privacy > observability, offline fidelity > portability, client-side anti-cheat, build-time balance > live tuning, stub SDKs > feature flags); what philosophy doesn't commit to; PR-heuristic checklist.
+  - Created `devdocs/archaeology/foundations/known_requirements.md` (685 lines): 18 sections covering platform, runtime/reliability, privacy/security, anti-cheat (with numeric thresholds: 200/min rate, 50k/day ceiling, 2k/day battle-step cap, 20% HC discrepancy), offline, latency budgets (16.67ms frame, 200ms UI poll, 30s/60s throttles, 15min worker), scalability (single-user/device/process), reproducibility/testability, compatibility, security consolidation, observability (deliberately minimal), deployment, integration (HC optional with graceful degrade; sensor implicit), privacy-by-default, concurrency, compliance/legal, explicit non-requirements (no accounts/server/multiplayer/leaderboards/CI/i18n/a11y-pass), and explicit unknowns (battery budget, real SDKs, final audio, cosmetic visual pipeline, localisation, retention policy, PlaceholderScreen intent).
+  - Updated `docs/agent/STATE.md` reference list + last-run line.
+- Code changes: none (archaeology only).
+- Commands/tests run: filesystem reads + grep only — no build.
+- Open questions: none. Phase 6 deliverables are documentation; they do not introduce code changes. Several explicit unknowns are enumerated inside `known_requirements.md` §18 rather than left implicit.
+- Follow-ups created: none new. The foundations docs cross-reference Phase 4 proposals (`5_things_or_not.md`) and Phase 5 concept inventories without scheduling new work.
+- Memory updated: STATE ✅ / RUN_LOG ✅
+- ADR: not warranted — no architectural decision was made; this phase describes decisions already in code.
+
+## 2026-05-05 — Archaeology Phase 4: "5 Things" improvement list
+- Goal: Synthesise the 13 Phase 3 traces into a prioritised list of 5 impactful improvements, with code citations, historical rationale, and PR-sized first steps.
+- Input review: read `devdocs/archaeology/small_summary.md`, `intro2codebase.md`, `intro2deployment.md`, and all 13 `traces/trace_*.md` "Feels Incomplete / Vulnerable / Bad Design" sections.
+- Cross-cutting findings: zero `@Transaction` or `withTransaction` uses in `app/src/main`; 53 direct `System.currentTimeMillis()`/`LocalDate.now()` calls across 33 files; `DailyStepManager` has 11 constructor parameters; `BattleViewModel.endRound` not invoked on `onCleared` so mid-battle deep-links lose the round.
+- Changes made:
+  - Created `devdocs/archaeology/5_things_or_not.md` (683 lines): TimeProvider abstraction, Room @Transaction for multi-writes, robust round-end cascade against navigation, extract FollowOnPipeline from DailyStepManager, surface anti-cheat effects on Stats screen. Each item has file+line citations, risk assessment, rollback, and verification steps per global rule #5.
+- Code changes: none (archaeology only).
+- Commands/tests run: grep/code-search only — no build.
+- Open questions: none; this is a proposal document. Each item is independently actionable; items 1 and 2 compose cleanly (a `TimeProvider` + `@Transaction` PR together would cover items 1 and 2 in a single small PR).
+- Follow-ups created: 5 proposals documented; none scheduled. If adopted, each is a separate PR; item 1 blocks nothing; item 2 is a dependency for item 3's rollback plan.
+- Memory updated: STATE ✅ / RUN_LOG ✅
+
 ## 2026-03-04 — Project Memory System Setup
 - Goal: Implement repo-backed project memory system for Kiro CLI default agent.
 - Plan: Create steering files (10-project-memory.md, 11-agent-protocol.md), living memory docs (START_HERE, STATE, CONSTRAINTS, RUN_LOG, ADR template), update AGENTS.md.
@@ -1447,3 +1543,290 @@ After the fix, tests pass on first try and assembleDebug is clean.
 - `docs/agent/RUN_LOG.md`
 
 **What remains:** Plan 31 (Play Console & Store Publication).
+
+---
+
+## 2026-05-05 — Archaeology Phase 1: Non-Technical Summary
+
+**Objective:** External prompt asked for a source-grounded, non-technical summary of the codebase.
+
+**What was done:** Created `devdocs/archaeology/small_summary.md` (283 lines). Written directly from source (AndroidManifest, StepsOfBabylonApp, MainActivity, StepCounterService, DailyStepManager, AppDatabase, 23-entry UpgradeType, BattleViewModel, GameEngine, WaveSpawner, AwardBattleSteps, StoreScreen, SoundManager, StubBillingManager, StubRewardAdManager, build.gradle.kts, settings.gradle.kts, libs.versions.toml, res/ tree). Not derived from existing docs. Identifies primary deliverable (single `:app` module, v1.0.0), walks through user experience, core loop, complete-vs-evolving areas, and five uncertainties.
+
+**Discrepancy logged (code is authoritative):** `.kiro/steering/source-files.md` still claims `AppDatabase` is version 7; code is version 8 with a registered v7→v8 `Migration` object. Summary flags this rather than silently correcting the steering file.
+
+**No code or production docs modified.** No new dependencies. No build/test runs needed (documentation-only).
+
+**Files created:**
+- `devdocs/archaeology/small_summary.md`
+
+**Memory updated:** STATE ✅ (no substantive status change — still Plan 31) / RUN_LOG ✅.
+
+---
+
+## 2026-05-05 — Archaeology Phase 2: Architecture + Deployment Intros
+
+**Objective:** External prompt asked for two source-grounded intros for new engineers: architecture intro (data flow paths, abstractions, patterns, time/random/ID/config/cache/env) and deployment intro (build, run, test, package, ship).
+
+**What was done:**
+1. Searched for prior equivalents — none (`docs/architecture.md` is a short reference card, not an intro; `docs/database-schema.md` is a per-table reference). Proceeded with new files.
+2. Read the full DI module set (`DatabaseModule`, `RepositoryModule`, `StepModule`, `HealthConnectModule`, `BillingModule`, `AdModule`), `DatabaseKeyManager`, `Migrations.kt`, `PlayerRepositoryImpl`, `PlayerProfileDao`, `StepSensorDataSource`, `StepCounterService`, `StepSyncWorker`, `StepSyncScheduler`, `StepIngestionPreferences`, `StepRateLimiter`, `AntiCheatPreferences`, `StepCrossValidator`, `HealthConnectClientWrapper`, `GameLoopThread`, `GameSurfaceView`, `BootReceiver`, `StepNotificationManager`, `WidgetUpdateHelper`, `StepWidgetProvider`, `Converters`, `run-gradle.sh`, `proguard-rules.pro`, `.gitignore`, `gradle.properties`, `local.properties`, `app/schemas/` tree, `network_security_config.xml`, `step_widget_info.xml`, signing-guide.md, release-checklist.md, the three stub use cases with injectable `Random` (`CalculateDamage`, `GenerateSupplyDrop`, `OpenCardPack`), and `GenerateDailyMissions` (date-seeded Random).
+3. Confirmed no CI configuration of any kind exists in the repo (no `.github/`, `.circleci/`, `.gitlab-ci.yml`, Jenkinsfile, Dockerfile, fastlane, etc.).
+4. Grep-verified: zero `BuildConfig` reads, zero `DataStore` references, zero `UUID.randomUUID()` calls, single `Room.databaseBuilder` (in `DatabaseModule`). 8 SharedPreferences files in use.
+5. Wrote `devdocs/archaeology/intro2codebase.md` (480 lines):
+   - 10-second mental model, six concrete entry points
+   - Two main data flows diagrammed: step ingestion pipeline (with follow-on fan-out) and battle game loop (SurfaceView + dedicated thread + callbacks into ViewModel)
+   - The four-layer trace used by every non-battle screen
+   - Main abstractions: 6 Hilt modules, 8 repositories, services & adapters, presentation conventions
+   - Explicit section on time / randomness / IDs / config / caching / persistence / environment access locations — flags that `Clock` is **not** abstracted, `Random` **is** injected in 3 use cases with the documented default-parameter pattern, and `GenerateDailyMissions` uses `Random(todayDate.hashCode())` deterministically
+   - Design patterns, module boundaries (single `:app`), entry-point quick lookup
+6. Wrote `devdocs/archaeology/intro2deployment.md` (464 lines):
+   - Build system at a glance (version matrix, catalog-only policy)
+   - Local build commands + `run-gradle.sh` non-TTY wrapper
+   - CI status (none; release gates are manual)
+   - Build types + R8 keep-rule inventory
+   - Bundled assets (code, .ogg sound effects, schemas (reference only), network_security_config, widget XML) and known missing assets (no launcher icon, no localisation)
+   - Release signing: opt-in `keystore.properties`, Play App Signing guidance, output paths
+   - Testing pipeline (JVM-only, JUnit5 + Robolectric, ~412 tests; no instrumented tests yet)
+   - Runtime deployment mechanisms (WorkManager 15-min periodic, foreground service, boot receiver, widget refresh, Health Connect sync)
+   - Database migration process (`AppMigrations.ALL`, `fallbackToDestructiveMigrationOnDowngrade(dropAllTables=true)`)
+   - Permissions and secrets, one-page quick reference
+
+**Discrepancies logged (code is authoritative):**
+   - `docs/database-schema.md` still says "Current schema version: 7"; code is v8 (`AppDatabase.kt`, `app/schemas/8.json`).
+   - `.kiro/steering/source-files.md` describes `AppDatabase` as version 7.
+   - `docs/architecture.md` doesn't mention `CosmeticEntity` and doesn't note `HealthConnectModule` is an empty placeholder — both verified in code.
+
+**No code or production docs modified.** No new dependencies. No build/test runs needed (documentation-only).
+
+**Files created:**
+- `devdocs/archaeology/intro2codebase.md`
+- `devdocs/archaeology/intro2deployment.md`
+
+**Memory updated:** STATE ✅ (no substantive status change — still Plan 31) / RUN_LOG ✅.
+
+
+## 2026-05-05 — Archaeology Phase 3: Deep Trace Analysis
+
+**Objective:** External prompt asked for per-trace files under `devdocs/archaeology/traces/` covering every internal interface boundary and submodule-level interaction, end-to-end, using a fixed 10-section schema (Entry Point, Execution Path, Resource Management, Error Path, Performance Characteristics, Observable Effects, Why This Design, Feels Incomplete, Feels Vulnerable, Feels Like Bad Design).
+
+**What was done:**
+1. Context preflight: read `START_HERE.md`, `STATE.md`, `CONSTRAINTS.md`, RUN_LOG tail, ADRs 0001–0003. Confirmed repo is on `main`, working tree clean except for prior RUN_LOG edit and untracked `devdocs/` from Phase 2.
+2. Surveyed existing archaeology output (`small_summary.md`, `intro2codebase.md`, `intro2deployment.md`) so Phase 3 deepens rather than duplicates. Confirmed Phase 2's entry-point quick-lookup table was a reasonable seed list for traces.
+3. Enumerated the highest-value internal boundaries across: sensor HAL ↔ Flow ↔ service ↔ DailyStepManager ↔ Room; service ↔ WorkManager heartbeat; HC cross-validation state machine; runFollowOnPipeline fan-out; Compose ↔ SurfaceView; game-loop thread ↔ GameEngine (`@Volatile`); engine kill callback ↔ VM viewModelScope ↔ use case ↔ DAO; round-end cascade; generic VM-VM-DAO pattern (Workshop); notification PendingIntent ↔ MainActivity deep-link; `AppWidgetManager` IPC; `System.loadLibrary("sqlcipher")` + Keystore passphrase; `BootReceiver` restart.
+4. Read all code on each trace path before writing — `StepSensorDataSource`, `StepCounterService`, `DailyStepManager`, `StepRateLimiter`, `StepVelocityAnalyzer`, `StepIngestionPreferences`, `StepSyncWorker`, `StepSyncScheduler`, `StepCrossValidator`, `StepGapFiller`, `HealthConnectClientWrapper`, `HealthConnectStepReader`, `ActivityMinuteConverter`, `ActivityMinuteValidator`, `ExerciseSessionReader`, `AntiCheatPreferences`, `GenerateSupplyDrop`, `WalkingEncounterRepositoryImpl`, `StepRepositoryImpl`, `DailyStepDao`, `DailyStepRecordEntity`, `Migrations.kt`, `PlayerRepositoryImpl`, `PlayerProfileDao`, `AppDatabase`, `DatabaseKeyManager`, all six DI modules, `MainActivity`, `BattleScreen`, `BattleViewModel`, `GameSurfaceView`, `GameLoopThread`, `GameEngine`, `WaveSpawner`, `CollisionSystem`, `EnemyEntity`, `ZigguratEntity`, `EnemyScaler`, `AwardBattleSteps`, `UpdateBestWave`, `AwardWaveMilestone`, `CheckTierUnlock`, `PurchaseUpgrade`, `WorkshopViewModel`, `HomeViewModel`, `StoreViewModel`, `StubBillingManager`, `StubRewardAdManager`, `SupplyDropNotificationManager`, `StepNotificationManager`, `SmartReminderManager`, `MilestoneNotificationManager`, `StepWidgetProvider`, `WidgetUpdateHelper`, `BootReceiver`, AndroidManifest.
+5. Wrote 13 trace files + 1 README index under `devdocs/archaeology/traces/`:
+   - `trace_01_step_sensor_to_room.md`
+   - `trace_02_step_sync_worker_and_heartbeat_handoff.md`
+   - `trace_03_hc_cross_validation_escrow.md`
+   - `trace_04_follow_on_pipeline_fanout.md`
+   - `trace_05_compose_to_surfaceview_boot.md`
+   - `trace_06_game_loop_single_frame.md`
+   - `trace_07_enemy_kill_and_battle_step_reward.md`
+   - `trace_08_round_end_cascade.md`
+   - `trace_09_workshop_purchase_flow.md`
+   - `trace_10_supply_drop_to_deep_link.md`
+   - `trace_11_widget_update.md`
+   - `trace_12_db_bootstrap_and_keystore.md`
+   - `trace_13_boot_recovery.md`
+   - `README.md` (index with per-trace table, usage guide, and what Phase 3 deliberately omits)
+
+**Key code facts verified during writing (no code changes):**
+- `GameEngine.onStepReward: ((Long) -> Unit)?` is `@Volatile`; game thread invokes it; `BattleViewModel.wireStepRewardCallback` hops to `viewModelScope.launch` so the loop never blocks on Room.
+- `AwardBattleSteps` does 3 statements (read cap, add steps, increment counter) with NO transaction wrapping — observed a partial-failure vulnerability.
+- `DailyStepManager.runFollowOnPipeline` wraps each of its 5 stages in `try/catch (_: Exception) {}` individually.
+- `StepCrossValidator` calls `playerRepository.spendSteps(excess)` destructively at Levels 0/1 *before* `updateEscrow`; separated by two different Room writes — partial-failure vulnerability.
+- `DatabaseKeyManager.getPassphrase` wipes SharedPreferences on decrypt failure but does NOT wipe the DB file — existing SQLCipher DB becomes unreadable with the new passphrase on device-restore. The `Room.databaseBuilder` has `fallbackToDestructiveMigrationOnDowngrade(true)` but no `fallbackToDestructiveMigration()`, so this is a latent crash-on-launch.
+- `GameLoopThread` uses `System.nanoTime()` directly (acceptable per `intro2codebase.md` §5); `TICK_NS = 16_666_667L`; speed multiplier scales the accumulator, not `dt`, so physics stays deterministic.
+- `StepSyncWorker.sensorCatchUp` uses `StepIngestionPreferences.isServiceAlive(now)` with `HEARTBEAT_THRESHOLD_MS=120_000`; HC gap-filling reuses `dailyStepManager.recordSteps` so anti-cheat cannot be bypassed via HC.
+- `MainActivity.pendingNavigation: MutableStateFlow<String?>` is the cold/warm deep-link carrier; `onNewIntent` + first `LaunchedEffect(Unit)` both write; collector `LaunchedEffect(Unit)` reads and nulls.
+
+**No code or production docs modified.** No new dependencies. No build/test runs needed — pure documentation output grounded in code reading.
+
+**Files created:**
+- `devdocs/archaeology/traces/` (new directory)
+- `devdocs/archaeology/traces/trace_01_step_sensor_to_room.md`
+- `devdocs/archaeology/traces/trace_02_step_sync_worker_and_heartbeat_handoff.md`
+- `devdocs/archaeology/traces/trace_03_hc_cross_validation_escrow.md`
+- `devdocs/archaeology/traces/trace_04_follow_on_pipeline_fanout.md`
+- `devdocs/archaeology/traces/trace_05_compose_to_surfaceview_boot.md`
+- `devdocs/archaeology/traces/trace_06_game_loop_single_frame.md`
+- `devdocs/archaeology/traces/trace_07_enemy_kill_and_battle_step_reward.md`
+- `devdocs/archaeology/traces/trace_08_round_end_cascade.md`
+- `devdocs/archaeology/traces/trace_09_workshop_purchase_flow.md`
+- `devdocs/archaeology/traces/trace_10_supply_drop_to_deep_link.md`
+- `devdocs/archaeology/traces/trace_11_widget_update.md`
+- `devdocs/archaeology/traces/trace_12_db_bootstrap_and_keystore.md`
+- `devdocs/archaeology/traces/trace_13_boot_recovery.md`
+- `devdocs/archaeology/traces/README.md`
+
+**Memory updated:** STATE ✅ (no substantive project-status change — still Plan 31; added pointer to new archaeology output) / RUN_LOG ✅. No ADR needed — the traces describe existing code behaviour; no new decisions were made.
+
+**Follow-ups worth considering (for a future, distinct session — not implemented here):**
+- Wrap `AwardBattleSteps` in a `@Transaction` suspend function to prevent the cap/wallet divergence observed in trace 07.
+- Wrap `StepCrossValidator` Level-0/1 escrow writes in a transaction so `spendSteps` + `updateEscrow` commit atomically (trace 03).
+- `DatabaseKeyManager` should wipe the DB file alongside the encrypted-passphrase reset, to avoid crash-on-launch after device restore (trace 12).
+- Missing deep-link routes in `MainActivity.pendingNavigation` collector: Store / Stats / etc. not handled; some notification paths already target Missions, Workshop, Battle, Supplies (trace 10).
+- `PlaceholderScreen` dead composable in `MainActivity.kt` — documented but not yet removed (noted across Phase 1 and trace 05).
+
+## 2026-05-05 — Archaeology Phase 5: Concept Inventory
+
+**Objective:** External prompt asked for a source-grounded concept inventory across four lists: technical, design, business, and missing concepts. Each entry ≤3 sentences with implementation status (Fully / Partial / Missing) and file pointers.
+
+**What was done:**
+1. Context preflight: re-read `START_HERE.md`, `STATE.md`, `CONSTRAINTS.md`, the full RUN_LOG tail, and the three ADRs. Confirmed repo on `main`, working tree clean except for prior STATE/RUN_LOG edits and untracked `devdocs/`.
+2. Surveyed existing archaeology output so Phase 5 complements Phases 1–4 instead of duplicating them. Phase 1 gives user-flow overview; Phase 2 gives architecture + deployment intros; Phase 3 gives 13 per-boundary traces; Phase 4 gives 5 improvement proposals. Phase 5 fills the inventory slot.
+3. Read 40+ definitional source files to ground the lists: all 23 `UpgradeType` configs, 10 `ResearchType`, 9 `CardType` (3 rarities), 6 `UltimateWeaponType`, 4 `OverdriveType`, 5 `Biome` ranges, 6 `Milestone`, 6 `DailyMissionType`, 4 × 4 `SupplyDropTrigger`/`SupplyDropReward`, 5 `BillingProduct`, 3 `AdPlacement`, 6 `EnemyType`, 7 `BattleCondition`, 12 `Screen` routes. Verified `AppDatabase` v8 + `MIGRATION_7_8` + 12 entities, `PlayerProfileEntity`'s 27 columns, `DailyStepRecordEntity.battleStepsEarned`, 7 manifest permissions, 4 notification channels, `StubBillingManager` + `StubRewardAdManager`, 8 SharedPreferences wrappers, injected `Random` in the 3 stochastic use cases, date-seeded RNG in `GenerateDailyMissions`, `@Volatile` + callback-hop step-reward wiring in `GameEngine` / `BattleViewModel`, the 5-stage `runFollowOnPipeline` fan-out in `DailyStepManager`, and the 4-level `StepCrossValidator` that deducts via `spendSteps` on first escrow.
+4. Wrote four concept-inventory docs under `devdocs/archaeology/concepts/`:
+   - `technical_concepts_list.md` — 9 sections, 40+ concepts (platform choices, persistence, step ingestion, anti-cheat, battle renderer, UI/navigation/notifications, security, reproducibility/testing, cross-cutting patterns).
+   - `design_concepts_list.md` — 7 sections, 35+ concepts (product design, domain data model shape, contract/interface shape, data-flow, UX/feedback, monetization, operational contracts).
+   - `business_lvl_concepts_list.md` — 7 sections, 30+ concepts (positioning, hard invariants, currency economy, progression systems, engagement/retention, player-trust contracts, release/distribution).
+   - `missing_concepts_list.md` — 4 sections, 30+ concepts split between intentionally deferred (Plan 24 accessibility, Plan 31 real SDKs, app icon, audio assets, i18n, instrumented tests, CI, step burst, onboarding, store assets, public privacy URL) and unintended gaps (TimeProvider abstraction, `@Transaction` wrapping, DB-file wipe on decrypt failure, round-end cascade on nav interrupt, deep-link coverage for 7 missing routes, FollowOnPipeline extraction, anti-cheat UI surfacing, boss/threat targeting, sound-settings surface, `PlaceholderScreen` dead code) plus compliance/operational assumptions and integration contracts worth naming.
+5. Each entry holds to the ≤3-sentence limit, carries an explicit `Implementation status:` line (Fully / Partial / Missing), and cites the primary file(s) it refers to. Central concepts first, then branching; implicit concepts (invariants, privacy assumptions, operational handoffs, integration protocols) surfaced where they exist only as conventions.
+
+**Discrepancies logged (code authoritative):** None new. Known drift points (DB v7 references in some docs, `CosmeticEntity` missing from `architecture.md`, `HealthConnectModule` placeholder) remain as called out in Phase 2. Phase 5 did not edit any production doc.
+
+**No code or production docs modified.** No new dependencies. No build/test runs needed — pure inventory output grounded in code reading.
+
+**Files created:**
+- `devdocs/archaeology/concepts/` (new directory)
+- `devdocs/archaeology/concepts/technical_concepts_list.md`
+- `devdocs/archaeology/concepts/design_concepts_list.md`
+- `devdocs/archaeology/concepts/business_lvl_concepts_list.md`
+- `devdocs/archaeology/concepts/missing_concepts_list.md`
+
+**Memory updated:** STATE ✅ (added Phase 5 pointer, no substantive status change — still Plan 31) / RUN_LOG ✅. No ADR needed — inventory describes existing code and decisions; no new decisions were made.
+
+## 2026-05-05 — Standard Analysis Phase 7: Doc-Inferred Foundations
+
+**Objective:** External prompt asked for "doc-inferred" foundation documents — `project_description.md`, `philosophy.md`, and `known_requirements.md` — extracted **only** from non-code documentation, with a "Docs vs Code" delta section at the end of each file. This is the twin of Phase 6 (which built the same three docs from code reading) but sourced from docs alone.
+
+**What was done:**
+1. Context preflight: read `START_HERE.md`, `STATE.md`, `CONSTRAINTS.md`, the tail of `RUN_LOG.md`, and all three ADRs. Confirmed still pointed at Plan 31 as the next substantive work.
+2. Gathered the full non-code doc surface: `README.md`, `AGENTS.md`, `CHANGELOG.md`, the GDD, `docs/architecture.md`, `docs/database-schema.md`, `docs/battle-formulas.md`, `docs/step-tracking.md`, `docs/monetization.md`, `docs/plans/master-plan.md`, `plan-R-remediation.md`, `plan-R2-remediation.md`, sampled plan files (01, 24, 31), `docs/release/*`, `docs/balance/balance-report.md`, all `.kiro/steering/*` including agent-protocol and project-memory rules, and every `docs/agent/` file including the three ADRs.
+3. Deliberately did **not** open code, gradle files, manifests, or the `devdocs/archaeology/` Phase 6 output (which is code-based) while drafting. The Phase 6 foundations at `devdocs/archaeology/foundations/` stay untouched; Phase 7 output is written to a fresh `devdocs/foundations/` directory so the two provenances can be compared side by side.
+4. Wrote `devdocs/foundations/project_description.md` — product description organised as: tagline / platform facts, core loop, major systems table (with doc citation per row), currencies, architecture snapshot, explicit out-of-scope list, delivery status, and a Docs vs Code delta.
+5. Wrote `devdocs/foundations/philosophy.md` — the product's stated belief system: the one immovable axiom ("Walk to Power"), design pillars, hard game rules, fair-play stance, monetization philosophy, accessibility/inclusivity stance, privacy posture, architectural philosophy, testing philosophy, the doc-first project-memory process philosophy, game-feel philosophy, and a negative philosophy list ("what the product refuses to be"), plus a delta.
+6. Wrote `devdocs/foundations/known_requirements.md` — a numbered requirements catalogue (R-STEP-*, R-AC-*, R-ECO-*, R-WS-*, R-BAT-*, R-IR-*, R-TIER-*, R-BIO-*, R-UW-*, R-OD-*, R-LAB-*, R-CARD-*, R-SUP-*, R-NOTIF-*, R-STAT-*, R-MON-*, R-NFR-*, R-REL-*, R-PROC-*) with every requirement tied to a specific doc citation. Doc-vague points are captured as vague rather than promoted to invented precision.
+7. Phase 7 delta sections identify a consistent set of doc drifts that are worth escalating eventually: schema v7 vs v8 (ADR-0003) in `docs/database-schema.md`, three simultaneous test counts (397/401/412), the Battle Step Rewards feature missing from every user-facing doc (GDD, README, CHANGELOG 1.0.0, battle-formulas, Play Store listing), the SharedPreferences state stores contradicting "Room is the single source of truth", the "33-entry roadmap" README phrasing, unchecked items in the release checklist that R2 already closed, the GDD pillars self-inconsistency (4 vs 5), and multiple vague areas (Supply-Drop seeding, Activity-Minute 100-step-eq rationale, inbox eviction policy, daily-mission rewards, battery acceptance methodology). These are only called out; nothing was fixed.
+
+**Discrepancies logged:** None edited — Phase 7 is observational. The delta sections inside each file are the catalogue.
+
+**No code, gradle, manifest, or production feature docs were modified.** No new dependencies. No build/test runs needed — this phase is pure doc synthesis.
+
+**Files created:**
+- `devdocs/foundations/` (new directory, distinct from the existing `devdocs/archaeology/foundations/`)
+- `devdocs/foundations/project_description.md`
+- `devdocs/foundations/philosophy.md`
+- `devdocs/foundations/known_requirements.md`
+
+**Memory updated:** STATE ✅ (added Phase 7 pointer; status still Plan 31) / RUN_LOG ✅. No ADR needed — this phase produces analysis, not decisions.
+
+## 2026-05-05 — Archaeology Phase 9: Concept Mappings
+
+**Objective:** External prompt asked for a per-concept mapping at `devdocs/archaeology/concept_mappings.md` with 7 parts per concept: files/modules, coverage % (Fully/Partial/Missing), divergence from an "ideal" architecture, alternatives likely considered, edge cases that shaped the design, related tests/fixtures/migrations/config/docs, and risks caused by the current shape.
+
+**What was done:**
+1. Context preflight: re-read `START_HERE.md`, `STATE.md`, `CONSTRAINTS.md`, RUN_LOG tail, all three ADRs. Confirmed still on `main`, working tree clean except modified STATE/RUN_LOG and untracked `devdocs/` (expected from prior phases).
+2. Surveyed existing Phase 1–8 output so Phase 9 complements, not duplicates. Phase 5 (concepts/) gives file pointers per concept; Phase 9's unique contribution is coverage %, divergence, alternatives, edge cases, tests, risks. Different lens on the same concept domain.
+3. Curated 25 major concepts (cut from an initial ~34 to keep signal high): step pipeline, HC cross-validation, battle step rewards (ADR-0003), currency model, persistence (Room/SQLCipher/migrations), battle renderer, combat formulas, wave system, biomes, Workshop upgrades, Labs research, Cards system, Ultimate Weapons, Step Overdrive, Tiers, supply drops, milestones/missions, weekly/login economy, monetization (billing/ads/cosmetics), notifications/widget, navigation/deep-link/UX feedback, DI/Hilt layering, reproducibility contracts, testing strategy, release/security.
+4. Wrote `devdocs/archaeology/concept_mappings.md` in five incremental chunks (header+TOC+5, then 5, 5, 5, 5+appendices) to manage output budget. Total 2 342 lines, 25 concepts × 7-part entries, plus Appendix A (12 cross-concept risks) and Appendix B (coverage roll-up table with Key Gap column).
+5. Every coverage figure and risk grounded in existing archaeology findings: Phase 4 items (TimeProvider, @Transaction, round-end cascade, FollowOnPipeline, anti-cheat surfacing), Phase 8 findings (12 forbidden imports, duplicated mission-progress updates, fat modules, thin modules, 3 reward vocabularies, 2 stat-snapshot chains), Phase 5 missing concepts (STEP_BURST orphan, cosmetic visual gap, deep-link partial, decrypt-failure zombie DB). No fresh code claims — Phase 9 synthesises what's already known in a mapping lens.
+
+**Key calibration:** Coverage labels = Fully (85–100%), Partial (50–84%), Skeleton (20–49%), Missing (0–19%). Per-concept % is qualitative (feature completeness + edge cases + tests + docs + production-readiness), not line-counted.
+
+**Highlights from the coverage roll-up (Appendix B):**
+- 18 of 25 concepts at ≥88% coverage (core gameplay loop solid).
+- 4 concepts at Partial (75–80%): supply drops (STEP_BURST orphan), milestones/missions (cosmetic no-op + 5-site duplication), navigation (5 of 12 deep-link routes), release (manual gate, Play Console pending).
+- 2 concepts at Partial (55–70%): reproducibility contracts (53 direct wall-clock calls), testing strategy (no instrumented tests, no CI).
+- 1 concept at Skeleton (45%): monetization (real SDKs deferred to Plan 31, cosmetic visuals missing).
+
+**Changes made:**
+- Created `devdocs/archaeology/concept_mappings.md` (2 342 lines).
+- Updated `docs/agent/STATE.md` references + last-run line.
+- This RUN_LOG entry.
+
+**Code changes:** none (archaeology only).
+
+**Commands/tests run:** filesystem reads + grep only — no build. No tests run (documentation-only).
+
+**Open questions:** none. Phase 9 deliverable is strictly documentation. Cross-concept risks in Appendix A are cross-references to Phase 4 (item 1 TimeProvider, item 2 @Transaction, item 3 round-end cascade, item 4 FollowOnPipeline, item 5 anti-cheat UX) and Phase 8 (module-discovery prioritised list §8). No new proposals.
+
+**Follow-ups created:** none new. Phase 9 synthesises existing findings; it does not schedule work. If the project wants to act on the map, the Key Gap column of Appendix B gives a natural triage order.
+
+**Memory updated:** STATE ✅ (added Phase 9 reference + last-run line) / RUN_LOG ✅.
+
+**ADR:** not warranted — no architectural decision was made; this phase maps decisions already evident in code plus the gaps around them.
+
+## 2026-05-05 — Standard Analysis Phase 11: Gap Closure Plan
+
+**Objective:** External prompt (Phase 11 "Towards First Implementation Pass — Gap Closure Strategy") asked for `devdocs/evolution/gap_closure_plan.md` — an executable, phased plan built from Phase 10's gap analysis. Required four phases (Quick Wins, Incremental Improvements, Major Refactoring, Complete Rewrites), each with dependencies, risk assessment, testing/verification, rollback, developer workflow, PR boundaries, and explicit non-goals.
+
+**What was done:**
+1. Context preflight: read `START_HERE.md`, `STATE.md`, `CONSTRAINTS.md`, RUN_LOG tail (Phase 10 entry), all three ADRs. Clean tree apart from modified STATE/RUN_LOG and untracked `devdocs/` (expected). Next substantive work is still Plan 31.
+2. Primary input: `devdocs/evolution/gap_analysis.md` (993 lines from Phase 10). Re-read §1 (12 missing concepts), §2 (6 architecture changes), §3 (12 tech-debt items), §4 (Phase 4 cross-ref + 7 additional incrementals), §5 (rewrite rejections), §6 (7 known risks + 8 unknowns + 4 non-unknowns), §7 (aggregated posture + critical path).
+3. Secondary input: `devdocs/archaeology/5_things_or_not.md` (Phase 4) which already costs out the five highest-leverage items with file:line citations and rollback plans. Phase 11 cross-references these rather than duplicating (global rule #3).
+4. Wrote `devdocs/evolution/gap_closure_plan.md` (1 032 lines): §0 read-first checklist; §1 quick wins (Q1–Q8: doc drift, DB-file wipe on decrypt failure, fake failure modes, FloatingText suppression on cap, deep-link all-routes, STEP_BURST decision, PlaceholderScreen deletion, Season Pass leak tactical patch); §2 incremental improvements (I1–I7: anti-cheat visibility, atomic writes first site + remaining sites, resilient endRound, TimeProvider narrow migration, ClaimMilestone.Cosmetic fix, Settings rename + privacy link); §3 major refactoring (M1 FollowOnPipeline + UpdateMissionProgress extractions, M2 real Billing SDK, M3 real Ad SDK, M4 Plan 31 external tasks) + MR1 cosmetic rendering pipeline promoted out of §4 per Phase 10 §5.2 "not a rewrite, a new narrow contract"; §4 rewrite rejections with explicit revisit triggers (multi-module Gradle split, Reward sealed hierarchy unification); §5 sixteen explicit non-goals matched to Phase 10 citations (accessibility, onboarding, i18n, analytics, server-side anti-cheat, etc.); §6 aggregate critical path with release-critical sequence (Q3 → M2+M3 → MR1 PR1-2 → M4); §7 memory-update checklist aligned to §11-agent-protocol.
+5. Each phase entry holds the prompt's required shape: dependencies/prerequisites, risk assessment + mitigation, testing/verification strategy, rollback plan, expected developer workflow, suggested commit/PR boundaries, explicit non-goals. No new findings introduced — every item cited back to its Phase 10 section, Phase 4 item number, or a roadmap/plan-31 task (global rules #1, #3).
+6. Updated `docs/agent/STATE.md` references list + last-run line.
+
+**Key design choices in the plan (explicit so future readers can audit):**
+- **Q6 (STEP_BURST) defaults to delete-with-documented-intent** because no doc demands wiring and Phase 10 §1.4 lists both options as equally valid. The commit-body documentation satisfies rule #2.
+- **Q8 is a tactical patch** for the Season Pass leak, flagged as duplicate-logic until M1 PR 4 removes it — prevents blocking the fix on the larger extraction.
+- **I2 lands the first @Transaction site before I3 fans it out** to prove the pattern on the most user-visible purchase before migrating four more.
+- **I5 explicitly migrates only 3 of 53 TimeProvider call sites** per Phase 4 §1's scope-creep mitigation. Not a sweep.
+- **MR1 moved from §4 to §3** — Phase 10 §5.2 was categorical: "Not a rewrite — a new narrow contract." Putting it in §4 would have contradicted the source.
+- **M4 (Plan 31 external) stays in the plan even though it's not code** — Phase 10 §1.1 and the master-plan both treat it as a release gate; omitting it would leave the critical path incomplete.
+- **Two rewrites explicitly rejected with revisit triggers**: multi-module Gradle split (revisit when a second engineer joins) and `Reward` sealed unification (revisit when a fourth reward type is specified). Satisfies prompt's §4 "only if necessary" framing.
+
+**Changes made:**
+- Created `devdocs/evolution/gap_closure_plan.md` (1 032 lines).
+- Updated `docs/agent/STATE.md` references list + last-run line.
+- This RUN_LOG entry.
+
+**Code changes:** none (evolution/planning only).
+
+**Commands/tests run:** filesystem reads only — no build, no tests.
+
+**Open questions:** two unknowns from Phase 10 §6.2 now carried forward into specific plan entries rather than left implicit —
+- Q6 resolution (delete vs wire `STEP_BURST`) is named as the first action of that PR.
+- MR1 PR 2's single-cosmetic choice (proposed: jade ziggurat recolour) needs a product decision before coding; the plan surfaces the decision up-front rather than guessing.
+
+**Follow-ups created:** none new work items. The plan aggregates, schedules, and risk-scopes already-discovered items. If adopted, the rollout orders inside §1, §2, §3 and the critical path in §6 give the sequence.
+
+**Memory updated:** STATE ✅ / RUN_LOG ✅.
+
+**ADR:** not warranted — no architectural decision made. The plan is a schedule of already-documented decisions; actual architecture choices (e.g. ADR-0004 FollowOnPipeline, ADR-0005 billing SDK, ADR-0006 ad SDK) are called out **as prerequisites** of M1/M2/M3 respectively, to be written before the first code PR of each.
+
+## 2026-05-06 — Standard Analysis Phase 13: Codebase Cleanup Inventory
+
+- Goal: Produce `devdocs/archaeology/cleanup_inventory.md` per the Phase 13 prompt — identify candidates for removal / consolidation / quarantine with evidence / confidence / risk / verification / action per item. No deletions, no code changes.
+- Preflight: read `START_HERE`, `STATE`, `CONSTRAINTS`, RUN_LOG tail (Phase 12 entry); `git status` clean apart from modified STATE/RUN_LOG and untracked `devdocs/` + `smoke_tests/` (expected). `git log -n 5 --oneline` shows HEAD at `a9d0386 feat: award Steps for enemy kills with 2k/day cap (ADR-0003)`.
+- Survey: confirmed no prior `devdocs/archaeology/cleanup_inventory.md` existed. Re-used Phases 1–12 findings (small_summary, intro2codebase, intro2deployment, traces, 5_things_or_not, concepts/, foundations/ x2, architecture_analysis, module_discovery, concept_mappings, gap_analysis, gap_closure_plan, smoke_tests/report.md) as the primary evidence base — cited inline per global rule #3 to avoid duplication.
+- Code verification (no builds, only filesystem + grep):
+  - `grep PlaceholderScreen` → 1 match, declaration only (MainActivity.kt:237). Dead composable confirmed.
+  - `grep UltimateWeaponLoadout app/src/main` → declaration file only, **0 non-self references in main**. `ManageCardLoadout.kt:15` uses `CardLoadout.MAX_SIZE` constant → CardLoadout is alive; UltimateWeaponLoadout is dead runtime-wise.
+  - `grep STEP_BURST` → 1 match, declaration at SupplyDropTrigger.kt:5. No producer. Orphan enum value.
+  - `grep 'STEP_MULTIPLIER|RECOVERY_PACKAGES' app/src` → 4 matches main (2 enum entries + 2 config entries) + 2 matches test (balance/CostCurveTest.kt:17,45) + 1 match WorkshopViewModel.kt:42 hiddenUpgrades. Not pure orphan — still exercised by balance tests.
+  - `grep 'MilestoneReward\.(Gems|PowerStones|Cosmetic)' app/src` → Milestone.kt declares 3 cosmetic rewards (garden_ziggurat_skin, lapis_lazuli_skin, sandals_of_gilgamesh); ClaimMilestone.kt:25 is `is Cosmetic -> { /* no-op */ }`. Grep of `cosmeticId\s*=` in CosmeticRepositoryImpl.kt shows SEED_COSMETICS uses ids `zig_obsidian, zig_crystal, zig_golden, proj_fire, proj_lightning, enemy_shadow, enemy_neon` — **zero overlap with the milestone cosmetic ids**. Confirmed.
+  - `grep 'releaseEscrow|discardEscrow|clearEscrow'` → StepRepositoryImpl.kt:44 = `dao.clearEscrow(date)`; line 46 = `dao.clearEscrow(date)` — byte-identical delegations. Semantic split lives only in StepCrossValidator (discard at 76,92 for offense; release at 106 for reconciliation).
+  - `grep '@RunWith|RobolectricTestRunner' app/src/test` → 3 files: RoomSchemaTest.kt (3 @Test), StepWidgetProviderTest.kt (3 @Test), DeepLinkRoutingTest.kt (3 @Test). All use `org.junit.Test` (JUnit 4). Classpath confirmed in Phase 12 has no `junit-vintage-engine`. Phase 12 report said only RoomSchemaTest + StepWidgetProviderTest were affected (6 tests); grep says DeepLinkRoutingTest is also JUnit 4 + Robolectric — so likely 9 tests silently skipped, not 6. Flagged in §C1 as a discrepancy worth verifying against the `testDebugUnitTest` XML on a future run.
+  - `grep 'TODO|FIXME|XXX|HACK' app/src/main` → 0 matches. Confirmed in Phase 10 gap_analysis too.
+  - `ls docs/agent/state.json docs/temp/` → both absent. Already-cleaned orphans; §E1 confirms.
+  - `ls app/schemas/.../AppDatabase/` → 1.json through 8.json present. `Migrations.kt` registers only `MIGRATION_7_8`. §D1 flags 1–6.json as possibly historical artefacts.
+  - `grep '@InstallIn|@Inject|@HiltViewModel|@HiltWorker|@HiltAndroidApp|@AndroidEntryPoint|@Provides|@Binds|@Module' app/src/main` → 239 matches across 79 files. §F dynamic-risk register pins all these.
+  - `grep 'BiomePreferences|NotificationPreferences|SoundPreferences|MilestoneNotificationPreferences|AntiCheatPreferences|StepIngestionPreferences'` → 8 preference wrappers total, each wired; §A8 names them as a virtual `prefs` module and proposes consolidation.
+  - Read HealthConnectModule.kt in full: lines 10–13 are `@Module / @InstallIn(SingletonComponent::class) / object HealthConnectModule` with **no body**. Empty organisational placeholder. §A6.
+  - Read Screen.kt: `val items by lazy { … }` — workaround for sealed-class init-order NPE (commit 1872af9). §A7 proposes a one-line comment.
+- Changes made:
+  - Created `devdocs/archaeology/cleanup_inventory.md` (565 lines, ~43 KB, 8 top-level sections + TL;DR + caution box): TL;DR of 18 candidates grouped by effort/confidence; Dynamic-Risk Caution Box up front listing 11 framework mechanisms; §A source tree (11 entries A1–A11); §B abandoned features / orphan enum entries (7 entries B1–B7); §C tests, fakes, fixtures (5 entries C1–C5); §D config, build, scripts, schema, migrations (13 entries D1–D13); §E docs orphans / redundancy (6 entries E1–E6); §F dynamic-risk register with 17-row table of classes invisible to grep plus a pre-removal audit checklist; §G retention / compatibility / legal; §H summary + cross-references to prior archaeology and Phase 11 schedule.
+  - Updated `docs/agent/STATE.md` references list + last-run line.
+  - This RUN_LOG entry.
+- Code changes: none (archaeology/inventory only).
+- Commands/tests run: filesystem reads + grep + `git status`/`git log` only — no build, no tests.
+- Open questions:
+  - §C1 flags possible discrepancy with Phase 12 report (DeepLinkRoutingTest may be silently skipped — Phase 12 claimed it passed). Worth verifying against `app/build/test-results/testDebugUnitTest/*.xml` per-package counts in a future session. Not blocking the inventory.
+  - Three product decisions called out in §B (STEP_BURST wire-or-delete, STEP_MULTIPLIER/RECOVERY_PACKAGES wire-or-delete, MilestoneReward.Cosmetic ID alignment) are **inputs** to any future cleanup; they are not decisions this phase makes.
+- Follow-ups created: none new work items. The inventory cross-references Phase 4 five-item list, Phase 8 module-discovery prioritised list, Phase 10 gap analysis, and Phase 11 gap closure plan as the existing schedules.
+- Memory updated: STATE ✅ / RUN_LOG ✅
+- ADR: not warranted — no architectural decision made; inventory surfaces existing code state plus gaps already documented elsewhere.
+
