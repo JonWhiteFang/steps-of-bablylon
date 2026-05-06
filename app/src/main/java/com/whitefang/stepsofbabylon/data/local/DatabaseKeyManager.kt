@@ -24,6 +24,11 @@ object DatabaseKeyManager {
     private const val PREFS_NAME = "db_key_prefs"
     private const val PREF_ENCRYPTED = "encrypted_passphrase"
     private const val PREF_IV = "passphrase_iv"
+    // Must match DatabaseModule.provideDatabase() name — when the passphrase is
+    // lost (e.g. backup-restore to a new device), the encrypted DB file on disk
+    // cannot be opened with a freshly-generated passphrase, so we delete it
+    // here alongside the stale key blob and let Room rebuild from scratch.
+    private const val DB_FILENAME = "steps_of_babylon.db"
 
     fun getPassphrase(context: Context): ByteArray {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -35,9 +40,13 @@ object DatabaseKeyManager {
                     android.util.Base64.decode(prefs.getString(PREF_IV, "")!!, android.util.Base64.NO_WRAP),
                 )
             } catch (e: Exception) {
-                // Keystore key missing or mismatched (e.g. device restore) — reset
-                Log.w(TAG, "Passphrase decryption failed, generating fresh key", e)
+                // Keystore key missing or mismatched (e.g. device restore) — reset.
+                // The existing DB file is encrypted with the now-lost passphrase
+                // and cannot be recovered; delete it so Room can rebuild cleanly
+                // instead of crashing in a loop on next open.
+                Log.w(TAG, "Passphrase decryption failed, wiping stale key and DB file", e)
                 prefs.edit().clear().apply()
+                wipeDatabaseFile(context)
             }
         }
         val passphrase = generateRandomPassphrase()
@@ -47,6 +56,29 @@ object DatabaseKeyManager {
             .putString(PREF_IV, android.util.Base64.encodeToString(iv, android.util.Base64.NO_WRAP))
             .apply()
         return passphrase
+    }
+
+    /**
+     * Deletes the SQLCipher database file and its companion -shm/-wal files.
+     * Called when the passphrase blob is no longer decryptable — the on-disk DB
+     * is unreadable without the original passphrase, so wiping it prevents a
+     * crash-on-launch loop at the cost of local progress. Progress is already
+     * unrecoverable at this point.
+     *
+     * Visible for testing: Robolectric cannot provide a working AndroidKeyStore
+     * shadow, so the full decrypt-fail → wipe path is verified via direct test
+     * on this method. Keystore integration is verified by the single call site
+     * in [getPassphrase] plus on-device smoke.
+     */
+    internal fun wipeDatabaseFile(context: Context) {
+        val dbFile = context.getDatabasePath(DB_FILENAME)
+        listOf(dbFile, java.io.File(dbFile.path + "-shm"), java.io.File(dbFile.path + "-wal"))
+            .filter { it.exists() }
+            .forEach { file ->
+                if (!file.delete()) {
+                    Log.w(TAG, "Failed to delete stale DB file: ${file.path}")
+                }
+            }
     }
 
     private fun generateRandomPassphrase(): ByteArray {
