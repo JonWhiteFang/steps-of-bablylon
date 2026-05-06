@@ -17,6 +17,7 @@ import com.whitefang.stepsofbabylon.domain.usecase.TrackDailyLogin
 import com.whitefang.stepsofbabylon.domain.usecase.TrackWeeklyChallenge
 import com.whitefang.stepsofbabylon.service.SupplyDropNotificationManager
 import com.whitefang.stepsofbabylon.service.WidgetUpdateHelper
+import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -182,7 +183,17 @@ class DailyStepManager @Inject constructor(
 
         // Economy rewards
         try {
-            trackDailyLogin.checkAndAward(currentDate, dailyCreditedTotal)
+            // Mirror HomeViewModel.init by passing Season Pass flags so the
+            // walking-streak Gem reward includes the +10 Gems/day bonus when the
+            // pipeline runs from a background ingestion path (widget, worker,
+            // or service) rather than app foreground.
+            val profile = playerRepository.observeProfile().first()
+            trackDailyLogin.checkAndAward(
+                currentDate,
+                dailyCreditedTotal,
+                profile.seasonPassActive,
+                profile.seasonPassExpiry,
+            )
             trackWeeklyChallenge.checkAndAward()
         } catch (_: Exception) {}
 

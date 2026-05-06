@@ -241,4 +241,69 @@ class DailyStepManagerTest {
         assertEquals(5000, missions[0].progress)
         assertTrue(missions[0].completed)
     }
+
+    // --- A.6: Season Pass flags in background TrackDailyLogin call ---
+
+    @Test
+    fun `background pipeline grants Season Pass bonus Gems when walking 1000+ steps`() = runTest {
+        // Arrange: Season Pass active with expiry in the far future
+        playerRepo.updateSeasonPass(active = true, expiry = Long.MAX_VALUE)
+        val gemsBefore = playerRepo.profile.value.gems
+
+        // Act: walk enough to cross both the 1000-step PS threshold and trigger
+        // the first-day streak reward. Alternate 150/250 to avoid velocity
+        // penalty; space calls 61s apart for fresh rate-limiter windows.
+        var total = 0L
+        var i = 0
+        while (total < 1_000) {
+            val delta = if (i % 2 == 0) 150L else 250L
+            manager.recordSteps(delta, baseTime + i * minuteGap)
+            total += delta
+            i++
+        }
+
+        // Assert: day-1 streak reward (1 Gem) + Season Pass bonus (+10) = 11 Gems
+        val gemsAfter = playerRepo.profile.value.gems
+        assertEquals(11L, gemsAfter - gemsBefore,
+            "Season Pass owner should receive streak (1) + daily bonus (10) = 11 Gems")
+    }
+
+    @Test
+    fun `background pipeline grants baseline streak Gems without Season Pass`() = runTest {
+        // Control: no Season Pass — same walking threshold, no +10 bonus
+        val gemsBefore = playerRepo.profile.value.gems
+
+        var total = 0L
+        var i = 0
+        while (total < 1_000) {
+            val delta = if (i % 2 == 0) 150L else 250L
+            manager.recordSteps(delta, baseTime + i * minuteGap)
+            total += delta
+            i++
+        }
+
+        val gemsAfter = playerRepo.profile.value.gems
+        assertEquals(1L, gemsAfter - gemsBefore,
+            "Non-Season-Pass walker should receive only the day-1 streak Gem")
+    }
+
+    @Test
+    fun `expired Season Pass does not grant daily bonus`() = runTest {
+        // Season Pass was purchased but has since expired — must not leak bonus
+        playerRepo.updateSeasonPass(active = true, expiry = 1L)
+        val gemsBefore = playerRepo.profile.value.gems
+
+        var total = 0L
+        var i = 0
+        while (total < 1_000) {
+            val delta = if (i % 2 == 0) 150L else 250L
+            manager.recordSteps(delta, baseTime + i * minuteGap)
+            total += delta
+            i++
+        }
+
+        val gemsAfter = playerRepo.profile.value.gems
+        assertEquals(1L, gemsAfter - gemsBefore,
+            "Expired Season Pass should fall back to baseline streak Gem only")
+    }
 }
