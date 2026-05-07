@@ -3,6 +3,7 @@ package com.whitefang.stepsofbabylon.data.integration
 import com.whitefang.stepsofbabylon.data.anticheat.AntiCheatPreferences
 import com.whitefang.stepsofbabylon.data.healthconnect.HealthConnectStepReader
 import com.whitefang.stepsofbabylon.data.healthconnect.StepCrossValidator
+import com.whitefang.stepsofbabylon.data.local.AppDatabase
 import com.whitefang.stepsofbabylon.domain.model.DailyStepSummary
 import com.whitefang.stepsofbabylon.domain.model.PlayerProfile
 import com.whitefang.stepsofbabylon.fakes.FakePlayerRepository
@@ -18,6 +19,19 @@ class EscrowLifecycleTest {
 
     private val stepReader: HealthConnectStepReader = mock()
     private val antiCheatPrefs: AntiCheatPreferences = mock()
+    private val appDatabase: AppDatabase = mock()
+
+    /**
+     * Builds a validator with the `runInTransaction` seam replaced by a pass-through so
+     * the atomic multi-write branches execute their bodies directly (the behaviour under
+     * test is the escrow-lifecycle state machine, not Room's transaction machinery).
+     */
+    private fun makeValidator(
+        stepRepo: FakeStepRepository,
+        playerRepo: FakePlayerRepository,
+    ) = StepCrossValidator(stepReader, stepRepo, playerRepo, antiCheatPrefs, appDatabase).apply {
+        runInTransaction = { block -> block() }
+    }
 
     @Test
     fun `full lifecycle - escrow deducts then release restores balance`() = runTest {
@@ -31,7 +45,7 @@ class EscrowLifecycleTest {
         whenever(stepReader.getStepsForDate(any())).thenReturn(8000L)
         whenever(antiCheatPrefs.getCvOffenseCount()).thenReturn(0)
 
-        val validator = StepCrossValidator(stepReader, stepRepo, playerRepo, antiCheatPrefs)
+        val validator = makeValidator(stepRepo, playerRepo)
 
         // First validation: escrow deducts excess (2000) from balance
         validator.validate("2026-03-12")
@@ -55,7 +69,7 @@ class EscrowLifecycleTest {
         whenever(stepReader.getStepsForDate(any())).thenReturn(8000L)
         whenever(antiCheatPrefs.getCvOffenseCount()).thenReturn(0)
 
-        val validator = StepCrossValidator(stepReader, stepRepo, playerRepo, antiCheatPrefs)
+        val validator = makeValidator(stepRepo, playerRepo)
 
         // Sync 1: escrow deducts
         validator.validate("2026-03-12")

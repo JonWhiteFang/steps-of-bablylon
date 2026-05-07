@@ -1,5 +1,74 @@
 # Run Log
 
+## 2026-05-07 — Phase B.2 PR 3 (RO-02 site #2): AppDatabase.withTransaction for StepCrossValidator
+
+- **Goal:** Apply RO-02 site #2 per `devdocs/evolution/refactoring_opportunities.md` §RO-02. `StepCrossValidator.validate` has multiple graduated-response branches that each pair a `playerRepository.spendSteps` / `addSteps` call with a `stepRepository.updateEscrow` / `releaseEscrow` call. A crash between the two writes leaves the wallet and escrow counter out of sync — either the player was charged without the escrow recording it (allowing double-spend on retry) or the reverse. RO-02 explicitly licenses the cross-layer `AppDatabase` import at this site (unlike PRs 1–2 where the transaction lives on the DAO) because the validator lives in `data/healthconnect/` and the graduated-response branches need parallel transaction scopes.
+- **Preflight:** read `START_HERE`, `STATE`, `CONSTRAINTS`, `RUN_LOG` head (B.2 PR 1 + 2, B.3 PR 1 entries). `git status` clean on `main`, 4 commits ahead of origin pushed. Read `StepCrossValidator`, `StepRepository` interface, `StepRepositoryImpl`, `AntiCheatPreferences`, `StepCrossValidatorTest` (10 cases, all Mockito-based), `EscrowLifecycleTest` (2 cases, uses `FakePlayerRepository` + `FakeStepRepository`). Grep-confirmed 3 construction sites total.
+
+### Design
+
+The spec says "3 parallel branches" but the validator actually has **5 multi-write pairs** (cap-excess branches share a shape; each gets its own wrapper):
+
+1. **Level 3 cap-excess:** `spendSteps(excess) + updateEscrow(..., MAX_ESCROW_SYNCS_DEFAULT)`
+2. **Level 2 cap-excess:** `spendSteps(excess) + updateEscrow(..., MAX_ESCROW_SYNCS_DEFAULT)`
+3. **Level 1 first-escrow:** `spendSteps(excess) + updateEscrow(..., newSyncCount)` — the subsequent-sync metadata-only update and the discard path are single writes (not wrapped)
+4. **Level 0 first-escrow:** same shape as #3
+5. **Reconciliation:** `addSteps(record.escrowSteps) + releaseEscrow(date)`
+
+All 5 wrapped in `runInTransaction { … }`. The `antiCheatPrefs.recordCvOffense(date)` write (at the top of the if-branch) and `antiCheatPrefs.decayCvOffenses()` (after reconciliation) deliberately stay **outside** the transaction — they are SharedPreferences writes, not SQLite-backed, and cannot participate in a Room transaction. Recording the offense before the transaction is also the safer ordering: a transaction failure must not hide the fact that a validation attempt detected a discrepancy.
+
+**Test seam.** `StepCrossValidator` gains an `@VisibleForTesting internal var runInTransaction` field with a default that delegates to `appDatabase.withTransaction { block() }`. Tests construct with `mock<AppDatabase>()` (Mockito can't mock Room's `withTransaction` extension on a bare mock) and override the seam with a direct-invocation pass-through `{ block -> block() }`. The branch-logic assertions remain unchanged; real Room transaction behaviour is an instrumented-test concern out of JVM scope, per the RO-02 verification strategy.
+
+### Why the seam + internal var, not a full abstraction
+
+RO-02 non-goal: "Do not introduce a global `TransactionRunner` abstraction." The seam is a single `internal var` on one class, not a project-wide interface — it exists only because `mock<AppDatabase>()` doesn't support Kotlin extension functions. Every production call goes through the default `appDatabase.withTransaction { block() }`; the override path is test-only and annotated with `@VisibleForTesting`.
+
+### Files touched
+
+- `app/src/main/java/.../data/healthconnect/StepCrossValidator.kt` (+`AppDatabase` + `androidx.annotation.VisibleForTesting` + `androidx.room.withTransaction` imports; +`appDatabase` constructor param; +`runInTransaction` seam; 5 multi-write branches wrapped; SharedPreferences writes explicitly documented as outside-transaction; comprehensive KDoc on the class header explaining the scope split and RO-02 license)
+- `app/src/test/java/.../data/healthconnect/StepCrossValidatorTest.kt` (+`AppDatabase` mock; `runInTransaction = { block -> block() }` on validator construction; all 10 existing cases preserved verbatim; +2 new atomicity cases)
+- `app/src/test/java/.../data/integration/EscrowLifecycleTest.kt` (+`AppDatabase` mock; new `makeValidator` helper that wires the pass-through seam; both existing integration cases preserved)
+
+### Tests added (2 new cases in `StepCrossValidatorTest`, bringing it to 12 total)
+
+1. **`RO-02 site 2 - multi-write branch invokes the transaction seam exactly once per write pair`** — constructs a validator with a counting wrapper around `runInTransaction`; exercises the Level 0 first-escrow path; asserts `transactionCalls == 1` and that both writes still happened. Proves the seam is live for the multi-write branches.
+2. **`RO-02 site 2 - single-write branches bypass the transaction seam`** — same counting wrapper; exercises the Level 0 subsequent-sync path (metadata-only `updateEscrow`, no `spendSteps`); asserts `transactionCalls == 0`. Proves the seam is not dead weight on single-write branches — the wrapping is surgical, not indiscriminate.
+
+All 10 existing `StepCrossValidatorTest` cases continue to pass verbatim because the seam's default is a direct-invocation pass-through from the test's perspective. `EscrowLifecycleTest`'s two full-lifecycle cases (escrow + release, escrow + discard) also pass — same seam wiring via the new `makeValidator` helper.
+
+### Verification
+
+- `./run-gradle.sh :app:compileDebugKotlin :app:testDebugUnitTest :app:lintDebug` — BUILD SUCCESSFUL.
+- Test suite: **463 → 465 JVM tests** (+2, matches the 2 new atomicity cases exactly), 0 failures, 0 errors, 0 skipped. `StepCrossValidatorTest`: 10 → 12 cases. `EscrowLifecycleTest`: 2 → 2 (preserved, now routing through the seam).
+- Lint: clean, no new warnings.
+- `grep -c "@Transaction" app/src/main/java/com/whitefang/stepsofbabylon/data/local/*.kt` still 2 (WorkshopDao, DailyStepDao). `grep -c "withTransaction" app/src/main/java/com/whitefang/stepsofbabylon/data/healthconnect/StepCrossValidator.kt` — 1 match (the default lambda body). RO-02 progress: 3/5 atomic sites landed.
+
+### Surface changes
+
+- `StepCrossValidator` constructor grew from 4 to 5 params (added `AppDatabase`). Hilt graph unaffected — `AppDatabase` is provided by `DatabaseModule`.
+- Tests that construct `StepCrossValidator` manually (3 sites total) all updated.
+- No public API changes to `StepRepository`, `PlayerRepository`, or `AntiCheatPreferences`.
+- No new production dependencies.
+- No ADR — same rationale as B.2 PRs 1–2.
+
+### Open questions / blockers
+
+- None. The `runInTransaction` seam is a deliberate, narrowly-scoped test hook. The real transaction behaviour is exercised at app runtime via Room's generated impl of `withTransaction` on the SQLCipher-wrapped `AppDatabase`.
+- 2 RO-02 sites remain. B.2 PR 4 (`ClaimMilestone`) is the same pattern as PRs 1–2 — a composite `@Transaction` method on `MilestoneDao` taking `PlayerProfileDao`. B.2 PR 5 wraps `runEndRoundPersistence` in `withTransaction { }` — a single-call-site change thanks to B.3 PR 1.
+
+### Follow-ups
+
+- B.2 PR 4 next: `ClaimMilestone` atomic. Same mechanical pattern as PRs 1–2. Expect a clean copy-paste of the shape.
+- B.2 PR 5 is the smallest remaining RO-02 unit (single `withTransaction { }` wrap around an existing function).
+- B.3 PR 2 (`onCleared` guard) remains independent and can land any time.
+- Doc drift: `AGENTS.md` still says "455 JVM tests" (now 465). Bundle into a future A.1-style sweep.
+
+### Memory updated
+
+- `STATE.md` ✅ — current objective now "B.2 PR 3 complete"; B.2 PR 3 added to "what works"; priorities/next-actions reshuffled (B.2 PR 4 top); test count 463 → 465; critical-path line updated.
+- `RUN_LOG.md` ✅ — this entry.
+- ADR: not warranted — RO-02 spec already covers this site with full alternatives/rollback.
+
 ## 2026-05-07 — Phase B.2 PR 2 (RO-02 site #1): atomic @Transaction for AwardBattleSteps
 
 - **Goal:** Apply the B.2 PR 1 pattern to the first multi-write site RO-02 names: `AwardBattleSteps`. Wrap the cap check + `incrementBattleSteps` + wallet-credit chain in a single Room `@Transaction` so a crash between the two writes can no longer leave the wallet credited without the cap counter moving, and two concurrent kills with 1 battle-step of headroom can no longer both credit and overflow the cap by 1.
