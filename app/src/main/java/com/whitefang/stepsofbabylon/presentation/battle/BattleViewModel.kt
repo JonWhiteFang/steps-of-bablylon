@@ -1,5 +1,6 @@
 package com.whitefang.stepsofbabylon.presentation.battle
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.whitefang.stepsofbabylon.data.local.DailyMissionDao
@@ -144,45 +145,108 @@ class BattleViewModel @Inject constructor(
     }
 
     private fun endRound() {
-        if (roundEnded) return; roundEnded = true
-        val eng = engine ?: return; val wave = eng.waveSpawner?.currentWave ?: 1
-        viewModelScope.launch {
-            val result = updateBestWave(tier, wave)
-            val psAwarded = if (result.isNewRecord) awardWaveMilestone(wave) else 0
-            if (result.isNewRecord) {
-                milestoneNotificationManager.notifyNewBestWave(wave, Biome.forTier(tier).name.replace("_", " "))
-            }
+        if (roundEnded) return
+        roundEnded = true
+        val eng = engine ?: return
+        val wave = eng.waveSpawner?.currentWave ?: 1
+        viewModelScope.launch { runEndRoundPersistence(eng, wave) }
+    }
+
+    /**
+     * Runs the end-of-round persistence fan-out and pushes the post-round UI state.
+     *
+     * Each write / notification is isolated in its own `runCatching { }.onFailure { Log.w }`
+     * block so a single Room or notification-manager exception cannot leave the player on a
+     * frozen battle screen with no post-round overlay. Writes whose results feed the
+     * [RoundEndState] ([updateBestWave], [awardWaveMilestone], [playerRepository.updateHighestUnlockedTier])
+     * fall back to safe defaults on failure so the UI push always runs.
+     *
+     * Composes with future RO-02 PR 5 — wrapping the body in a Room `@Transaction` turns three
+     * atomicity gaps into one transactional boundary; this extraction makes that wrapper a
+     * single-call-site change.
+     */
+    private suspend fun runEndRoundPersistence(eng: GameEngine, wave: Int) {
+        // Write 1: best wave per tier. Result feeds the UI push below.
+        val bestWaveResult = runCatching { updateBestWave(tier, wave) }
+            .onFailure { Log.w(TAG, "endRound: updateBestWave failed", it) }
+            .getOrNull()
+        val isNewRecord = bestWaveResult?.isNewRecord == true
+        val previousBest = bestWaveResult?.previousBest ?: 0
+
+        // Write 2: award wave-milestone power stones (only on a new record).
+        val psAwarded = if (isNewRecord) {
+            runCatching { awardWaveMilestone(wave) }
+                .onFailure { Log.w(TAG, "endRound: awardWaveMilestone failed", it) }
+                .getOrDefault(0)
+        } else 0
+
+        // New-record notification — best-effort; failure must not abort the flow.
+        if (isNewRecord) {
+            runCatching {
+                milestoneNotificationManager.notifyNewBestWave(
+                    wave,
+                    Biome.forTier(tier).name.replace("_", " "),
+                )
+            }.onFailure { Log.w(TAG, "endRound: notifyNewBestWave failed", it) }
+        }
+
+        // Write 3: highest-unlocked-tier advance. Wrapped so a profile-read failure or a DB
+        // write failure on updateHighestUnlockedTier cannot skip the UI push below.
+        val newTier = runCatching {
             val profile = playerRepository.observeProfile().first()
-            val newTier = checkTierUnlock(profile.bestWavePerTier, profile.highestUnlockedTier)
-            if (newTier != null) playerRepository.updateHighestUnlockedTier(newTier)
-            _uiState.update {
-                it.copy(isPaused = false, showUpgradeMenu = false, showOverdriveMenu = false,
-                    roundEndState = RoundEndState(wave, eng.totalEnemiesKilled, eng.totalCashEarned,
-                        eng.elapsedTimeSeconds, result.isNewRecord, result.previousBest, newTier, psAwarded,
-                        stepsEarned = it.stepsEarnedThisRound, adRemoved = it.adRemoved))
-            }
-            // Update daily mission progress for battle missions
-            try {
-                playerRepository.incrementBattleStats(1, eng.totalEnemiesKilled.toLong(), eng.totalCashEarned)
-            } catch (_: Exception) { /* best-effort */ }
-            try {
-                val today = timeProvider.today().toString()
-                val missions = dailyMissionDao.getByDateOnce(today)
-                for (m in missions) {
-                    if (m.claimed || m.completed) continue
-                    when (m.missionType) {
-                        DailyMissionType.REACH_WAVE_30.name -> {
-                            val newProgress = maxOf(m.progress, wave)
-                            dailyMissionDao.updateProgress(m.id, newProgress, newProgress >= m.target)
-                        }
-                        DailyMissionType.KILL_500_ENEMIES.name -> {
-                            val newProgress = m.progress + eng.totalEnemiesKilled
-                            dailyMissionDao.updateProgress(m.id, newProgress, newProgress >= m.target)
-                        }
+            val computed = checkTierUnlock(profile.bestWavePerTier, profile.highestUnlockedTier)
+            if (computed != null) playerRepository.updateHighestUnlockedTier(computed)
+            computed
+        }
+            .onFailure { Log.w(TAG, "endRound: updateHighestUnlockedTier failed", it) }
+            .getOrNull()
+
+        // UI state push — MUST run regardless of the above writes so the post-round overlay
+        // appears. This is the critical user-facing payoff of RO-03.
+        _uiState.update {
+            it.copy(
+                isPaused = false,
+                showUpgradeMenu = false,
+                showOverdriveMenu = false,
+                roundEndState = RoundEndState(
+                    wave,
+                    eng.totalEnemiesKilled,
+                    eng.totalCashEarned,
+                    eng.elapsedTimeSeconds,
+                    isNewRecord,
+                    previousBest,
+                    newTier,
+                    psAwarded,
+                    stepsEarned = it.stepsEarnedThisRound,
+                    adRemoved = it.adRemoved,
+                ),
+            )
+        }
+
+        // Write 4: all-time battle stats. Previously wrapped in an ad-hoc try/catch swallow;
+        // now normalised to runCatching + Log.w for consistency with writes 1–3.
+        runCatching {
+            playerRepository.incrementBattleStats(1, eng.totalEnemiesKilled.toLong(), eng.totalCashEarned)
+        }.onFailure { Log.w(TAG, "endRound: incrementBattleStats failed", it) }
+
+        // Write 5: daily-mission progress (battle missions). Same normalisation as write 4.
+        runCatching {
+            val today = timeProvider.today().toString()
+            val missions = dailyMissionDao.getByDateOnce(today)
+            for (m in missions) {
+                if (m.claimed || m.completed) continue
+                when (m.missionType) {
+                    DailyMissionType.REACH_WAVE_30.name -> {
+                        val newProgress = maxOf(m.progress, wave)
+                        dailyMissionDao.updateProgress(m.id, newProgress, newProgress >= m.target)
+                    }
+                    DailyMissionType.KILL_500_ENEMIES.name -> {
+                        val newProgress = m.progress + eng.totalEnemiesKilled
+                        dailyMissionDao.updateProgress(m.id, newProgress, newProgress >= m.target)
                     }
                 }
-            } catch (_: Exception) { /* best-effort */ }
-        }
+            }
+        }.onFailure { Log.w(TAG, "endRound: updateDailyMissionProgress failed", it) }
     }
 
     fun quitRound() { val eng = engine ?: return; eng.roundOver = true; endRound() }
@@ -301,4 +365,8 @@ class BattleViewModel @Inject constructor(
     fun setSpeed(multiplier: Float) { _uiState.update { it.copy(speedMultiplier = multiplier) } }
     fun togglePause() { _uiState.update { it.copy(isPaused = !it.isPaused) } }
     fun pause() { _uiState.update { it.copy(isPaused = true) } }
+
+    private companion object {
+        private const val TAG = "BattleViewModel"
+    }
 }

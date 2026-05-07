@@ -1,5 +1,140 @@
 # Run Log
 
+## 2026-05-07 — Phase B.3 PR 1 (RO-03 pattern-proving): resilient `runEndRoundPersistence`
+
+- **Goal:** Execute the RO-03 first PR per `devdocs/evolution/refactoring_opportunities.md` §RO-03 — extract `runEndRoundPersistence` from `BattleViewModel.endRound` and isolate every write / notification in a `runCatching { }.onFailure { Log.w }` block so a single Room or notification-manager exception can no longer leave the player on a frozen battle screen. Spec explicitly splits RO-03 into two PRs; **no `onCleared` change in this PR** (that is PR 2, which uses `ProcessLifecycleOwner.lifecycleScope` to outlive VM cleanup). PR 1 is deliberately small and composable with a future B.2 PR 5 that wraps the whole body in a Room `@Transaction`.
+- **Preflight:** read `START_HERE`, `STATE`, `CONSTRAINTS`, `RUN_LOG` head (B.2 PR 1 entry and below). `git status` showed the B.2 PR 1 working tree uncommitted — flagged to user. B.3 touches a disjoint file set (`BattleViewModel.kt`, `BattleViewModelTest.kt`, `FakePlayerRepository.kt`), so the diffs stack cleanly and can be staged as two commits at review time. Read RO-03 spec in full, `BattleViewModel`, `BattleViewModelTest`, `BattleUiState` (for `RoundEndState` field names).
+
+### Design
+
+The spec names 3 writes but the current `endRound` actually has **5** best-effort writes plus 1 notification:
+
+1. `updateBestWave(tier, wave)` — produces `result.isNewRecord` + `result.previousBest` used by the UI push.
+2. `awardWaveMilestone(wave)` — produces `psAwarded` used by the UI push.
+3. `milestoneNotificationManager.notifyNewBestWave(...)` — not a DB write but still best-effort.
+4. `playerRepository.updateHighestUnlockedTier(newTier)` — gated on a profile read + `checkTierUnlock`; result used by the UI push.
+5. `playerRepository.incrementBattleStats(...)` — previously wrapped in ad-hoc `try / catch (_: Exception) {}` swallow.
+6. `dailyMissionDao.updateProgress(...)` — previously wrapped in ad-hoc `try / catch (_: Exception) {}` swallow.
+
+All six are now normalised to `runCatching { ... }.onFailure { Log.w(TAG, "endRound: <writeName> failed", it) }`. Writes whose results feed `RoundEndState` (1, 2, 4) use `.getOrNull()` / `.getOrDefault(0)` with safe fallbacks (`isNewBestWave = false`, `previousBest = 0`, `psAwarded = 0`, `tierUnlocked = null`) so the `_uiState.update` push below is guaranteed to run.
+
+`endRound()` shrank from ~35 lines to 6 (guard + null-check + `viewModelScope.launch { runEndRoundPersistence(eng, wave) }`). `quitRound()` and the polling-loop call site (`startPollingEngine`) are unchanged — both go through the same slimmed-down `endRound()`, so the `roundEnded` guard still dedupes.
+
+Added `private companion object { private const val TAG = "BattleViewModel" }` + `import android.util.Log`. This is the first `Log.*` call in the Battle presentation layer; it matches the R2-07 precedent for `StepSyncWorker`'s resilient-worker catches.
+
+### Design decision: no `onCleared` change
+
+Per the RO-03 spec's "First safe step": *"PR 1 — extract `runEndRoundPersistence` and wrap each of the 3 writes in `runCatching { }.onFailure { Log.w }`. Both `endRound()` and `quitRound()` now call the extracted function. **No `onCleared` change yet.**"* Deliberately keeping this PR to a single-axis change (error handling) means a clean revert and lets reviewers verify the behaviour-preservation without having to reason about lifecycle scoping at the same time. The `onCleared` fix needs `ProcessLifecycleOwner.lifecycleScope` to survive VM cleanup, which is a different risk profile (process-kill still loses data; transaction wrapping in RO-02 PR 5 is the longer-term fix).
+
+### Files touched
+
+- `app/src/main/java/.../presentation/battle/BattleViewModel.kt` (+`android.util.Log` import; extracted `runEndRoundPersistence(eng, wave)`; normalised 5 writes + 1 notification to `runCatching + Log.w`; `endRound()` shrank from ~35 lines to 6; +`private companion object { TAG }`)
+- `app/src/test/java/.../fakes/FakePlayerRepository.kt` (`class` → `open class`; marked `updateBestWave`, `addPowerStones`, `updateHighestUnlockedTier`, `incrementBattleStats` as `open override` for per-method throwing overrides)
+- `app/src/test/java/.../presentation/battle/BattleViewModelTest.kt` (+ `installEngineForEndRound(vm)` helper using reflection on the private `engine` field, mirroring the existing A.7 pattern; +3 RO-03 tests)
+
+### Tests added (3 new cases in `BattleViewModelTest`, bringing it to 19 total)
+
+1. **`RO-03 - updateBestWave failure does not block later writes or UI push`** — anonymous `FakePlayerRepository` subclass throws from `updateBestWave`. Asserts (a) `vm.uiState.value.roundEndState` is non-null (UI push ran despite the earlier throw) and (b) `totalRoundsPlayed == 1L` (a later write, `incrementBattleStats`, still ran). Before RO-03 this test would fail because the thrown exception propagates out of the `viewModelScope.launch` and short-circuits the remaining writes + UI push.
+2. **`RO-03 - all persistence failures still produce RoundEndState`** — throws from all 4 player-repository writes (`updateBestWave`, `addPowerStones`, `updateHighestUnlockedTier`, `incrementBattleStats`). Asserts the `RoundEndState` is still set, with safe-default fields (`isNewBestWave = false`, `previousBest = 0`, `powerStonesAwarded = 0`, `tierUnlocked = null`). Proves the `.getOrNull() / .getOrDefault(0)` fallback contract.
+3. **`RO-03 - roundEnded guard prevents double persistence on repeated quitRound`** — calls `quitRound()` twice in sequence. Asserts `totalRoundsPlayed` is exactly 1 after both calls — the `roundEnded` boolean guard at the top of `endRound()` gates the second call. Protects against a regression where a future change (e.g. making `endRound` idempotent differently) breaks the single-run invariant the polling loop + `quitRound` depend on.
+
+Both failure-isolation tests use reflection to reach the private `engine` field (`installEngineForEndRound` helper), then call the public `quitRound()` to drive `endRound` without needing the full polling-loop setup. The pattern follows the A.7 tests, which already use reflection for `effectEngine` / `pendingEffects` / `effects` access.
+
+### Verification
+
+- `./run-gradle.sh :app:compileDebugKotlin` — BUILD SUCCESSFUL. The `runCatching { ... }.getOrNull() ` / `.getOrDefault(0)` chains type-check against `UpdateBestWave.Result?`, `Int?`, and `Int` targets cleanly.
+- `./run-gradle.sh :app:testDebugUnitTest :app:lintDebug` — BUILD SUCCESSFUL. `BattleViewModelTest`: 16 → 19 cases, 0 failures. Total suite: **458 → 461 JVM tests** (+3, matches the 3 new RO-03 cases exactly), 0 failures, 0 errors, 0 skipped. Lint clean.
+- Field-name correction: initial test draft referenced `state.isNewRecord` / `state.newTierUnlocked`, which don't exist — actual field names are `state.isNewBestWave` / `state.tierUnlocked`. Caught by a pre-test grep on `RoundEndState`'s declaration in `BattleUiState.kt` before running the suite.
+
+### Surface changes
+
+- No public `BattleViewModel` API change. `endRound()` is private; `quitRound()` and `startPollingEngine()` behaviour preserved.
+- `FakePlayerRepository` is now `open class` with 4 `open override` methods. Subclassing is the only behaviour change — the unqualified `FakePlayerRepository(...)` constructor call still works unchanged across all 15+ existing test sites.
+- No new production dependencies. `android.util.Log` was already available (presentation layer is allowed Android imports).
+
+### Open questions / blockers
+
+- None for this PR. `onCleared` mid-nav gap is explicitly deferred to B.3 PR 2 per the RO-03 spec.
+- No ADR written. RO-03 is fully documented in `devdocs/evolution/refactoring_opportunities.md §RO-03` with alternatives, first-safe-step, verification, rollback, and non-goals. Same rationale as B.2 PR 1 — no duplication with the evolution doc, matches Phase A precedent of only writing ADRs for genuinely new decisions.
+
+### Follow-ups
+
+- **B.2 PR 5 is now trivial.** The extraction means wrapping the `runEndRoundPersistence` body in a Room `@Transaction` (or `AppDatabase.withTransaction { }`) is a single-call-site change. Was gated on this PR per the RO-02 spec's dependency graph; now unblocked.
+- B.3 PR 2 remains: `onCleared` guard using `ProcessLifecycleOwner.lifecycleScope`. Would outlive the VM but still not the process — process-kill loss is a separate issue that RO-02 PR 5 (this-PR-dependent transaction wrapping) partially addresses.
+- B.2 PR 2 (`AwardBattleSteps` atomic) and B.2 PR 4 (`ClaimMilestone` atomic) can now proceed in parallel with each other since the pattern is proven.
+- Doc drift: `AGENTS.md` still says "455 JVM tests" — now stale by two PRs (+3 each). Bundle into a future A.1-style sweep rather than a one-line doc PR per change.
+
+### Memory updated
+
+- `STATE.md` ✅ — current objective now "Phase B.3 PR 1 complete"; B.3 PR 1 moved into "what works"; priorities/next-actions reshuffled (B.2 PRs 2–4 now top; B.3 PR 2 dropped to priority 3); test count 458 → 461; critical-path line updated.
+- `RUN_LOG.md` ✅ — this entry.
+- ADR: not warranted — see "Open questions".
+
+## 2026-05-07 — Phase B.2 PR 1 (RO-02 pattern-proving): atomic @Transaction for PurchaseUpgrade
+
+- **Goal:** Execute the RO-02 first PR per `devdocs/evolution/refactoring_opportunities.md` §RO-02 — replace the two-step `spendSteps` + `setUpgradeLevel` sequence in `PurchaseUpgrade` with a single atomic call backed by a Room `@Transaction` DAO method. Proves the pattern so PRs 2–5 (AwardBattleSteps, StepCrossValidator, ClaimMilestone, endRound) can follow without re-litigating the design.
+- **Preflight:** read `START_HERE`, `STATE`, `CONSTRAINTS`, `RUN_LOG` head (Phase A + B.1 entries). Verified `@Transaction` count in `app/src/main` was 0 before this PR (Phase 4 §2 baseline still held post-Phase-A). room-ktx 2.8.4 confirmed on classpath; chose DAO-level `@Transaction` default method over repo-level `AppDatabase.withTransaction { }` to match RO-02 sketch literally and keep the pattern per-site rather than introducing a transaction idiom to be repeated at every future repo. Read `PurchaseUpgrade` use case, both repos + impls, both DAOs, existing `PurchaseUpgradeTest`, both fakes, `WorkshopViewModelTest`, `UserFeedbackTest`, DI modules. Grep-confirmed `PurchaseUpgrade` has exactly two callers: the test and `WorkshopViewModel`.
+
+### Design
+
+- **Authoritative guard** lives in SQL: `PlayerProfileDao.adjustStepBalanceIfSufficient(cost: Long): Int` runs `UPDATE player_profile SET currentStepBalance = currentStepBalance - :cost WHERE id = 1 AND currentStepBalance >= :cost`. Returns rows affected (1 = deducted, 0 = insufficient). The `WHERE ... >= :cost` clause atomically closes both the partial-failure gap and the double-tap race (two concurrent purchases can't both pass and double-spend).
+- **Transaction boundary** lives on `WorkshopDao` as a suspend `@Transaction` default interface method: `purchaseUpgradeAtomic(type, newLevel, cost, playerDao: PlayerProfileDao): Boolean`. Body calls `playerDao.adjustStepBalanceIfSufficient(cost)`; if it returns 0 the transaction short-circuits to `false` (no upsert); otherwise it calls `upsert(WorkshopUpgradeEntity(type, newLevel))` and returns `true`. Cross-DAO call inside the transaction is safe because Room's transaction tracker is scoped to the underlying `RoomDatabase`, not to a specific DAO instance — both DAO calls share the same SQLite transaction.
+- **Domain interface** gained `WorkshopRepository.purchaseUpgradeAtomic(type, newLevel, cost): Boolean`. Implemented in `WorkshopRepositoryImpl` after adding a `PlayerProfileDao` constructor dependency (DI graph unaffected — `DatabaseModule` already `@Provides`-es both DAOs).
+- **Use case shrink:** `PurchaseUpgrade` dropped its `PlayerRepository` dependency entirely. Body now does `maxLevel` check → `calculateCost` → wallet fast-fail (UI-side hint) → `workshopRepository.purchaseUpgradeAtomic(type, currentLevel + 1, cost)`. Public signature `(type, currentLevel, wallet): Boolean` unchanged, so `WorkshopViewModel`'s call sites were untouched aside from the one-line constructor update from 3-arg to 2-arg.
+- **Fake emulation.** `FakeWorkshopRepository` gained an optional `linkedPlayer: FakePlayerRepository? = null` constructor param. When supplied, `purchaseUpgradeAtomic` uses a `kotlinx.coroutines.sync.Mutex` to faithfully emulate the SQL atomic guard — read-check-deduct-write under the mutex so a concurrent call observes the deducted balance. When null, it acts as a purchase recorder (no affordability check) so the 5 existing `FakeWorkshopRepository()` call sites stayed source-compatible without every test being forced to supply a player. `FakePlayerRepository` gained a `spendStepsCallCount` counter (increments on direct `spendSteps`) so tests can prove the use case does NOT call the legacy path.
+
+### Files touched
+
+- `app/src/main/java/.../data/local/PlayerProfileDao.kt` (+1 `@Query` method, KDoc)
+- `app/src/main/java/.../data/local/WorkshopDao.kt` (+`@Transaction` default method, +import `androidx.room.Transaction`, KDoc)
+- `app/src/main/java/.../domain/repository/WorkshopRepository.kt` (+1 interface method, KDoc)
+- `app/src/main/java/.../data/repository/WorkshopRepositoryImpl.kt` (+`PlayerProfileDao` constructor dep, +impl)
+- `app/src/main/java/.../domain/usecase/PurchaseUpgrade.kt` (–`PlayerRepository` dep, body rewrite, KDoc)
+- `app/src/main/java/.../presentation/workshop/WorkshopViewModel.kt` (1-line constructor call update)
+- `app/src/test/java/.../fakes/FakePlayerRepository.kt` (+`spendStepsCallCount`)
+- `app/src/test/java/.../fakes/FakeWorkshopRepository.kt` (rewritten: +`linkedPlayer` param, +Mutex, +`purchaseUpgradeAtomic` impl, +`purchaseUpgradeAtomicCallCount`)
+- `app/src/test/java/.../domain/usecase/PurchaseUpgradeTest.kt` (rewrite: 4 existing cases strengthened with workshop-side asserts, +3 new RO-02 atomicity cases)
+- `app/src/test/java/.../presentation/workshop/WorkshopViewModelTest.kt` (setup order swap + link fakes)
+
+### Tests added (3 new cases in `PurchaseUpgradeTest`)
+
+1. **`successful purchase uses atomic repo method and does not call spendSteps directly`** — asserts `playerRepo.spendStepsCallCount == 0` and `workshopRepo.purchaseUpgradeAtomicCallCount == 1` after one successful purchase. If someone re-introduces the two-step flow this test fails immediately.
+2. **`purchase skips atomic call when wallet fast-fail trips`** — wallet balance 0 means the use case returns false before hitting the repo. Asserts `purchaseUpgradeAtomicCallCount == 0`. Verifies the fast-fail path exists and avoids an unnecessary DB round-trip for obviously-broke callers.
+3. **`two concurrent purchases on exactly sufficient balance - only one succeeds`** — `kotlinx.coroutines.async` pair racing on the atomic path with exactly one purchase worth of Steps. Asserts exactly one `true` and one `false` result, balance = 0 after, upgrade level = 1 (not 2), and `purchaseUpgradeAtomicCallCount == 2`. Proves the Mutex-guarded fake models the SQL atomic guard correctly; the real Room-level atomicity is a separate instrumented-test concern (out of scope for this PR; documented in RO-02 verification strategy).
+
+The 4 existing cases were all preserved. `insufficient steps returns false without mutation` was strengthened: previously only asserted on step balance; now also asserts `workshop.upgrades.value[DAMAGE] == null` (no partial workshop-side write). `at max level returns false` gained a balance-unchanged assertion. `level 0 purchase costs exactly baseCost` unchanged.
+
+### Verification
+
+- `./run-gradle.sh :app:compileDebugKotlin` — BUILD SUCCESSFUL. Room KSP compiled the `@Transaction` default method including the cross-DAO call signature cleanly; had the pattern been malformed (e.g. interface-vs-abstract-class, transaction-boundary-across-DAOs), KSP would have failed at this step.
+- `./run-gradle.sh :app:testDebugUnitTest` — BUILD SUCCESSFUL. `PurchaseUpgradeTest`: 4 → 7 cases, 0 failures. Total suite: **455 → 458 JVM tests** (+3, matches the 3 new atomicity cases exactly), 0 failures, 0 errors, 0 skipped.
+- `./run-gradle.sh :app:lintDebug` — BUILD SUCCESSFUL. No new warnings introduced.
+- `grep -rn "@Transaction\|withTransaction" app/src/main --include='*.kt'` — **1 match** (`WorkshopDao.kt:48`). This is the first `@Transaction` marker in `app/src/main`; RO-02 target is ≥5 after all 5 PRs in the family land.
+
+### Surface changes (breaking-but-internal)
+
+- `PurchaseUpgrade` constructor now takes `(workshopRepository, calculateCost?)` instead of `(workshopRepository, playerRepository, calculateCost?)`. Only two call sites touched (`WorkshopViewModel` + `PurchaseUpgradeTest`); both updated in this PR.
+- `WorkshopRepositoryImpl` constructor gained a second `PlayerProfileDao` param. Hilt graph unaffected — the DAO is already provided by `DatabaseModule`. Test code that manually constructs `WorkshopRepositoryImpl` would need updating; a grep confirmed there is no such code (all test sites use `FakeWorkshopRepository`).
+
+### Open questions / blockers
+
+- None for this PR. Concurrent-purchase atomicity is proven at the fake/Mutex level; a future on-device smoke test or instrumented test against a real Room DB would be the only stronger guarantee but is not in RO-02 PR 1 scope (the verification strategy in the spec explicitly calls these two levels adequate for each PR).
+- No ADR written. The decision was already fully documented in `devdocs/evolution/refactoring_opportunities.md §RO-02` with alternatives, first-safe-step, rollback, and non-goals. Writing an ADR would duplicate content; subsequent RO-02 PRs can reference the same section. Matches the Phase A precedent (9 PRs, 0 ADRs, all pre-documented in Phase-14 roadmap).
+
+### Follow-ups
+
+- B.2 PR 2 (`AwardBattleSteps` — `addSteps` + `incrementBattleSteps` cross-DAO) is the next natural unit; add a composite `@Transaction` method on `DailyStepDao` that takes `PlayerProfileDao`. Uses the pattern established here.
+- B.2 PR 3 (`StepCrossValidator`) is the one place RO-02 licenses a repo-level `AppDatabase.withTransaction { }` (validator lives in `data/healthconnect/` so it can import `RoomDatabase`); different pattern but same spirit.
+- B.2 PR 4 (`ClaimMilestone`) — composite method on `MilestoneDao` taking `PlayerProfileDao`. Same pattern as this PR.
+- B.2 PR 5 (`endRound` `@Transaction` wrapper) is gated on B.3 PR 1 landing first (extraction of `runEndRoundPersistence`).
+- Doc drift: `AGENTS.md` says "455 JVM tests" — stale after this PR. Bundle into the next A.1-style doc sweep alongside any subsequent test-count changes (no value in a one-line PR for each ±3).
+
+### Memory updated
+
+- `STATE.md` ✅ — current objective now "Phase B.2 PR 1 complete"; B.2 PR 1 moved into "what works"; priorities/next-actions reshuffled with B.3 PR 1 as the new top priority; test count 455 → 458; critical-path line updated.
+- `RUN_LOG.md` ✅ — this entry.
+- ADR: not warranted — see "Open questions".
+
 ## 2026-05-07 — Phase A (Foundation): land 9 tactical PRs from the Phase-14 implementation roadmap
 
 - **Goal:** Execute Phase A of `devdocs/evolution/implementation_roadmap.md` — 9 tactical PRs (A.1–A.9) covering doc drift, test-classpath recovery, DB-decrypt recovery, Season Pass background fix, deep-link coverage expansion, configurable fake failure modes, capped-kill FloatingText suppression, dead-code removal, and an orphan-enum decision. Low risk, high velocity; nothing blocks a later phase but several enable Phase B/C/D to land safely.

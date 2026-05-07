@@ -324,4 +324,116 @@ class BattleViewModelTest {
         )
         assertEquals(initialBalance + 10L, playerRepo.profile.value.stepBalance)
     }
+
+    // -------- RO-03 endRound resilience tests --------
+
+    /**
+     * Drives `endRound` from a test context by reflection-setting the private `engine`
+     * field, then calling the public `quitRound()`. Mirrors the pattern the A.7 tests use
+     * for accessing `effectEngine` — avoids needing the full polling loop.
+     */
+    private fun installEngineForEndRound(vm: BattleViewModel): com.whitefang.stepsofbabylon.presentation.battle.engine.GameEngine {
+        val engine = com.whitefang.stepsofbabylon.presentation.battle.engine.GameEngine()
+        val field = BattleViewModel::class.java.getDeclaredField("engine").apply { isAccessible = true }
+        field.set(vm, engine)
+        return engine
+    }
+
+    @Test
+    fun `RO-03 - updateBestWave failure does not block later writes or UI push`() = runTest(dispatcher) {
+        // A throwing PlayerRepository: updateBestWave (write 1) fails; other writes behave
+        // normally. Without the runCatching wrapper this exception would propagate out of
+        // the coroutine launched by endRound, skipping the _uiState.update push and the
+        // two remaining writes. With the wrapper in place, the rest of the pipeline runs.
+        val throwingPlayer = object : FakePlayerRepository(PlayerProfile(stepBalance = 10_000, currentTier = 1)) {
+            override suspend fun updateBestWave(tier: Int, wave: Int) {
+                throw RuntimeException("simulated DB failure on updateBestWave")
+            }
+        }
+        val vm = BattleViewModel(
+            workshopRepo, throwingPlayer, biomePreferences, uwRepo, cardRepo,
+            dailyMissionDao, dailyStepDao, milestoneNotificationManager, adManager,
+        )
+        backgroundScope.launch { vm.uiState.collect {} }
+        advanceUntilIdle()
+
+        installEngineForEndRound(vm)
+        vm.quitRound()
+        advanceUntilIdle()
+
+        // The UI push must have happened — this is the primary user-facing payoff.
+        assertNotNull(
+            vm.uiState.value.roundEndState,
+            "RoundEndState must be set even when updateBestWave throws",
+        )
+        // A later write (incrementBattleStats) must still have run. Before RO-03 the
+        // propagated exception would have short-circuited the launch before this point.
+        assertEquals(
+            1L,
+            throwingPlayer.profile.value.totalRoundsPlayed,
+            "incrementBattleStats must still run after an earlier write fails",
+        )
+    }
+
+    @Test
+    fun `RO-03 - all persistence failures still produce RoundEndState`() = runTest(dispatcher) {
+        // Worst-case robustness: every wrapped write throws. The player still sees a
+        // post-round overlay. Before RO-03 the first thrown exception would have
+        // cancelled the launch, leaving the player on a frozen battle screen.
+        val brokenPlayer = object : FakePlayerRepository(PlayerProfile(stepBalance = 10_000, currentTier = 1)) {
+            override suspend fun updateBestWave(tier: Int, wave: Int) { throw RuntimeException("w1") }
+            override suspend fun addPowerStones(amount: Long) { throw RuntimeException("w2") }
+            override suspend fun updateHighestUnlockedTier(tier: Int) { throw RuntimeException("w3") }
+            override suspend fun incrementBattleStats(rounds: Long, kills: Long, cash: Long) {
+                throw RuntimeException("w4")
+            }
+        }
+        val vm = BattleViewModel(
+            workshopRepo, brokenPlayer, biomePreferences, uwRepo, cardRepo,
+            dailyMissionDao, dailyStepDao, milestoneNotificationManager, adManager,
+        )
+        backgroundScope.launch { vm.uiState.collect {} }
+        advanceUntilIdle()
+
+        installEngineForEndRound(vm)
+        vm.quitRound()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value.roundEndState
+        assertNotNull(state, "RoundEndState must be set even when every write fails")
+        // Because updateBestWave failed, isNewBestWave falls back to false; previousBest
+        // falls back to 0; psAwarded stays 0 (no wave-milestone awarded because not a
+        // new record). tierUnlocked falls back to null. This is the safe-default contract.
+        assertFalse(state!!.isNewBestWave, "isNewBestWave must default to false when updateBestWave throws")
+        assertEquals(0, state.previousBest)
+        assertEquals(0, state.powerStonesAwarded)
+        assertNull(state.tierUnlocked)
+    }
+
+    @Test
+    fun `RO-03 - roundEnded guard prevents double persistence on repeated quitRound`() = runTest(dispatcher) {
+        // The polling loop and quitRound both call endRound; the in-flight
+        // `roundEnded` boolean is what guarantees only one persistence pass. A
+        // regression here would show up as double-incrementing totalRoundsPlayed.
+        val vm = createVm()
+        backgroundScope.launch { vm.uiState.collect {} }
+        advanceUntilIdle()
+
+        installEngineForEndRound(vm)
+
+        vm.quitRound()
+        advanceUntilIdle()
+        val roundsAfterFirst = playerRepo.profile.value.totalRoundsPlayed
+
+        vm.quitRound()
+        advanceUntilIdle()
+        val roundsAfterSecond = playerRepo.profile.value.totalRoundsPlayed
+
+        assertEquals(1L, roundsAfterFirst, "first quitRound must persist exactly one round")
+        assertEquals(
+            roundsAfterFirst,
+            roundsAfterSecond,
+            "second quitRound must be a no-op — roundEnded guard must hold",
+        )
+    }
 }

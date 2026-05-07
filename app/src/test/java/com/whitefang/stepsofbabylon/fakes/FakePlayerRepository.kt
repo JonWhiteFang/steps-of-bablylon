@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 
-class FakePlayerRepository(
+open class FakePlayerRepository(
     initialProfile: PlayerProfile = PlayerProfile()
 ) : PlayerRepository {
 
@@ -34,18 +34,18 @@ class FakePlayerRepository(
     }
     override suspend fun addGems(amount: Long) { profile.update { it.copy(gems = it.gems + amount, totalGemsEarned = it.totalGemsEarned + amount) } }
     override suspend fun spendGems(amount: Long) { profile.update { it.copy(gems = maxOf(0, it.gems - amount), totalGemsSpent = it.totalGemsSpent + amount) } }
-    override suspend fun addPowerStones(amount: Long) { profile.update { it.copy(powerStones = it.powerStones + amount, totalPowerStonesEarned = it.totalPowerStonesEarned + amount) } }
+    open override suspend fun addPowerStones(amount: Long) { profile.update { it.copy(powerStones = it.powerStones + amount, totalPowerStonesEarned = it.totalPowerStonesEarned + amount) } }
     override suspend fun spendPowerStones(amount: Long) { profile.update { it.copy(powerStones = maxOf(0, it.powerStones - amount), totalPowerStonesSpent = it.totalPowerStonesSpent + amount) } }
     override suspend fun addCardDust(amount: Long) { profile.update { it.copy(cardDust = it.cardDust + amount) } }
     override suspend fun spendCardDust(amount: Long) { profile.update { it.copy(cardDust = maxOf(0, it.cardDust - amount)) } }
     override suspend fun updateTier(tier: Int) { profile.update { it.copy(currentTier = tier) } }
-    override suspend fun updateHighestUnlockedTier(tier: Int) { profile.update { it.copy(highestUnlockedTier = tier) } }
+    open override suspend fun updateHighestUnlockedTier(tier: Int) { profile.update { it.copy(highestUnlockedTier = tier) } }
     override suspend fun updateLabSlotCount(count: Int) { profile.update { it.copy(labSlotCount = count) } }
     override suspend fun updateStreak(streak: Int, date: String) { profile.update { it.copy(currentStreak = streak, lastLoginDate = date) } }
-    override suspend fun incrementBattleStats(rounds: Long, kills: Long, cash: Long) {
+    open override suspend fun incrementBattleStats(rounds: Long, kills: Long, cash: Long) {
         profile.update { it.copy(totalRoundsPlayed = it.totalRoundsPlayed + rounds, totalEnemiesKilled = it.totalEnemiesKilled + kills, totalCashEarned = it.totalCashEarned + cash) }
     }
-    override suspend fun updateBestWave(tier: Int, wave: Int) {
+    open override suspend fun updateBestWave(tier: Int, wave: Int) {
         profile.update { it.copy(bestWavePerTier = it.bestWavePerTier + (tier to wave)) }
     }
     override suspend fun updateAdRemoved(removed: Boolean) { profile.update { it.copy(adRemoved = removed) } }
