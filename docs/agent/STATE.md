@@ -1,35 +1,36 @@
 # Project State
 
 ## Current objective
-- Battle Step Rewards feature complete — kills grant Steps with a 2k/day cap (ADR-0003). DB schema v8.
-- Plan 31: Play Console & Store Publication — unblocked, ready to start.
+- Phase A (Foundation) of the Phase-14 implementation roadmap is complete — 9 tactical PRs landed on main. Low-risk cleanup done; core debt remaining for Phase B, release blockers remaining for Phase C/D.
+- Plan 31: Play Console & Store Publication — still the only release-blocker; Phase C.5/C.6 (real Billing/Ad SDKs) are its prerequisites.
 
 ## What works
-- Plans 01–30 + 10b: All foundation layers, battle system, full round lifecycle, tier/biome progression, all progression systems, notifications & widget, anti-cheat, monetization (stub), polish & VFX, balancing, testing, release prep complete.
-- Plan R (Remediation): All 12 sub-plans (R01–R12) complete.
-- Plan R2 (Remediation 2): All 12 sub-plans (R2-01–R2-12) complete.
-- Battle Step Rewards (ADR-0003): enemy kills grant flat per-type Steps (BASIC/FAST/SCATTER=1, RANGED=2, TANK=3, BOSS=10), capped at 2,000/day via `AwardBattleSteps` against `DailyStepRecordEntity.battleStepsEarned`. Wired through `GameEngine.onStepReward` callback, surfaced as HUD counter + green '+N Step' FloatingText + Round End line item.
-- DB version 8: 12 entities, first explicit Room Migration (v7→v8) registered. **412 JVM tests**, all green. Release APK builds (26MB).
+- Plans 01–30 + 10b + R (R01–R12) + R2 (R2-01–R2-12) complete.
+- Battle Step Rewards (ADR-0003): per-enemy flat reward, 2k/day cap, partial credit, capped-kill FloatingText suppression (A.7).
+- DB version 8: 12 entities, first explicit Room Migration (v7→v8) registered. DB-file wipe recovery on decrypt failure (A.3).
+- Phase A foundation: junit-vintage-engine on classpath recovering 9 previously-hidden Robolectric tests (A.2); Season Pass bonus now paid from background ingestion (A.6); `Screen.fromRoute` + whitelist covers all 12 deep-link routes (A.5); `FakeBillingManager`/`FakeRewardAdManager` scriptable via `resultQueue` (A.4); dead `PlaceholderScreen` + `SupplyDropTrigger.STEP_BURST` removed (A.8, A.9); docs synced to schema v8 + 453-test state (A.1).
+- **453 JVM tests** green (+41 vs pre-Phase-A 412 baseline).
 
 ## Known issues / debt
-- Billing/ads use stub implementations — real SDK integration deferred to Plan 31.
+- Billing/ads still use stub implementations — real SDK integration pending Phase C.5/C.6.
 - Cosmetic visual application not implemented (purchases disabled via R2-11 guard).
 - Sound assets are placeholder sine wave tones.
 - No app icon resources.
+- Phase B core refactors (TimeProvider, @Transaction for 5 multi-write sites, resilient endRound, FollowOnPipeline extraction, UpdateMissionProgress use case) are debt, not blockers.
 
 ## Top priorities (next 5)
-1. Plan 31: Play Console & Store Publication
-2. Real billing SDK integration (Google Play Billing Library)
-3. Real ad SDK integration (AdMob)
-4. App icon and store listing assets
-5. Accessibility (Plan 24, deferred)
+1. Phase B.1 — TimeProvider abstraction (RO-01). Lowest risk, unblocks B.4 and future features.
+2. Phase B.2 PR 1 — `@Transaction` pattern proven on PurchaseUpgrade (RO-02).
+3. Phase C.2 — Cosmetic rendering pipeline PRs 1–2 (ship one cosmetic end-to-end).
+4. Phase C.5 — Real Billing SDK swap (requires ADR-0005 first).
+5. Phase C.6 — Real Ad SDK swap (requires ADR-0006 first).
 
 ## Next actions (explicit order)
-1. Begin Plan 31: Play Console & Store Publication
-2. Set up Google Play Console, create app listing
-3. Integrate real billing SDK (replace StubBillingManager)
-4. Integrate real ad SDK (replace StubRewardAdManager)
-5. Upload AAB to internal test track
+1. Decide Phase B entry point: B.1 TimeProvider (cleanest) or jump straight to C.2 cosmetic pipeline (most user-facing).
+2. If B.1: write ADR-0004 for the narrow migration plan, then land PR 1 (new `TimeProvider` + `SystemTimeProvider` + Hilt binding).
+3. If C.2: pick the first cosmetic to ship (gap_analysis §5.2 proposes jade-ziggurat recolour) and wire its visual application path.
+4. When ready for release: Phase C.5 + C.6 SDK swaps gated by ADR-0005/0006.
+5. Finish with Phase D (Plan 31 Play Console setup, AAB upload, Firebase pre-launch).
 
 ## Do-not-touch / fragile zones
 - `domain/model/` — stable, all constants validated by balance tests.
@@ -39,6 +40,7 @@
 - `gradle/libs.versions.toml` — single source for all dependency versions.
 - `app/proguard-rules.pro` — hardened R8 rules.
 - `app/build.gradle.kts` — signing config, version 1.0.0.
+- `Screen.items by lazy` + new `argumentFreeRoutes by lazy` — both guard against sealed-class init-order NPE (commit 1872af9).
 
 ## References
 - ADR-0003 (Battle Step Rewards): docs/agent/DECISIONS/ADR-0003-battle-step-rewards.md
@@ -54,15 +56,15 @@
 - Code archaeology (Phase 3, per-boundary traces): devdocs/archaeology/traces/ (13 traces + README)
 - Code archaeology (Phase 4, 5-things improvement list): devdocs/archaeology/5_things_or_not.md
 - Code archaeology (Phase 5, concept inventory): devdocs/archaeology/concepts/ (technical, design, business, missing)
-- Evolution (Phase 14, Part 1): devdocs/evolution/refactoring_opportunities.md — top-10 highest-ROI refactors (RO-01..RO-10) with current pattern, proposed abstraction, benefits, effort, risk+mitigation, ROI, first safe step, verification, rollback, non-goals; plus a deferred-refactors appendix and cross-reference table to Phases 4/8/10/11/12/13
-- Evolution (Phase 14, Part 2): devdocs/evolution/implementation_roadmap.md — phased plan (A Foundation, B Core Refactoring, C Gap Filling, D Integration & Polish); each item has files / dependencies / success criteria / risk / verification / PR size / rollback / owner role; includes aggregate critical path, mermaid dep graph, doc-update table, Non-goals list, memory-update checklist, and source-phase cross-reference table
 - Code archaeology (Phase 6, foundations): devdocs/archaeology/foundations/ (project_description, philosophy, known_requirements)
 - Doc-inferred foundations (Phase 7): devdocs/foundations/ (project_description, philosophy, known_requirements) — built from docs only, pairs with Phase 6
 - Code archaeology (Phase 8, reconstruction): devdocs/archaeology/architecture_analysis.md + module_discovery.md — architectural critique + module-boundary analysis from code
 - Code archaeology (Phase 9, concept mappings): devdocs/archaeology/concept_mappings.md — 25-concept map with coverage %, divergence rationale, alternatives, edge cases, tests/config pointers, risks; plus cross-concept risk appendix + coverage roll-up
 - Evolution (Phase 10, gap analysis): devdocs/evolution/gap_analysis.md — compares current state to desired state; separates known/inferred gaps, marks release blockers vs incremental improvements; argues no rewrite needed; names cosmetic rendering pipeline as the one structural refactor blocking a shipped-but-disabled feature
 - Evolution (Phase 11, gap closure plan): devdocs/evolution/gap_closure_plan.md — phased execution plan (Q1–Q8 quick wins, I1–I7 incremental subsystem work, M1–M4 + MR1 major refactor, §4 rewrites rejected with revisit triggers, §5 explicit non-goals, §6 critical path)
-- Smoke tests (Phase 12, baseline): smoke_tests/check_what_is_working/ — README (strategy/commands/prerequisites), test_plan.md (5 areas × 5 cases mapped to existing tests), report.md (live run results: 412 tests pass, lint clean, APK builds; 6 JUnit4 Robolectric tests silently not discovered because no junit-vintage-engine dependency — flagged as "broken but acceptable" with one-line fix path)
-- Codebase cleanup inventory (Phase 13): devdocs/archaeology/cleanup_inventory.md — identifies removal/consolidation/quarantine candidates (3 High-conf Low-risk pure removals: PlaceholderScreen, UltimateWeaponLoadout class+test; 4 consolidations: escrow methods, StepCrossValidator branches, 6 SharedPreferences wrappers, GameEngine stat snapshots; 4 quarantines pending product decision: STEP_BURST, STEP_MULTIPLIER+RECOVERY_PACKAGES, MilestoneReward.Cosmetic no-op+ID mismatch, cosmetic purchase UI); Dynamic-risk register §F pins classes invisible to grep (manifest, Hilt/Room/WorkManager codegen, enum-as-string Room columns, notification deep-links). No file modified this phase.
-- Critical path: 01→…→30→R→R2→ Battle Step Rewards →31
-- Last run: 2026-05-06 (Standard Analysis Phase 14 — wrote devdocs/evolution/refactoring_opportunities.md (Part 1, ~1296 lines) + devdocs/evolution/implementation_roadmap.md (Part 2, ~1319 lines); no build/test runs; no code changes; synthesises Phases 4/8/10/11/12/13 into top-10 ROI-ranked refactors and a release-gated Phase A/B/C/D roadmap; Phase B is optional for v1.0, release-critical subset is A.4 + C.2 PR1-2 + C.5 + C.6 + D)
+- Smoke tests (Phase 12, baseline): smoke_tests/check_what_is_working/ — README (strategy/commands/prerequisites), test_plan.md (5 areas × 5 cases mapped to existing tests), report.md (live run results)
+- Codebase cleanup inventory (Phase 13): devdocs/archaeology/cleanup_inventory.md — removal/consolidation/quarantine candidates; Dynamic-risk register §F pins classes invisible to grep
+- Evolution (Phase 14, Part 1): devdocs/evolution/refactoring_opportunities.md — top-10 highest-ROI refactors (RO-01..RO-10) with current pattern, proposed abstraction, benefits, effort, risk+mitigation, ROI, first safe step, verification, rollback, non-goals
+- Evolution (Phase 14, Part 2): devdocs/evolution/implementation_roadmap.md — phased plan (A Foundation, B Core Refactoring, C Gap Filling, D Integration & Polish); each item has files / dependencies / success criteria / risk / verification / PR size / rollback / owner role
+- Critical path: 01→…→30→R→R2→ Battle Step Rewards → **Phase A done** → Phase B/C/D → 31
+- Last run: 2026-05-07 (Phase A Foundation — landed A.2/A.3/A.6/A.5/A.4/A.7/A.8/A.1/A.9 across 9 commits on main; test count 412 → 453, all green; see RUN_LOG entry dated 2026-05-07 for per-item details)

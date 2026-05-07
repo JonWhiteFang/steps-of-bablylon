@@ -1,5 +1,62 @@
 # Run Log
 
+## 2026-05-07 — Phase A (Foundation): land 9 tactical PRs from the Phase-14 implementation roadmap
+
+- **Goal:** Execute Phase A of `devdocs/evolution/implementation_roadmap.md` — 9 tactical PRs (A.1–A.9) covering doc drift, test-classpath recovery, DB-decrypt recovery, Season Pass background fix, deep-link coverage expansion, configurable fake failure modes, capped-kill FloatingText suppression, dead-code removal, and an orphan-enum decision. Low risk, high velocity; nothing blocks a later phase but several enable Phase B/C/D to land safely.
+- **Preflight:** read `START_HERE`, `STATE`, `CONSTRAINTS`, RUN_LOG tail (Phase 14 entry); `git status` clean on `main`, up to date with origin. `git log -n 10 --oneline` confirmed HEAD at `1609680 docs: add archaeology + evolution deliverables and smoke-test baseline` prior to starting.
+- **Execution order (payback-per-day per roadmap §A.10, modified to put A.2 first because A.3/A.5 tests depend on it):** A.2 → A.3 → A.6 → A.5 → A.4 → A.7 → A.8 → A.1 → A.9. Six commits landed on `main`; three had been pushed mid-phase after A.2/A.3/A.6 per a checkpoint request. Final push brought the whole phase up.
+
+### Per-item summary
+
+- **A.2 — junit-vintage-engine on test classpath.** Added `junit-vintage-engine` via `gradle/libs.versions.toml` + `app/build.gradle.kts`. 3 silently-skipped JUnit 4 + Robolectric test classes (`RoomSchemaTest`, `DeepLinkRoutingTest`, `StepWidgetProviderTest`) now discovered; each needed `@Config(sdk = [34], application = android.app.Application::class)` because Robolectric 4.14.1 does not support `compileSdk 36` and the default Hilt-generated Application tries to initialise `DatabaseModule` → SQLCipher native lib (UnsatisfiedLinkError on JVM). Commit `a336bce`. Tests: 412 → 421.
+- **A.3 — DB-file wipe on decrypt failure.** `DatabaseKeyManager.kt` now wipes `steps_of_babylon.db` + `-shm`/`-wal` siblings when the encrypted passphrase blob fails to decrypt (e.g. backup-restore to a new device). Prevents crash-on-launch loop. Extracted `wipeDatabaseFile(context)` as `internal` for test visibility because Robolectric's `AndroidKeyStore` shadow throws `NoSuchAlgorithmException` — the keystore-to-wipe coupling is single call-site and covered by code inspection plus on-device smoke. Added `DatabaseKeyManagerTest` (3 Robolectric cases). Commit `51636c0`. Tests: 421 → 424.
+- **A.6 — Season Pass flag in background pipeline.** `DailyStepManager.runFollowOnPipeline` now reads `seasonPassActive` + `seasonPassExpiry` from `PlayerRepository` and forwards them to `TrackDailyLogin.checkAndAward`, mirroring `HomeViewModel.init`. Season Pass owners now receive the +10 Gems/day streak bonus when step ingestion happens from `StepSyncWorker` or `StepCounterService` (previously only the foreground path paid out). Added 3 `DailyStepManagerTest` cases: active pass = 11 Gems (1 streak + 10 bonus); no pass = 1 Gem; expired pass falls back to 1 Gem. Commit `35529e8`. Tests: 424 → 427. Tactical patch per roadmap B.4 non-goal — the cleaner home for this logic is the planned FollowOnPipeline extraction (RO-04).
+- **A.5 — Deep-link coverage for all argument-free routes.** Added `Screen.fromRoute(name): Screen?` and `val argumentFreeRoutes: Set<String>` in `presentation/navigation/Screen.kt`. Both guarded by `by lazy` to preserve the sealed-class init-order NPE workaround (commit 1872af9). `MainActivity`'s 4-route `when` replaced with `Screen.fromRoute(route)?.takeIf { it.route in Screen.argumentFreeRoutes }?.let { navController.navigate(it.route) }`. Deep-links now reach all 12 argument-free routes (home, workshop, battle, labs, stats, weapons, cards, supplies, economy, missions, settings, store); unknown routes fall through silently (preserves prior behaviour). `DeepLinkRoutingTest` extended from 3 to 17 cases (per-route resolution, null/unknown/case-sensitivity, whitelist contents, round-trip). Commit `5266623`. Tests: 427 → 444.
+- **A.4 — Configurable failure modes in Fake billing/ad managers.** `FakeBillingManager` + `FakeRewardAdManager` enhanced with `resultQueue: ArrayDeque<...>` (per-call scripted results, falls back to `nextResult` when empty), configurable `isAdRemoved`/`isSeasonPassActive`/`isAdAvailable`, and append-only `purchases`/`shown` call logs. Added 4 `StoreViewModelTest` cases (Success + Error variants for GemPack and AdRemoval, plus sequential queue replay) and 3 `CardsViewModelTest` cases (AdResult.Rewarded records day-stamp + opens pack, Cancelled and Error leave state unchanged). Commit `dae4fa7`. Tests: 444 → 451. Dropped 2 initially-drafted concurrent-call tests because `StandardTestDispatcher` doesn't exercise in-flight guards cleanly — guards work in practice but aren't deterministically testable without more orchestration (out of scope for A.4).
+- **A.7 — Suppress Battle Step FloatingText when daily cap hit.** `GameEngine.onStepReward` callback signature changed from `((Long) -> Unit)?` to `((amount: Long, x: Float, y: Float) -> Unit)?`. `GameEngine.killEnemy` no longer spawns the `+N Step` FloatingText unconditionally; `BattleViewModel.wireStepRewardCallback` now spawns it on the engine's `EffectEngine` only when `AwardBattleSteps` returns credited > 0. Capped kills (2k/day cap hit) silently drop the indicator; frozen HUD counter at `DAILY_BATTLE_STEP_CAP` communicates the gate. Updated 3 existing `BattleViewModelTest` cases for the new signature; added 2 A.7 cases asserting (a) fully capped kill spawns zero FloatingText effects, (b) partial-credit kill still spawns exactly one. Tests use reflection on `EffectEngine.pendingEffects + effects` because `addEffect` is deferred until the next `update()` tick. Commit `61bdd33`. Tests: 451 → 453.
+- **A.8 — Delete `PlaceholderScreen` dead code.** Removed `private fun PlaceholderScreen(name: String)` at `MainActivity.kt` (dead since Plan 06 replaced every placeholder route). Removed 4 orphaned imports it was the only consumer of: `androidx.compose.foundation.layout.{Box, fillMaxSize}`, `androidx.compose.material3.Text`, `androidx.compose.ui.Alignment`. `grep PlaceholderScreen app/src` returns empty. Not touched: `Screen.items by lazy` — per cleanup_inventory §A7 it is a documented NPE workaround (commit 1872af9) and must stay. Commit `7e9ea81`. Tests: 453 (unchanged).
+- **A.1 — Doc drift sync (schema v8, test count, Battle Step Rewards).** Resolved current-state doc drift without touching historical docs (RUN_LOG, plan-R*, plan-26, external-reviews stay). `docs/database-schema.md`: added `battleStepsEarned` column row + v7→v8 migration entry + "Current schema version: 8". `.kiro/steering/source-files.md`: version 7 → 8, added missing `Migrations.kt` entry. `.kiro/steering/structure.md`: version 7 → 8. `.kiro/steering/lib-room.md`: schema version 2 → 8 (stale since v3), entity/DAO count 9 → 12. `AGENTS.md`: test count 401 → 453, added A.3/A.4/A.6/A.7/A.5 coverage items. Verification: `grep -rn 'version 7|schema v7|Current schema version: 2|Current schema version: 7' docs/ .kiro/ AGENTS.md README.md` (excluding historical files) returns zero matches. Commit `337643a`. Tests: 453 (unchanged — pure doc sweep).
+- **A.9 — Delete `SupplyDropTrigger.STEP_BURST`.** Decision: delete (confirmed by @jpawhite). The enum entry was declared with notification copy ("Your pace is impressive! An energy surge flows into your ziggurat.") but never produced by `GenerateSupplyDrop`; zero Room rows ever carried this value as a `.name` string. No test, no doc, no GDD line promised the feature. Commit body preserves the original copy per project rule #2 (historical intent). `grep -r STEP_BURST app/src` returns zero matches. Commit `9f7f1d2`. Tests: 453 (unchanged). Unblocks Phase B.4 `FollowOnPipeline` extraction by simplifying `GenerateSupplyDrop`'s surface.
+
+### Test results
+- Start of phase: **412 JVM tests**, all green.
+- End of phase: **453 JVM tests**, all green. Delta **+41 tests**. Breakdown: +9 recovered (A.2 Robolectric discovery) + +3 (A.3 DB wipe) + +3 (A.6 Season Pass) + +14 (A.5 new deep-link cases) + +7 (A.4 failure modes) + +2 (A.7 capped-kill) + +0 (A.8/A.1/A.9 no test changes) + +3 net from existing DeepLinkRoutingTest migration.
+- Full suite runs: `./run-gradle.sh :app:testDebugUnitTest` green after each of the 9 items.
+- Build: `./run-gradle.sh :app:compileDebugKotlin` green after A.8's import cleanup (zero warnings introduced).
+
+### Commits landed on `main`
+```
+9f7f1d2 chore: delete unused SupplyDropTrigger.STEP_BURST enum entry (A.9)
+337643a docs: sync schema to v8 and refresh test-count / coverage (A.1)
+7e9ea81 chore: delete PlaceholderScreen dead code (A.8)
+61bdd33 fix: suppress Battle Step floating text when daily cap is hit (A.7)
+dae4fa7 test: configurable failure modes in Fake billing and ad managers (A.4)
+5266623 feat: extend deep-link coverage to all argument-free routes (A.5)
+35529e8 fix: pass Season Pass flags from background ingestion pipeline (A.6)
+51636c0 fix: wipe SQLCipher DB file on decrypt failure (A.3)
+a336bce test: add junit-vintage-engine to discover Robolectric tests (A.2)
+```
+
+### Files touched (summary)
+- Build: `gradle/libs.versions.toml`, `app/build.gradle.kts`
+- Code: `DatabaseKeyManager.kt`, `DailyStepManager.kt`, `Screen.kt`, `MainActivity.kt`, `GameEngine.kt`, `BattleViewModel.kt`, `SupplyDropTrigger.kt`
+- Test: `RoomSchemaTest.kt`, `DeepLinkRoutingTest.kt`, `StepWidgetProviderTest.kt`, `DatabaseKeyManagerTest.kt` (new), `DailyStepManagerTest.kt`, `FakeBillingManager.kt`, `FakeRewardAdManager.kt`, `StoreViewModelTest.kt`, `CardsViewModelTest.kt`, `BattleViewModelTest.kt`
+- Docs: `docs/database-schema.md`, `.kiro/steering/source-files.md`, `.kiro/steering/structure.md`, `.kiro/steering/lib-room.md`, `AGENTS.md`
+
+### Open questions / blockers
+- None blocking. Phase A exit criteria (A.10 in roadmap) all met: 9/9 tactical PRs merged, test count ≥ 418 (actual 453), `grep STEP_BURST app/src` empty (delete route), schema/test-count drift in current-state docs aligned to HEAD.
+- Two decisions already consumed by Phase A and not carried forward: (a) A.9 delete-vs-wire STEP_BURST → delete; (b) the concurrent-call test coverage gap flagged in A.4 → deferred as out-of-scope.
+
+### Follow-ups
+- **Next phase entry point is a product choice**: Phase B.1 (`TimeProvider` narrow migration, lowest risk, unblocks B.4) **or** Phase C.2 (cosmetic rendering pipeline, most user-facing, ships one cosmetic end-to-end). Both paths end at Plan 31. Phase B is optional for v1.0 per roadmap §1; the release-critical subset is A (done) + C.2 PR 1-2 + C.5 + C.6 + D.
+- Three ADRs scheduled by the roadmap remain to be written before their corresponding PRs: ADR-0004 `FollowOnPipeline` (prerequisite of B.4), ADR-0005 Billing SDK (prerequisite of C.5), ADR-0006 Ad SDK (prerequisite of C.6).
+- Phase 12 smoke report flagged 6 hidden Robolectric tests; A.2 recovered 9 (all 3 files had 3 tests each, consistent with the sweep grep done in Phase 13 §C1). `cleanup_inventory.md` §C1 can be updated if/when next touched.
+
+### Memory updated
+- `STATE.md` ✅ — current objective now "Phase A complete; entry point for Phase B/C/D pending product choice"; priorities, next-actions, and references refreshed.
+- `RUN_LOG.md` ✅ — this entry.
+- ADR: not warranted for Phase A itself — every item executed a decision already documented in the Phase-14 roadmap. ADR-0004/0005/0006 still owed before their corresponding Phase B/C PRs.
+
 ## 2026-05-06 — Standard Analysis Phase 14: refactoring opportunities + implementation roadmap
 
 - Goal: Produce two deliverables per the Phase 14 prompt. (a) `devdocs/evolution/refactoring_opportunities.md` — highest-ROI refactors with current pattern + file paths, proposed abstraction, benefits, effort, risk+mitigation, ROI, first safe step, verification, rollback. (b) `devdocs/evolution/implementation_roadmap.md` — phased plan (A Foundation, B Core Refactoring, C Gap Filling, D Integration & Polish) combining critical cleanup from cleanup inventory, essential unblocking refactors, smoke-report fixes, gap closure, and doc sync; each item carries files / dependencies / success criteria / risk / verification / PR size / rollback / owner role.
