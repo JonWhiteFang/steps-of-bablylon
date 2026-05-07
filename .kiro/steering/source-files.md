@@ -23,9 +23,9 @@ data/local/Migrations.kt          # Registered Migration objects (v7→8 for bat
 data/local/Converters.kt          # @TypeConverters: Map<Int,Int> and Map<String,Int> via JSON
 data/local/DatabaseKeyManager.kt  # SQLCipher passphrase via Android Keystore
 data/local/PlayerProfileEntity.kt # Player profile entity (single row, id=1)
-data/local/PlayerProfileDao.kt    # Player DAO: get() as Flow, atomic currency adjustments
+data/local/PlayerProfileDao.kt    # Player DAO: get() as Flow, atomic currency adjustments (incl. adjustStepBalanceIfSufficient SQL-guarded deduct for B.2 PR 1)
 data/local/WorkshopUpgradeEntity.kt # Workshop upgrade entity
-data/local/WorkshopDao.kt         # Workshop DAO
+data/local/WorkshopDao.kt         # Workshop DAO + @Transaction purchaseUpgradeAtomic default method (B.2 PR 1)
 data/local/LabResearchEntity.kt   # Lab research entity
 data/local/LabDao.kt              # Lab research DAO
 data/local/CardInventoryEntity.kt # Card inventory entity
@@ -33,7 +33,7 @@ data/local/CardDao.kt             # Card inventory DAO
 data/local/UltimateWeaponStateEntity.kt # UW state entity
 data/local/UltimateWeaponDao.kt   # UW state DAO
 data/local/DailyStepRecordEntity.kt # Daily step record entity (with escrow fields)
-data/local/DailyStepDao.kt        # Daily step record DAO (with escrow queries)
+data/local/DailyStepDao.kt        # Daily step record DAO (with escrow queries) + @Transaction creditBattleStepsAtomic default method (B.2 PR 2)
 data/local/WalkingEncounterEntity.kt # Walking encounter entity
 data/local/WalkingEncounterDao.kt # Walking encounter DAO
 data/local/WeeklyChallengeEntity.kt # Weekly step challenge entity
@@ -52,7 +52,7 @@ data/local/CosmeticDao.kt          # Cosmetic store DAO
 
 ```
 data/repository/PlayerRepositoryImpl.kt         # Player profile + wallet (entity→domain mapping)
-data/repository/WorkshopRepositoryImpl.kt        # Workshop upgrades
+data/repository/WorkshopRepositoryImpl.kt        # Workshop upgrades; takes WorkshopDao + PlayerProfileDao for purchaseUpgradeAtomic (B.2 PR 1)
 data/repository/LabRepositoryImpl.kt             # Lab research
 data/repository/CardRepositoryImpl.kt            # Card inventory
 data/repository/UltimateWeaponRepositoryImpl.kt  # Ultimate weapon state
@@ -83,7 +83,7 @@ data/ads/StubRewardAdManager.kt      # Stub ads: simulates ad view with 1s delay
 ```
 data/healthconnect/HealthConnectClientWrapper.kt  # HealthConnectClient wrapper, availability, permissions
 data/healthconnect/HealthConnectStepReader.kt      # Reads aggregated daily steps via aggregate()
-data/healthconnect/StepCrossValidator.kt           # Cross-validation, graduated response (4 offense levels)
+data/healthconnect/StepCrossValidator.kt           # Cross-validation, graduated response (4 offense levels); 5 multi-write branches wrapped in AppDatabase.withTransaction via @VisibleForTesting runInTransaction seam (B.2 PR 3)
 data/healthconnect/StepGapFiller.kt                # Recovers missed steps from HC when service killed
 data/healthconnect/ExerciseSessionReader.kt        # Reads exercise sessions for Activity Minute Parity
 data/healthconnect/ActivityMinuteConverter.kt      # Converts exercise minutes to step-equivalents with caps
@@ -154,7 +154,7 @@ domain/model/ResolvedStats.kt         # Computed combat stats from workshop + in
 
 ```
 domain/repository/PlayerRepository.kt          # Profile/wallet: observe + spend/add currencies
-domain/repository/WorkshopRepository.kt         # Workshop upgrades interface
+domain/repository/WorkshopRepository.kt         # Workshop upgrades interface (incl. purchaseUpgradeAtomic for B.2 PR 1)
 domain/repository/LabRepository.kt              # Lab research interface
 domain/repository/CardRepository.kt             # Card inventory interface
 domain/repository/UltimateWeaponRepository.kt   # Ultimate weapon interface
@@ -165,7 +165,7 @@ domain/repository/RewardAdManager.kt            # Reward ad interface (show ad, 
 domain/repository/CosmeticRepository.kt         # Cosmetic store interface
 domain/usecase/CalculateUpgradeCost.kt          # Cost formula: baseCost * scaling^level
 domain/usecase/CanAffordUpgrade.kt              # Affordability check against wallet
-domain/usecase/PurchaseUpgrade.kt               # Deducts Steps, increments upgrade level
+domain/usecase/PurchaseUpgrade.kt               # Delegates to WorkshopRepository.purchaseUpgradeAtomic — atomic deduct + level-set (B.2 PR 1)
 domain/usecase/QuickInvest.kt                   # Recommends cheapest affordable upgrade
 domain/usecase/ResolveStats.kt                  # Workshop + in-round levels → ResolvedStats
 domain/usecase/CalculateDamage.kt               # Raw damage + crit roll + damage/meter bonus → DamageResult
@@ -213,7 +213,7 @@ presentation/workshop/WorkshopUiState.kt           # UI state: upgrade list, bal
 presentation/workshop/WorkshopScreen.kt            # 3-tab layout, upgrade list, Quick Invest FAB
 presentation/workshop/UpgradeCard.kt               # Reusable upgrade card (affordable/expensive/maxed states)
 presentation/battle/BattleScreen.kt                # Compose wrapper: AndroidView + overlays (HUD, pause, post-round), auto-pause
-presentation/battle/BattleViewModel.kt             # @HiltViewModel: round lifecycle (start, end, quit, play again), stats polling
+presentation/battle/BattleViewModel.kt             # @HiltViewModel: round lifecycle; endRound delegates to runEndRoundPersistence with per-write runCatching error isolation (B.3 PR 1)
 presentation/battle/BattleUiState.kt               # UI state: wave, HP, cash, speed, pause, RoundEndState
 presentation/battle/GameSurfaceView.kt             # SurfaceView + SurfaceHolder.Callback, manages game loop thread
 presentation/battle/GameLoopThread.kt              # Dedicated thread: fixed timestep (60 UPS), accumulator, speed multiplier
@@ -388,7 +388,7 @@ presentation/store/StoreViewModelTest.kt           # Store VM: gems, cosmetics, 
 presentation/ux/CurrencyGuardTest.kt               # Currency spend clamps to 0 (gems, PS, dust, steps)
 presentation/ux/UserFeedbackTest.kt                # Workshop purchase failure sets userMessage
 presentation/DeepLinkRoutingTest.kt                # Deep-link intent extra extraction
-data/local/RoomSchemaTest.kt                       # Room v7 schema round-trip (profile, steps, workshop)
+data/local/RoomSchemaTest.kt                       # Room v8 schema round-trip (profile, steps, workshop)
 data/integration/EscrowLifecycleTest.kt            # End-to-end escrow lifecycle (release + discard)
 service/StepWidgetProviderTest.kt                  # Widget SharedPreferences round-trip
 ```
