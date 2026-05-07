@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.whitefang.stepsofbabylon.data.local.DailyMissionDao
 import com.whitefang.stepsofbabylon.data.local.DailyStepDao
+import com.whitefang.stepsofbabylon.data.local.PlayerProfileDao
 import com.whitefang.stepsofbabylon.domain.model.AdPlacement
 import com.whitefang.stepsofbabylon.domain.model.AdResult
 import com.whitefang.stepsofbabylon.domain.model.Biome
@@ -55,6 +56,7 @@ class BattleViewModel @Inject constructor(
     private val cardRepository: CardRepository,
     private val dailyMissionDao: DailyMissionDao,
     private val dailyStepDao: DailyStepDao,
+    private val playerProfileDao: PlayerProfileDao,
     private val milestoneNotificationManager: MilestoneNotificationManager,
     private val rewardAdManager: RewardAdManager,
     private val timeProvider: TimeProvider = SystemTimeProvider(),
@@ -70,7 +72,7 @@ class BattleViewModel @Inject constructor(
     private val activateOverdriveUseCase = ActivateOverdrive()
     private val awardWaveMilestone = AwardWaveMilestone(playerRepository)
     private val applyCardEffects = ApplyCardEffects()
-    private val awardBattleSteps = AwardBattleSteps(playerRepository, dailyStepDao, timeProvider)
+    private val awardBattleSteps = AwardBattleSteps(dailyStepDao, playerProfileDao, timeProvider)
 
     var resolvedStats: ResolvedStats = ResolvedStats(); private set
     var workshopLevels: Map<UpgradeType, Int> = emptyMap(); private set

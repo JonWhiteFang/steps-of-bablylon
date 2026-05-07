@@ -2,12 +2,41 @@ package com.whitefang.stepsofbabylon.fakes
 
 import com.whitefang.stepsofbabylon.data.local.DailyStepDao
 import com.whitefang.stepsofbabylon.data.local.DailyStepRecordEntity
+import com.whitefang.stepsofbabylon.data.local.PlayerProfileDao
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlin.math.min
 
-class FakeDailyStepDao : DailyStepDao {
+/**
+ * In-memory fake for [DailyStepDao].
+ *
+ * Post-B.2 PR 2 the [creditBattleStepsAtomic] method is the authoritative battle-step credit
+ * path and must emulate the Room `@Transaction` contract \u2014 cap check + counter increment +
+ * wallet credit applied as a single logical step so callers can assert partial-failure
+ * absence and concurrent-kill safety without a real database.
+ *
+ * @param linkedPlayer when supplied, the fake forwards wallet credits to this player fake's
+ *                     `stepBalance`, under a [Mutex] that mirrors the SQLite-level atomicity.
+ *                     Callers can pass `mock<PlayerProfileDao>()` as the `playerDao` argument
+ *                     to [creditBattleStepsAtomic] \u2014 the fake ignores it and uses
+ *                     [linkedPlayer] instead (the real DAO path is exercised by Room's
+ *                     generated impl at runtime). When null, wallet updates are no-ops.
+ */
+class FakeDailyStepDao(
+    private val linkedPlayer: FakePlayerRepository? = null,
+) : DailyStepDao {
     val data = MutableStateFlow<Map<String, DailyStepRecordEntity>>(emptyMap())
+
+    /** Serialises concurrent [creditBattleStepsAtomic] calls \u2014 mirrors SQL-level atomicity. */
+    private val atomicMutex = Mutex()
+
+    /** Number of [creditBattleStepsAtomic] calls \u2014 used by tests to assert the atomic path is live. */
+    var creditBattleStepsAtomicCallCount: Int = 0
+        private set
 
     override fun getByDate(date: String): Flow<DailyStepRecordEntity?> = data.map { it[date] }
 
@@ -36,5 +65,26 @@ class FakeDailyStepDao : DailyStepDao {
         val updated = existing?.copy(battleStepsEarned = existing.battleStepsEarned + delta)
             ?: DailyStepRecordEntity(date = date, battleStepsEarned = delta)
         data.value = data.value + (date to updated)
+    }
+
+    override suspend fun creditBattleStepsAtomic(
+        date: String,
+        requested: Long,
+        dailyCap: Long,
+        playerDao: PlayerProfileDao,
+    ): Long = atomicMutex.withLock {
+        creditBattleStepsAtomicCallCount++
+        if (requested <= 0L) return@withLock 0L
+        val alreadyEarned = getBattleStepsEarned(date)
+        val remaining = (dailyCap - alreadyEarned).coerceAtLeast(0L)
+        if (remaining <= 0L) return@withLock 0L
+        val credited = min(requested, remaining)
+        // Under-the-mutex read-modify-write faithfully emulates the SQL guard.
+        incrementBattleSteps(date, credited)
+        // Test-level decoy: the real impl calls playerDao.adjustStepBalance(credited). The fake
+        // routes the wallet side to linkedPlayer so tests can continue to assert on the existing
+        // FakePlayerRepository flow. Callers pass mock<PlayerProfileDao>() for type satisfaction.
+        linkedPlayer?.profile?.update { it.copy(stepBalance = it.stepBalance + credited) }
+        credited
     }
 }

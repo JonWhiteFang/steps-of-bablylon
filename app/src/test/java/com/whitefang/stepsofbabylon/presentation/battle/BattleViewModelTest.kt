@@ -31,9 +31,9 @@ class BattleViewModelTest {
     private lateinit var cardRepo: FakeCardRepository
     private lateinit var adManager: FakeRewardAdManager
     private lateinit var dailyStepDao: FakeDailyStepDao
-    private lateinit var awardBattleSteps: AwardBattleSteps
     private val biomePreferences = mock<BiomePreferences>()
     private val dailyMissionDao = mock<com.whitefang.stepsofbabylon.data.local.DailyMissionDao>()
+    private val playerProfileDao = mock<com.whitefang.stepsofbabylon.data.local.PlayerProfileDao>()
     private val milestoneNotificationManager = mock<MilestoneNotificationManager>()
 
     @BeforeEach
@@ -45,8 +45,10 @@ class BattleViewModelTest {
         uwRepo = FakeUltimateWeaponRepository()
         cardRepo = FakeCardRepository()
         adManager = FakeRewardAdManager()
-        dailyStepDao = FakeDailyStepDao()
-        awardBattleSteps = AwardBattleSteps(playerRepo, dailyStepDao)
+        // Link the DAO to playerRepo so the VM's internal AwardBattleSteps (post-B.2 PR 2 goes
+        // through DailyStepDao.creditBattleStepsAtomic) still surfaces wallet changes via the
+        // existing FakePlayerRepository.profile flow.
+        dailyStepDao = FakeDailyStepDao(linkedPlayer = playerRepo)
         whenever(biomePreferences.hasSeenBiome(any())).thenReturn(true)
         whenever(dailyMissionDao.getByDateOnce(any())).thenReturn(emptyList())
     }
@@ -56,7 +58,7 @@ class BattleViewModelTest {
 
     private fun createVm(timeProvider: com.whitefang.stepsofbabylon.domain.time.TimeProvider = com.whitefang.stepsofbabylon.data.time.SystemTimeProvider()) = BattleViewModel(
         workshopRepo, playerRepo, biomePreferences, uwRepo, cardRepo,
-        dailyMissionDao, dailyStepDao, milestoneNotificationManager, adManager,
+        dailyMissionDao, dailyStepDao, playerProfileDao, milestoneNotificationManager, adManager,
         timeProvider,
     )
 
@@ -352,7 +354,7 @@ class BattleViewModelTest {
         }
         val vm = BattleViewModel(
             workshopRepo, throwingPlayer, biomePreferences, uwRepo, cardRepo,
-            dailyMissionDao, dailyStepDao, milestoneNotificationManager, adManager,
+            dailyMissionDao, dailyStepDao, playerProfileDao, milestoneNotificationManager, adManager,
         )
         backgroundScope.launch { vm.uiState.collect {} }
         advanceUntilIdle()
@@ -390,7 +392,7 @@ class BattleViewModelTest {
         }
         val vm = BattleViewModel(
             workshopRepo, brokenPlayer, biomePreferences, uwRepo, cardRepo,
-            dailyMissionDao, dailyStepDao, milestoneNotificationManager, adManager,
+            dailyMissionDao, dailyStepDao, playerProfileDao, milestoneNotificationManager, adManager,
         )
         backgroundScope.launch { vm.uiState.collect {} }
         advanceUntilIdle()

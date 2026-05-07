@@ -1,5 +1,72 @@
 # Run Log
 
+## 2026-05-07 — Phase B.2 PR 2 (RO-02 site #1): atomic @Transaction for AwardBattleSteps
+
+- **Goal:** Apply the B.2 PR 1 pattern to the first multi-write site RO-02 names: `AwardBattleSteps`. Wrap the cap check + `incrementBattleSteps` + wallet-credit chain in a single Room `@Transaction` so a crash between the two writes can no longer leave the wallet credited without the cap counter moving, and two concurrent kills with 1 battle-step of headroom can no longer both credit and overflow the cap by 1.
+- **Preflight:** read `START_HERE`, `STATE`, `CONSTRAINTS`, `RUN_LOG` head (B.2 PR 1 + B.3 PR 1 entries). `git status` clean at `main`, 2 commits ahead pushed to origin. Read `AwardBattleSteps`, `DailyStepDao`, `DailyStepRecordEntity`, existing `AwardBattleStepsTest` (7 cases), `FakeDailyStepDao`. Grep-confirmed 3 callers: `AwardBattleStepsTest` (sut helper), `BattleViewModel` (init), `BattleViewModelTest` (dead `awardBattleSteps` field declared but never read).
+
+### Design
+
+Mirrored B.2 PR 1 exactly: cross-DAO `@Transaction` default method on a Room interface.
+
+- **`DailyStepDao`:** added `creditBattleStepsAtomic(date, requested, dailyCap, playerDao: PlayerProfileDao): Long` as a suspend `@Transaction` default method. Body does cap check → `min(requested, remaining)` → `incrementBattleSteps(date, credited)` → `playerDao.adjustStepBalance(credited)` → returns credited. Cross-DAO call is safe inside the `@Transaction` because Room's transaction tracker is scoped to the underlying `RoomDatabase`.
+- **`AwardBattleSteps` use case:** dep shape changed from `(playerRepository, dailyStepDao, timeProvider)` to `(dailyStepDao, playerProfileDao, timeProvider)`. Body shrank from ~7 lines of read/compute/write to a single delegation `dailyStepDao.creditBattleStepsAtomic(today, amount, DAILY_BATTLE_STEP_CAP, playerProfileDao)`. Drops the `PlayerRepository` dep — wallet write now happens inside the transaction via `PlayerProfileDao` directly.
+- **`BattleViewModel`:** added `PlayerProfileDao` as a Hilt-injected constructor param (11 params now); updated the internal `AwardBattleSteps` construction. DI graph unaffected — `DatabaseModule` already provides `PlayerProfileDao`.
+- **Fake emulation (`FakeDailyStepDao`):** added optional `linkedPlayer: FakePlayerRepository? = null` constructor arg. Overrides `creditBattleStepsAtomic` to emulate the SQL atomic contract under a `Mutex` — read-check-write-credit serialised so concurrent callers observe each other's mutations. The override takes `playerDao: PlayerProfileDao` for type satisfaction but ignores it; wallet side-effects go through `linkedPlayer` so existing tests can keep asserting on `FakePlayerRepository.profile`. Added `creditBattleStepsAtomicCallCount` for tests to prove the atomic path is live.
+
+The `playerDao` decoy is a deliberate test-only abstraction. The real impl (Room's generated default-method delegate) exercises the actual `PlayerProfileDao.adjustStepBalance` path at runtime. The JVM tests can't meaningfully test the real cross-DAO call path without an in-memory Room DB; the fake's Mutex-guarded override models the SQL-level atomicity, and callers pass `mock<PlayerProfileDao>()` for type satisfaction.
+
+### Files touched
+
+- `app/src/main/java/.../data/local/DailyStepDao.kt` (+`@Transaction creditBattleStepsAtomic` default method, +`androidx.room.Transaction` + `kotlin.math.min` imports, KDoc)
+- `app/src/main/java/.../domain/usecase/AwardBattleSteps.kt` (–`PlayerRepository` dep, +`PlayerProfileDao` dep, body rewrite to single delegation, KDoc update)
+- `app/src/main/java/.../presentation/battle/BattleViewModel.kt` (+`PlayerProfileDao` import + constructor param, updated `AwardBattleSteps` construction)
+- `app/src/test/java/.../fakes/FakeDailyStepDao.kt` (+`linkedPlayer` param, +Mutex-guarded `creditBattleStepsAtomic` override, +`creditBattleStepsAtomicCallCount`, KDoc)
+- `app/src/test/java/.../domain/usecase/AwardBattleStepsTest.kt` (sut helper rewritten: `FakeDailyStepDao(linkedPlayer = playerRepo)` + `mock<PlayerProfileDao>()`; 7 existing cases preserved; +2 new atomicity cases)
+- `app/src/test/java/.../presentation/battle/BattleViewModelTest.kt` (removed dead `awardBattleSteps` field; `dailyStepDao = FakeDailyStepDao(linkedPlayer = playerRepo)`; +`playerProfileDao = mock<PlayerProfileDao>()`; wired into `createVm` + 2 B.3 PR 1 failure-injection tests)
+
+### Tests added (2 new cases in `AwardBattleStepsTest`, bringing it to 9 total)
+
+1. **`successful credit goes through atomic DAO method and bypasses the legacy split path`** — asserts `dao.creditBattleStepsAtomicCallCount == 1` and `player.spendStepsCallCount == 0` after a successful credit. Proves the use case no longer uses the split `playerRepository.addSteps` + `dao.incrementBattleSteps` path. Regression-guard: if someone reintroduces the split flow this test fails immediately.
+2. **`two concurrent kills on exactly one headroom - only one credits`** — `kotlinx.coroutines.async` pair racing on the atomic path with exactly 1 battle-step of headroom. Asserts `results.sum() == 1L` (total credited = 1 unit, no overflow), cap counter advances by exactly 1, wallet advances by exactly 1, and both calls reached the atomic method. Proves the Mutex-guarded fake models the SQL atomic guard correctly; real Room-level atomicity is a separate instrumented-test concern (out of scope).
+
+All 7 existing cases preserved verbatim: first call / cap exhausted / partial credit / date rollover / zero-or-negative no-op / dao-incremented-by-credited-not-requested / FakeTimeProvider drives default today.
+
+BattleViewModelTest dead-code removal: the `private lateinit var awardBattleSteps: AwardBattleSteps` field at test line 34 was declared and initialised at line 49 but never read by any test case. Removed as a drive-by cleanup (the imports reference resolves via the companion-object constant access at lines 182/202, unchanged).
+
+### Verification
+
+- `./run-gradle.sh :app:compileDebugKotlin :app:testDebugUnitTest :app:lintDebug` — BUILD SUCCESSFUL. Room KSP compiled the second `@Transaction` default method with a cross-DAO parameter cleanly (same shape as B.2 PR 1's `WorkshopDao.purchaseUpgradeAtomic`).
+- Test suite: **461 → 463 JVM tests** (+2, matches the 2 new atomicity cases exactly), 0 failures, 0 errors, 0 skipped. `AwardBattleStepsTest`: 7 → 9 cases. `BattleViewModelTest`: 19 → 19 (dead field removal doesn't change test count — never a `@Test`).
+- Lint: clean, no new warnings.
+- `grep -c "@Transaction" app/src/main/java/com/whitefang/stepsofbabylon/data/local/*.kt` — **2 matches** (`WorkshopDao.kt`, `DailyStepDao.kt`). RO-02 target is ≥5 after all 5 PRs land; 2/5 now.
+- One mid-edit bug fixed: the first `BattleViewModelTest` edit had a trailing-newline mismatch that concatenated `MilestoneNotificationManager` + `kotlinx.coroutines.Dispatchers` imports onto one line. Caught by the next immediate edit+diff review, fixed with a dedicated edit.
+
+### Surface changes
+
+- `AwardBattleSteps` constructor: `(playerRepository, dailyStepDao, timeProvider?)` → `(dailyStepDao, playerProfileDao, timeProvider?)`. 3 call sites updated in this PR (VM init, use case test, and the removed dead-field init in `BattleViewModelTest`).
+- `BattleViewModel` constructor grew from 10 to 11 params. Hilt graph unaffected (PlayerProfileDao already `@Provides`-d). Manual constructions in `BattleViewModelTest` (`createVm` and 2 B.3 PR 1 failure-injection tests) all updated.
+- `FakeDailyStepDao` constructor: no-arg → optional `linkedPlayer` param. All 5 other call sites (`DailyStepManagerTest` x2, `TrackWeeklyChallengeTest`, plus the 2 in updated tests) remain source-compatible because the default is `null`.
+- No new production dependencies. No ADR — RO-02 spec already covers this site; same rationale as B.2 PR 1 / B.3 PR 1.
+
+### Open questions / blockers
+
+- None. Concurrent-kill atomicity is proven at the fake/Mutex level; real Room transaction behaviour is a separate instrumented-test concern per RO-02 verification strategy.
+- 3 RO-02 sites remain. B.2 PR 3 (`StepCrossValidator`) uses a different idiom (`AppDatabase.withTransaction { }` at repo level) because the validator lives in `data/healthconnect/` and can legally import `RoomDatabase`. B.2 PR 4 (`ClaimMilestone`) applies the same pattern as PR 1 and PR 2. B.2 PR 5 wraps `runEndRoundPersistence` — a single-call-site change thanks to B.3 PR 1.
+
+### Follow-ups
+
+- B.2 PR 3 (`StepCrossValidator`) next. Different pattern but same goal; expect higher touch count due to the three graduated-response branches.
+- B.2 PR 4 (`ClaimMilestone`) is mechanically identical to this PR once `MilestoneDao` gets its own `@Transaction` default method.
+- B.3 PR 2 (`onCleared` guard via `ProcessLifecycleOwner.lifecycleScope`) is independent and can slot in any time.
+- Doc drift: `AGENTS.md` says "455 JVM tests" — now stale by three PRs (+3, +3, +2). Bundle into a future A.1-style sweep.
+
+### Memory updated
+
+- `STATE.md` ✅ — current objective now "B.2 PR 2 complete"; B.2 PR 2 added to "what works"; priorities/next-actions reshuffled (B.2 PR 3 top); test count 461 → 463; critical-path line updated.
+- `RUN_LOG.md` ✅ — this entry.
+- ADR: not warranted — RO-02 spec already fully covers this site.
+
 ## 2026-05-07 — Phase B.3 PR 1 (RO-03 pattern-proving): resilient `runEndRoundPersistence`
 
 - **Goal:** Execute the RO-03 first PR per `devdocs/evolution/refactoring_opportunities.md` §RO-03 — extract `runEndRoundPersistence` from `BattleViewModel.endRound` and isolate every write / notification in a `runCatching { }.onFailure { Log.w }` block so a single Room or notification-manager exception can no longer leave the player on a frozen battle screen. Spec explicitly splits RO-03 into two PRs; **no `onCleared` change in this PR** (that is PR 2, which uses `ProcessLifecycleOwner.lifecycleScope` to outlive VM cleanup). PR 1 is deliberately small and composable with a future B.2 PR 5 that wraps the whole body in a Room `@Transaction`.
