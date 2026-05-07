@@ -1,5 +1,6 @@
 package com.whitefang.stepsofbabylon.data.repository
 
+import com.whitefang.stepsofbabylon.data.local.PlayerProfileDao
 import com.whitefang.stepsofbabylon.data.local.WorkshopDao
 import com.whitefang.stepsofbabylon.data.local.WorkshopUpgradeEntity
 import com.whitefang.stepsofbabylon.domain.model.UpgradeCategory
@@ -12,6 +13,7 @@ import javax.inject.Inject
 
 class WorkshopRepositoryImpl @Inject constructor(
     private val dao: WorkshopDao,
+    private val playerProfileDao: PlayerProfileDao,
 ) : WorkshopRepository {
 
     override fun observeAllUpgrades(): Flow<Map<UpgradeType, Int>> =
@@ -28,6 +30,14 @@ class WorkshopRepositoryImpl @Inject constructor(
 
     override suspend fun setUpgradeLevel(type: UpgradeType, level: Int) =
         dao.upsert(WorkshopUpgradeEntity(upgradeType = type.name, level = level))
+
+    override suspend fun purchaseUpgradeAtomic(type: UpgradeType, newLevel: Int, cost: Long): Boolean =
+        dao.purchaseUpgradeAtomic(
+            type = type.name,
+            newLevel = newLevel,
+            cost = cost,
+            playerDao = playerProfileDao,
+        )
 
     override suspend fun ensureUpgradesExist() {
         if (dao.getAll().first().isEmpty()) {

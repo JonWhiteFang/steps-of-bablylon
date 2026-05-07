@@ -31,8 +31,8 @@ class WorkshopViewModelTest {
     @BeforeEach
     fun setup() = runTest(dispatcher) {
         Dispatchers.setMain(dispatcher)
-        workshopRepo = FakeWorkshopRepository()
         playerRepo = FakePlayerRepository(PlayerProfile(stepBalance = 10_000))
+        workshopRepo = FakeWorkshopRepository(linkedPlayer = playerRepo)
         workshopRepo.upgrades.value = UpgradeType.entries.associateWith { 0 }
         whenever(dailyMissionDao.getByDateOnce(org.mockito.kotlin.any())).thenReturn(emptyList())
     }

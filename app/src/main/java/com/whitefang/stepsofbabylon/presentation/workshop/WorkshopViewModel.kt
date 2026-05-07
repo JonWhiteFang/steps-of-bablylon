@@ -32,7 +32,7 @@ class WorkshopViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val calculateCost = CalculateUpgradeCost()
-    private val purchaseUpgrade = PurchaseUpgrade(workshopRepository, playerRepository, calculateCost)
+    private val purchaseUpgrade = PurchaseUpgrade(workshopRepository, calculateCost)
     private val quickInvest = QuickInvest(calculateCost)
     private val resolveStats = ResolveStats()
 

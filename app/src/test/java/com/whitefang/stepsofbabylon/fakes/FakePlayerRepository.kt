@@ -14,12 +14,24 @@ class FakePlayerRepository(
 
     val profile = MutableStateFlow(initialProfile)
 
+    /**
+     * Number of times [spendSteps] was called directly on this fake. Post-RO-02 purchase flow
+     * goes through [FakeWorkshopRepository.purchaseUpgradeAtomic] and never hits this method, so
+     * a test can assert `spendStepsCallCount == 0` after a successful workshop purchase to prove
+     * the atomic path is live. Other call sites (e.g. rewarded-ad refunds) still call it directly.
+     */
+    var spendStepsCallCount: Int = 0
+        private set
+
     override fun observeProfile(): Flow<PlayerProfile> = profile
     override fun observeWallet(): Flow<PlayerWallet> = profile.map { it.toWallet() }
     override fun observeTier(): Flow<Int> = profile.map { it.currentTier }
 
     override suspend fun addSteps(amount: Long) { profile.update { it.copy(stepBalance = it.stepBalance + amount) } }
-    override suspend fun spendSteps(amount: Long) { profile.update { it.copy(stepBalance = maxOf(0, it.stepBalance - amount)) } }
+    override suspend fun spendSteps(amount: Long) {
+        spendStepsCallCount++
+        profile.update { it.copy(stepBalance = maxOf(0, it.stepBalance - amount)) }
+    }
     override suspend fun addGems(amount: Long) { profile.update { it.copy(gems = it.gems + amount, totalGemsEarned = it.totalGemsEarned + amount) } }
     override suspend fun spendGems(amount: Long) { profile.update { it.copy(gems = maxOf(0, it.gems - amount), totalGemsSpent = it.totalGemsSpent + amount) } }
     override suspend fun addPowerStones(amount: Long) { profile.update { it.copy(powerStones = it.powerStones + amount, totalPowerStonesEarned = it.totalPowerStonesEarned + amount) } }

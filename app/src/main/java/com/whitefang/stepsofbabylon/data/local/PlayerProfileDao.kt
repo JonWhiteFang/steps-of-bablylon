@@ -41,6 +41,18 @@ interface PlayerProfileDao {
     @Query("UPDATE player_profile SET currentStepBalance = MAX(0, currentStepBalance + :delta), totalStepsEarned = CASE WHEN :delta > 0 THEN totalStepsEarned + :delta ELSE totalStepsEarned END WHERE id = 1")
     suspend fun adjustStepBalance(delta: Long)
 
+    /**
+     * Atomic guarded Step deduction. Used by multi-write transactions (e.g. [WorkshopDao.purchaseUpgradeAtomic])
+     * to combine an affordability check and a deduction in a single SQL statement. The `WHERE` clause ensures
+     * the row is only updated when the player can afford the cost, eliminating the classic read-modify-write
+     * race where two concurrent purchases can both pass a Kotlin-side check but only one has the funds.
+     *
+     * @param cost Steps to deduct. Must be non-negative.
+     * @return Rows affected — `1` if the player had sufficient Steps and the balance was deducted; `0` otherwise.
+     */
+    @Query("UPDATE player_profile SET currentStepBalance = currentStepBalance - :cost WHERE id = 1 AND currentStepBalance >= :cost")
+    suspend fun adjustStepBalanceIfSufficient(cost: Long): Int
+
     @Query("UPDATE player_profile SET gems = MAX(0, gems + :delta) WHERE id = 1")
     suspend fun adjustGems(delta: Long)
 
