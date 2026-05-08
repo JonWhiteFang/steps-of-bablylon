@@ -1,7 +1,7 @@
 # Project State
 
 ## Current objective
-- Phase C.2 PR 1 (cosmetic renderer override pipeline) landed — `GameEngine.cosmeticOverrides: Map<CosmeticCategory, CosmeticItem>` now plumbs through from `CosmeticRepository → BattleViewModel → GameEngine → ZigguratEntity.layerColors`. Pure additive plumbing; no visible change until C.2 PR 2 seeds the first cosmetic (`ZIG_JADE`) and removes the R2-11 guard for it.
+- Doc sweep landed — AGENTS.md / CHANGELOG.md / `.kiro/steering/source-files.md` / `.kiro/steering/structure.md` synced with the current state after B.2 PRs 4-5 + B.3 PR 2 + C.2 PR 1. No code changes, test count stays 475.
 - Plan 31: Play Console & Store Publication — still the only release-blocker; Phase C.5/C.6 (real Billing/Ad SDKs) are its prerequisites.
 
 ## What works
@@ -77,4 +77,4 @@
 - Evolution (Phase 14, Part 1): devdocs/evolution/refactoring_opportunities.md — top-10 highest-ROI refactors (RO-01..RO-10) with current pattern, proposed abstraction, benefits, effort, risk+mitigation, ROI, first safe step, verification, rollback, non-goals
 - Evolution (Phase 14, Part 2): devdocs/evolution/implementation_roadmap.md — phased plan (A Foundation, B Core Refactoring, C Gap Filling, D Integration & Polish); each item has files / dependencies / success criteria / risk / verification / PR size / rollback / owner role
 - Critical path: 01→…→30→R→R2→ Battle Step Rewards → **Phase A done** → B.1 done → **B.2 done (RO-02 complete)** → **B.3 done (RO-03 complete)** → B.4–B.5 → **C.2 PR 1 done** → C.2 PR 2 + C.4 + C.5 + C.6 → D → 31
-- Last run: 2026-05-08 (Phase C.2 PR 1 — cosmetic renderer override pipeline, plumbing only; 473 → 475 tests, all green; lintDebug green; first release-critical cosmetic unblocked for PR 2)
+- Last run: 2026-05-08 (doc sweep — A.1-style sync of AGENTS.md / CHANGELOG.md / source-files.md / structure.md after B.2 PRs 4-5 + B.3 PR 2 + C.2 PR 1; 475 tests stable, no code changes)

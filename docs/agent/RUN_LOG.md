@@ -1,5 +1,49 @@
 # Run Log
 
+## 2026-05-08 — Doc sweep: current-state sync after B.2 PRs 4-5 + B.3 PR 2 + C.2 PR 1
+
+- **Goal:** Close accumulated current-state doc drift. Last A.1-style sweep (2026-05-06) synced through Phase A; since then B.2 PRs 4-5, B.3 PR 2, and C.2 PR 1 have landed — 4 current-state docs were stale. Preflight grep confirmed 4 targets needed updates: `AGENTS.md`, `CHANGELOG.md`, `.kiro/steering/source-files.md`, `.kiro/steering/structure.md`. Historical artifacts (RUN_LOG, plan-R*, external-reviews, devdocs/archaeology, devdocs/evolution) intentionally left untouched per the A.1 precedent.
+- **Preflight:** read `START_HERE`, `STATE`, `CONSTRAINTS`, `RUN_LOG` head (C.2 PR 1 + B.3 PR 2 + B.2 PRs 4-5 entries). `git status` clean on `main`, up to date with origin (last commit `ff5c414 feat: cosmetic renderer override pipeline (C.2 PR 1)`). Grep-enumerated stale references: `465 JVM tests` (2 hits in AGENTS/CHANGELOG), missing `CoroutineScopeModule` / `cosmeticOverrides` / `claimMilestoneAtomic` / `hasWaveProgress` / `ZIGGURAT_COLOR_LOOKUP` entries across the 4 targets.
+
+### Changes
+
+- **`AGENTS.md`** (1 line): test count 465 → 475; coverage list extended to note RO-02 `5/5 sites landed` (added `ClaimMilestone.claimMilestoneAtomic`, `BattleViewModel.runEndRoundPersistence` tx wrap), RO-03 `2/2 sites landed` (added `onCleared` guard), RO-07 `PR 1` cosmetic pipeline plumbing.
+- **`CHANGELOG.md`** (4 new sections + updated Current state): added "Phase B.2 PR 4 — Atomic @Transaction for ClaimMilestone", "Phase B.2 PR 5 — Room @Transaction around runEndRoundPersistence (FINAL RO-02 site)", "Phase B.3 PR 2 — onCleared guard preserves mid-nav round progress (FINAL RO-03 site)", "Phase C.2 PR 1 — Cosmetic renderer override pipeline". Current state test progression 465 → 475, RO-02 complete (5/5), RO-03 complete (2/2), RO-07 in flight, noted B.4/B.5/C.4 as remaining debt.
+- **`.kiro/steering/source-files.md`**: added `di/CoroutineScopeModule.kt` entry with KDoc-style one-liner; updated 6 existing entries — `MilestoneDao` (+`@Transaction claimMilestoneAtomic`), `ClaimMilestone` (+atomic delegation note), `CosmeticItem` (+`overrideColors`), `CosmeticRepositoryImpl` (+`ZIGGURAT_COLOR_LOOKUP`), `BattleViewModel` (composite summary: 14-param constructor; RO-02 tx wrap + RO-03 resilience + onCleared guard + C.2 cosmetic hydration), `GameEngine` (+`hasWaveProgress` + `cosmeticOverrides`).
+- **`.kiro/steering/structure.md`**: added `CoroutineScopeModule` to the `di/` module list (line 39) and a new row in the Key Files table directly below `di/TimeModule.kt`.
+
+### Verification
+
+- `./run-gradle.sh :app:testDebugUnitTest` — BUILD SUCCESSFUL in 1s, all 36 actionable tasks UP-TO-DATE (no code changed — nothing to recompile, test task cached). Test suite stays at **475 JVM tests**, all green.
+- Post-sweep grep `'465 JVM tests'` — 0 matches in non-historical docs. Post-sweep grep `'CoroutineScopeModule'` — now referenced from source-files.md + structure.md + CHANGELOG.md as expected.
+- No code or test changes; the RO-02/RO-03/RO-07 behaviour locked in earlier is unaffected.
+
+### Files touched
+
+- `AGENTS.md` (1-line test count + coverage update)
+- `CHANGELOG.md` (+4 PR sections; updated Current state)
+- `.kiro/steering/source-files.md` (+1 entry; 6 updated entries)
+- `.kiro/steering/structure.md` (+2 mentions of `CoroutineScopeModule`)
+- `docs/agent/STATE.md` (objective line + last-run line)
+- `docs/agent/RUN_LOG.md` (this entry)
+
+### Intentionally NOT touched
+
+- `docs/agent/RUN_LOG.md` (historical per-session entries below this one)
+- `docs/plans/plan-R*.md`, `docs/plans/plan-R2*.md` (historical)
+- `docs/external-reviews/*` (historical at review date)
+- `devdocs/archaeology/*`, `devdocs/evolution/*`, `smoke_tests/*` (historical per their HEAD pin)
+
+### Open questions / blockers
+
+- **None.** Doc drift closed. Next substantive work: C.2 PR 2 (seed `ZIG_JADE` + remove R2-11 guard for that single ID), then C.4 (ClaimMilestone.Cosmetic detection fix), then C.5/C.6 (real SDK swaps gated on ADR stubs).
+
+### Memory updated
+
+- `STATE.md` ✅ — current objective now "Doc sweep landed"; last-run date reflects doc-sweep.
+- `RUN_LOG.md` ✅ — this entry.
+- ADR: not warranted — doc-only sweep, no architectural decisions.
+
 ## 2026-05-08 — Phase C.2 PR 1 (RO-07): cosmetic renderer override pipeline (plumbing only)
 
 - **Goal:** Land PR 1 of the cosmetic rendering pipeline per `devdocs/evolution/refactoring_opportunities.md` §RO-07 and `implementation_roadmap.md` §C.2. The cosmetic system has three disconnected parts: **data** (`CosmeticEntity` / `CosmeticDao` / 7 seeded rows), **UI** (`StoreScreen` + `StoreViewModel` with the R2-11 "Coming Soon" guard disabling purchases), and **renderer** (`GameEngine` / `ZigguratEntity` with zero cosmetic awareness). This PR closes the *renderer* gap with pure-additive plumbing so PR 2 can seed one cosmetic (`ZIG_JADE`) end-to-end and remove the R2-11 guard for it.

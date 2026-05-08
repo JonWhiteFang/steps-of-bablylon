@@ -13,6 +13,7 @@ di/HealthConnectModule.kt          # Hilt: Health Connect organizational module
 di/BillingModule.kt                # Hilt: BillingManager stub binding
 di/AdModule.kt                     # Hilt: RewardAdManager stub binding
 di/TimeModule.kt                   # Hilt: TimeProvider → SystemTimeProvider (B.1)
+di/CoroutineScopeModule.kt         # Hilt: @ApplicationScope qualifier + app-lifetime CoroutineScope(SupervisorJob + Dispatchers.Default) for work that outlives VM cancellation (B.3 PR 2)
 ```
 
 ## Data Layer — Room
@@ -41,7 +42,7 @@ data/local/WeeklyChallengeDao.kt   # Weekly challenge DAO
 data/local/DailyLoginEntity.kt     # Daily login tracking entity
 data/local/DailyLoginDao.kt        # Daily login DAO
 data/local/MilestoneEntity.kt      # Milestone claim state entity
-data/local/MilestoneDao.kt         # Milestone DAO
+data/local/MilestoneDao.kt         # Milestone DAO + @Transaction claimMilestoneAtomic default method (B.2 PR 4)
 data/local/DailyMissionEntity.kt   # Daily mission entity
 data/local/DailyMissionDao.kt      # Daily mission DAO
 data/local/CosmeticEntity.kt       # Cosmetic store entity
@@ -58,7 +59,7 @@ data/repository/CardRepositoryImpl.kt            # Card inventory
 data/repository/UltimateWeaponRepositoryImpl.kt  # Ultimate weapon state
 data/repository/StepRepositoryImpl.kt            # Daily step records + escrow + getDailyRecord()
 data/repository/WalkingEncounterRepositoryImpl.kt # Walking encounters
-data/repository/CosmeticRepositoryImpl.kt        # Cosmetic store items
+data/repository/CosmeticRepositoryImpl.kt        # Cosmetic store items + private ZIGGURAT_COLOR_LOOKUP table (empty in C.2 PR 1; first entry ships with ZIG_JADE in PR 2); toDomain populates CosmeticItem.overrideColors from the lookup
 ```
 
 ## Data Layer — Sensor
@@ -128,7 +129,7 @@ domain/model/MissionCategory.kt          # Mission categories: WALKING, BATTLE, 
 domain/model/BillingProduct.kt           # 5 billing products + PurchaseResult sealed class
 domain/model/AdPlacement.kt              # 3 ad placements + AdResult sealed class
 domain/model/CosmeticCategory.kt         # 3 cosmetic categories (ziggurat, projectile, enemy)
-domain/model/CosmeticItem.kt             # Cosmetic item domain model
+domain/model/CosmeticItem.kt             # Cosmetic item domain model (+ optional overrideColors: List<Int>? for renderer override, C.2 PR 1)
 domain/model/UpgradeType.kt           # 23 Workshop upgrade types with configs
 domain/model/UpgradeCategory.kt       # Attack, Defense, Utility categories
 domain/model/UpgradeConfig.kt         # Upgrade configuration (baseCost, scaling, maxLevel)
@@ -192,7 +193,7 @@ domain/usecase/TrackWeeklyChallenge.kt           # Weekly step challenge PS awar
 domain/usecase/TrackDailyLogin.kt                # Daily login PS + Gem streak
 domain/usecase/AwardWaveMilestone.kt             # PS on new personal-best waves (1/2/5)
 domain/usecase/CheckMilestones.kt                # Detect newly achievable walking milestones
-domain/usecase/ClaimMilestone.kt                 # Credit milestone rewards (Gems, PS, cosmetics)
+domain/usecase/ClaimMilestone.kt                 # Credit milestone rewards via MilestoneDao.claimMilestoneAtomic (gems + power stones); Cosmetic reward no-op pending C.4 (B.2 PR 4)
 domain/usecase/GenerateDailyMissions.kt          # Generate 3 daily missions (date-seeded random)
 domain/usecase/PurchaseGemPack.kt                # Purchase Gem pack via BillingManager
 ```
@@ -213,11 +214,11 @@ presentation/workshop/WorkshopUiState.kt           # UI state: upgrade list, bal
 presentation/workshop/WorkshopScreen.kt            # 3-tab layout, upgrade list, Quick Invest FAB
 presentation/workshop/UpgradeCard.kt               # Reusable upgrade card (affordable/expensive/maxed states)
 presentation/battle/BattleScreen.kt                # Compose wrapper: AndroidView + overlays (HUD, pause, post-round), auto-pause
-presentation/battle/BattleViewModel.kt             # @HiltViewModel: round lifecycle; endRound delegates to runEndRoundPersistence with per-write runCatching error isolation (B.3 PR 1)
+presentation/battle/BattleViewModel.kt             # @HiltViewModel: 14-param constructor; round lifecycle in `runEndRoundPersistence` wrapped in `AppDatabase.withTransaction` (B.2 PR 5) with per-write runCatching error isolation (B.3 PR 1); `onCleared` guard launches persistence on `@ApplicationScope CoroutineScope` when round is mid-progress (B.3 PR 2); hydrates `engine.cosmeticOverrides` from CosmeticRepository (C.2 PR 1)
 presentation/battle/BattleUiState.kt               # UI state: wave, HP, cash, speed, pause, RoundEndState
 presentation/battle/GameSurfaceView.kt             # SurfaceView + SurfaceHolder.Callback, manages game loop thread
 presentation/battle/GameLoopThread.kt              # Dedicated thread: fixed timestep (60 UPS), accumulator, speed multiplier
-presentation/battle/engine/GameEngine.kt           # Central coordinator: entity list, update/render dispatch, wave/collision integration
+presentation/battle/engine/GameEngine.kt           # Central coordinator: entity list, update/render dispatch, wave/collision integration; +hasWaveProgress() (B.3 PR 2); +@Volatile cosmeticOverrides: Map<CosmeticCategory, CosmeticItem> consulted in init() to select ziggurat layer colors (C.2 PR 1)
 presentation/battle/engine/Entity.kt               # Abstract base: x, y, width, height, isAlive, update(), render()
 presentation/battle/engine/WaveSpawner.kt          # Wave lifecycle: 26s spawn + 9s cooldown, enemy composition by wave
 presentation/battle/engine/EnemyScaler.kt          # Wave-based stat scaling (1.05^wave), cash rewards per type
