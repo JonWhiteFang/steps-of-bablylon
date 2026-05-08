@@ -26,6 +26,7 @@ import com.whitefang.stepsofbabylon.domain.repository.UltimateWeaponRepository
 import com.whitefang.stepsofbabylon.domain.repository.WorkshopRepository
 import com.whitefang.stepsofbabylon.domain.time.TimeProvider
 import com.whitefang.stepsofbabylon.data.time.SystemTimeProvider
+import com.whitefang.stepsofbabylon.di.ApplicationScope
 import com.whitefang.stepsofbabylon.domain.usecase.AwardBattleSteps
 import com.whitefang.stepsofbabylon.domain.usecase.AwardWaveMilestone
 import com.whitefang.stepsofbabylon.domain.usecase.ActivateOverdrive
@@ -39,6 +40,7 @@ import com.whitefang.stepsofbabylon.presentation.battle.engine.GameEngine
 import com.whitefang.stepsofbabylon.presentation.battle.ui.BiomeTransitionInfo
 import com.whitefang.stepsofbabylon.presentation.battle.UWSlotInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -61,6 +63,7 @@ class BattleViewModel @Inject constructor(
     private val dailyStepDao: DailyStepDao,
     private val playerProfileDao: PlayerProfileDao,
     private val appDatabase: AppDatabase,
+    @param:ApplicationScope private val applicationScope: CoroutineScope,
     private val milestoneNotificationManager: MilestoneNotificationManager,
     private val rewardAdManager: RewardAdManager,
     private val timeProvider: TimeProvider = SystemTimeProvider(),
@@ -166,10 +169,26 @@ class BattleViewModel @Inject constructor(
 
     private fun endRound() {
         if (roundEnded) return
-        roundEnded = true
         val eng = engine ?: return
+        markEndedAndLaunchPersistence(viewModelScope, eng)
+    }
+
+    /**
+     * Shared helper for the two end-of-round launch call sites: the normal [endRound] path
+     * (polling loop + [quitRound]) which launches on [viewModelScope], and the mid-nav
+     * [onCleared] path (RO-03 B.3 PR 2) which launches on [applicationScope] so the work
+     * outlives the VM cancellation.
+     *
+     * Centralises the "claim the guard, mark the engine ended, compute the wave, launch the
+     * persistence" sequence so both paths stay in sync. The `roundEnded` flag is set *before*
+     * the launch so an overlapping call (e.g. polling loop firing one tick after quitRound)
+     * short-circuits at [endRound]'s guard.
+     */
+    private fun markEndedAndLaunchPersistence(scope: CoroutineScope, eng: GameEngine) {
+        roundEnded = true
+        eng.roundOver = true
         val wave = eng.waveSpawner?.currentWave ?: 1
-        viewModelScope.launch { runEndRoundPersistence(eng, wave) }
+        scope.launch { runEndRoundPersistence(eng, wave) }
     }
 
     /**
@@ -351,7 +370,20 @@ class BattleViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        engine?.onStepReward = null
+        // RO-03 B.3 PR 2: if the user navigates away mid-round (e.g. deep-link from a supply-drop
+        // notification replaces the Battle route), `viewModelScope` is about to be cancelled and
+        // any in-flight persistence would be discarded silently. Launch the end-of-round writes
+        // on the application-scoped CoroutineScope instead so they survive VM teardown.
+        //
+        // Only fires when the round has actually made progress ([GameEngine.hasWaveProgress])
+        // AND hasn't already ended — prevents a no-op persistence pass from a bounce-through
+        // (user opens Battle then immediately backs out) and prevents double persistence from
+        // a normal quitRound → onCleared sequence.
+        val eng = engine
+        if (eng != null && !roundEnded && eng.hasWaveProgress()) {
+            markEndedAndLaunchPersistence(applicationScope, eng)
+        }
+        eng?.onStepReward = null
         super.onCleared()
     }
 

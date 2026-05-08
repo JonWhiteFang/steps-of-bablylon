@@ -5,8 +5,10 @@ import com.whitefang.stepsofbabylon.domain.model.*
 import com.whitefang.stepsofbabylon.domain.usecase.AwardBattleSteps
 import com.whitefang.stepsofbabylon.fakes.*
 import com.whitefang.stepsofbabylon.service.MilestoneNotificationManager
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -31,6 +33,7 @@ class BattleViewModelTest {
     private lateinit var cardRepo: FakeCardRepository
     private lateinit var adManager: FakeRewardAdManager
     private lateinit var dailyStepDao: FakeDailyStepDao
+    private lateinit var applicationScope: CoroutineScope
     private val biomePreferences = mock<BiomePreferences>()
     private val dailyMissionDao = mock<com.whitefang.stepsofbabylon.data.local.DailyMissionDao>()
     private val playerProfileDao = mock<com.whitefang.stepsofbabylon.data.local.PlayerProfileDao>()
@@ -52,6 +55,10 @@ class BattleViewModelTest {
         dailyStepDao = FakeDailyStepDao(linkedPlayer = playerRepo)
         whenever(biomePreferences.hasSeenBiome(any())).thenReturn(true)
         whenever(dailyMissionDao.getByDateOnce(any())).thenReturn(emptyList())
+        // Application-scoped CoroutineScope for B.3 PR 2 onCleared tests. Bound to the test
+        // dispatcher so `advanceUntilIdle()` drains launches made on it. SupervisorJob so a
+        // child failure doesn't kill the scope for later tests (mirrors prod semantics).
+        applicationScope = CoroutineScope(SupervisorJob() + dispatcher)
     }
 
     @AfterEach
@@ -59,7 +66,7 @@ class BattleViewModelTest {
 
     private fun createVm(timeProvider: com.whitefang.stepsofbabylon.domain.time.TimeProvider = com.whitefang.stepsofbabylon.data.time.SystemTimeProvider()) = BattleViewModel(
         workshopRepo, playerRepo, biomePreferences, uwRepo, cardRepo,
-        dailyMissionDao, dailyStepDao, playerProfileDao, appDatabase, milestoneNotificationManager, adManager,
+        dailyMissionDao, dailyStepDao, playerProfileDao, appDatabase, applicationScope, milestoneNotificationManager, adManager,
         timeProvider,
     ).apply {
         // B.2 PR 5: override the transaction seam with a direct pass-through so tests exercise
@@ -360,7 +367,7 @@ class BattleViewModelTest {
         }
         val vm = BattleViewModel(
             workshopRepo, throwingPlayer, biomePreferences, uwRepo, cardRepo,
-            dailyMissionDao, dailyStepDao, playerProfileDao, appDatabase, milestoneNotificationManager, adManager,
+            dailyMissionDao, dailyStepDao, playerProfileDao, appDatabase, applicationScope, milestoneNotificationManager, adManager,
         ).apply { runInTransaction = { block -> block() } }
         backgroundScope.launch { vm.uiState.collect {} }
         advanceUntilIdle()
@@ -398,7 +405,7 @@ class BattleViewModelTest {
         }
         val vm = BattleViewModel(
             workshopRepo, brokenPlayer, biomePreferences, uwRepo, cardRepo,
-            dailyMissionDao, dailyStepDao, playerProfileDao, appDatabase, milestoneNotificationManager, adManager,
+            dailyMissionDao, dailyStepDao, playerProfileDao, appDatabase, applicationScope, milestoneNotificationManager, adManager,
         ).apply { runInTransaction = { block -> block() } }
         backgroundScope.launch { vm.uiState.collect {} }
         advanceUntilIdle()
@@ -508,6 +515,116 @@ class BattleViewModelTest {
         assertNotNull(
             vm.uiState.value.roundEndState,
             "UI push must run after the transaction commits so the overlay appears",
+        )
+    }
+
+    // -------- B.3 PR 2 onCleared guard tests --------
+
+    /**
+     * Drives `onCleared()` from a test context via reflection. [ViewModel.onCleared] is
+     * `protected`, so direct invocation requires setAccessible. Mirrors the pattern already
+     * used by [installEngineForEndRound] for the private `engine` field.
+     */
+    private fun invokeOnCleared(vm: BattleViewModel) {
+        val method = androidx.lifecycle.ViewModel::class.java.getDeclaredMethod("onCleared")
+            .apply { isAccessible = true }
+        method.invoke(vm)
+    }
+
+    /**
+     * Simulates a mid-round engine — in-progress wave with kills on the clock. Used by the
+     * B.3 PR 2 tests that need [GameEngine.hasWaveProgress] to return `true` without running
+     * the full polling loop.
+     */
+    private fun installEngineWithProgress(
+        vm: BattleViewModel,
+        elapsedSeconds: Float = 15f,
+        kills: Int = 3,
+    ): com.whitefang.stepsofbabylon.presentation.battle.engine.GameEngine {
+        val engine = installEngineForEndRound(vm)
+        val engineCls = com.whitefang.stepsofbabylon.presentation.battle.engine.GameEngine::class.java
+        engineCls.getDeclaredField("elapsedTimeSeconds").apply { isAccessible = true }
+            .setFloat(engine, elapsedSeconds)
+        engineCls.getDeclaredField("totalEnemiesKilled").apply { isAccessible = true }
+            .setInt(engine, kills)
+        return engine
+    }
+
+    @Test
+    fun `B3PR2 - onCleared mid-round launches persistence on the application scope`() = runTest(dispatcher) {
+        // User navigates away via a deep-link mid-battle. onCleared runs; viewModelScope is
+        // about to be cancelled. Without B.3 PR 2 the in-flight round would be silently lost.
+        // With the applicationScope launch, persistence still runs and the player keeps the
+        // round's progress (best wave, kills, battle stats).
+        val vm = createVm()
+        backgroundScope.launch { vm.uiState.collect {} }
+        advanceUntilIdle()
+
+        installEngineWithProgress(vm, elapsedSeconds = 30f, kills = 7)
+        val roundsBefore = playerRepo.profile.value.totalRoundsPlayed
+
+        invokeOnCleared(vm)
+        advanceUntilIdle()
+
+        assertEquals(
+            roundsBefore + 1L,
+            playerRepo.profile.value.totalRoundsPlayed,
+            "incrementBattleStats must run — persistence survived VM cancellation",
+        )
+        assertEquals(
+            7L,
+            playerRepo.profile.value.totalEnemiesKilled,
+            "kills must be credited to the all-time counter",
+        )
+    }
+
+    @Test
+    fun `B3PR2 - onCleared with no wave progress is a no-op`() = runTest(dispatcher) {
+        // Bounce-through: user opens Battle screen, engine never ticks (elapsedTimeSeconds = 0,
+        // totalEnemiesKilled = 0), user backs out immediately. Persisting here would record a
+        // zero-progress round as totalRoundsPlayed += 1, which is misleading. The hasWaveProgress
+        // guard in onCleared must short-circuit.
+        val vm = createVm()
+        backgroundScope.launch { vm.uiState.collect {} }
+        advanceUntilIdle()
+
+        installEngineForEndRound(vm) // engine present, but elapsed=0 and kills=0
+        val roundsBefore = playerRepo.profile.value.totalRoundsPlayed
+
+        invokeOnCleared(vm)
+        advanceUntilIdle()
+
+        assertEquals(
+            roundsBefore,
+            playerRepo.profile.value.totalRoundsPlayed,
+            "no-progress bounce-through must not persist a phantom round",
+        )
+    }
+
+    @Test
+    fun `B3PR2 - onCleared after quitRound is a no-op (roundEnded guard holds)`() = runTest(dispatcher) {
+        // Normal quitRound path: endRound already ran; roundEnded = true. onCleared fires next
+        // (typical navigation teardown). The roundEnded guard in onCleared must short-circuit
+        // to prevent double persistence (quitRound: totalRoundsPlayed = 1; onCleared bug would
+        // make it 2).
+        val vm = createVm()
+        backgroundScope.launch { vm.uiState.collect {} }
+        advanceUntilIdle()
+
+        installEngineWithProgress(vm, elapsedSeconds = 20f, kills = 4)
+        vm.quitRound()
+        advanceUntilIdle()
+
+        val roundsAfterQuit = playerRepo.profile.value.totalRoundsPlayed
+        assertEquals(1L, roundsAfterQuit, "quitRound must persist exactly one round")
+
+        invokeOnCleared(vm)
+        advanceUntilIdle()
+
+        assertEquals(
+            roundsAfterQuit,
+            playerRepo.profile.value.totalRoundsPlayed,
+            "onCleared after quitRound must be a no-op — roundEnded guard must hold",
         )
     }
 }

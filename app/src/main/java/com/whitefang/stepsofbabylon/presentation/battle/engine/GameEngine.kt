@@ -88,6 +88,20 @@ class GameEngine {
      */
     @Volatile var onStepReward: ((amount: Long, x: Float, y: Float) -> Unit)? = null
 
+    /**
+     * Returns `true` if this round has made observable progress — at least one enemy killed
+     * or any game-loop ticks elapsed. Used by [com.whitefang.stepsofbabylon.presentation.battle.BattleViewModel.onCleared]
+     * to decide whether a mid-nav teardown should persist the in-flight round (RO-03 B.3 PR 2).
+     *
+     * A fresh battle screen that the user backs out of immediately — before any wave ticks —
+     * returns `false` and skips persistence. Once the game loop has ticked at least once
+     * ([elapsedTimeSeconds] > 0) the round is considered "in progress" and deserves to be
+     * committed even if navigation cancels the VM. Safe to call from any thread — reads
+     * `@Volatile` fields only.
+     */
+    fun hasWaveProgress(): Boolean = elapsedTimeSeconds > 0f || totalEnemiesKilled > 0
+
+
     data class UWState(val type: UltimateWeaponType, val level: Int, var cooldownRemaining: Float = 0f, var effectTimeRemaining: Float = 0f)
     val uwStates = mutableListOf<UWState>()
     private var chronoActive = false

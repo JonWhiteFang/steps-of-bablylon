@@ -1,7 +1,7 @@
 # Project State
 
 ## Current objective
-- **RO-02 is COMPLETE.** Phase B.2 PR 5 (site #5) landed — `runEndRoundPersistence` in `BattleViewModel` now runs all 5 SQLite writes inside a single `AppDatabase.withTransaction { }`, with the milestone notification and UI push deliberately moved outside the transaction. All 5 RO-02 atomic sites done (3 DAO-level `@Transaction` + 2 repo-level `withTransaction`).
+- **RO-03 is COMPLETE.** Phase B.3 PR 2 landed — `BattleViewModel.onCleared` now launches the end-of-round persistence on an `@ApplicationScope`-provided `CoroutineScope` when the round is in progress, so mid-battle deep-link navigation no longer silently discards round state. Both B.3 PRs now done; both RO-02 and RO-03 families complete.
 - Plan 31: Play Console & Store Publication — still the only release-blocker; Phase C.5/C.6 (real Billing/Ad SDKs) are its prerequisites.
 
 ## What works
@@ -16,27 +16,29 @@
 - Phase B.2 PR 3 (RO-02 site #2) landed: `StepCrossValidator`'s 5 multi-write branches (Level 3/2 cap-excess, Level 1/0 first-escrow, reconciliation release) now commit inside `AppDatabase.withTransaction { }`. Different idiom from PRs 1–2 (repo-level not DAO-level) because the validator lives in `data/healthconnect/` and needs parallel transaction scopes; RO-02 explicitly licenses the cross-layer `AppDatabase` import here. Introduced `@VisibleForTesting internal var runInTransaction` seam so existing Mockito-based tests keep working without a real Room DB. SharedPreferences anti-cheat writes (`recordCvOffense`, `decayCvOffenses`) deliberately stay outside the transaction (not SQLite-backed).
 - Phase B.2 PR 4 (RO-02 site #4) landed: atomic `@Transaction` DAO method for milestone claims. `MilestoneDao.claimMilestoneAtomic` wraps the already-claimed check + `upsert(... claimed = true)` + wallet credits (`playerProfileDao.adjustGems` + `incrementGemsEarned`; equivalent for Power Stones) in one SQLite transaction. `ClaimMilestone` use case still reads `totalStepsEarned` through `PlayerRepository` (monotonic read, safe outside the tx) but drops the reward-iteration credit loop and delegates to the atomic DAO method. `MissionsViewModel` gained a Hilt-injected `PlayerProfileDao`. Closes the partial-failure window between the reward credits and the mark-claimed write (crash between them would enable double-credit on retry) and the double-claim race (two concurrent clicks could both see `claimed = false` and both credit the reward).
 - Phase B.2 PR 5 (RO-02 site #5, FINAL) landed: `BattleViewModel.runEndRoundPersistence` now commits its 5 SQLite writes inside a single `AppDatabase.withTransaction { }` block. Constructor grew to 12 params (added `AppDatabase`). Introduced `@VisibleForTesting internal var runInTransaction` seam matching `StepCrossValidator`'s B.2 PR 3 idiom so existing Mockito-based tests keep working without a real Room DB. Non-SQLite side effects (milestone notification, `_uiState.update`) deliberately moved to *after* the tx so the DB lock isn't held across Android system calls or UI pushes. Outer `runCatching { runInTransaction { ... } }` preserves RO-03 resilience — Room infrastructure failures (disk full, SQLCipher decrypt failure) still let the post-round overlay appear. **RO-02 family complete: 5/5 sites landed.**
-- **470 JVM tests** green (+58 vs pre-Phase-A 412 baseline; +15 vs pre-B.2 455 baseline).
+- Phase B.3 PR 2 (RO-03, FINAL) landed: `BattleViewModel.onCleared` now guards against mid-nav round loss. Introduced `@ApplicationScope` qualifier + `di/CoroutineScopeModule.kt` providing a singleton `CoroutineScope(SupervisorJob() + Dispatchers.Default)` that outlives VM cancellation. `BattleViewModel` constructor grew to 13 params; new `markEndedAndLaunchPersistence(scope, engine)` helper centralises the "claim guard + compute wave + launch" sequence so both `endRound()` (via `viewModelScope`) and the new `onCleared` guard (via `applicationScope`) stay in sync. Added `GameEngine.hasWaveProgress()` so `onCleared` skips persistence for no-progress bounce-throughs. Deviated from RO-03 spec's `ProcessLifecycleOwner.lifecycleScope` suggestion because `lifecycle-process` is not on the classpath, and Hilt-injected scope is more testable + uses `Dispatchers.Default` (DB-appropriate) over `Dispatchers.Main`. **RO-03 family complete.**
+- **473 JVM tests** green (+61 vs pre-Phase-A 412 baseline; +18 vs pre-B.2 455 baseline).
 
 ## Known issues / debt
 - Billing/ads still use stub implementations — real SDK integration pending Phase C.5/C.6.
 - Cosmetic visual application not implemented (purchases disabled via R2-11 guard).
 - Sound assets are placeholder sine wave tones.
 - No app icon resources.
-- Phase B core refactors (@Transaction for 5 multi-write sites, resilient endRound, FollowOnPipeline extraction, UpdateMissionProgress use case) are debt, not blockers. B.1 TimeProvider landed. **B.2 PRs 1–5 all landed — RO-02 complete.** B.3 PR 1 landed; B.3 PR 2 (`onCleared` guard) remains.
+- Phase B core refactors (@Transaction for 5 multi-write sites, resilient endRound, FollowOnPipeline extraction, UpdateMissionProgress use case) are debt, not blockers. B.1 TimeProvider landed. **B.2 PRs 1–5 all landed — RO-02 complete.** **B.3 PRs 1–2 all landed — RO-03 complete.** B.4/B.5 (FollowOnPipeline + UpdateMissionProgress) remain.
 
 ## Top priorities (next 5)
-1. Phase B.3 PR 2 — `onCleared` guard using `ProcessLifecycleOwner.lifecycleScope` so mid-battle deep-link navigation no longer silently discards round progress. Closes the RO-03 family.
-2. Phase C.2 — Cosmetic rendering pipeline PRs 1–2 (ship one cosmetic end-to-end). Release critical path.
-3. Phase C.5 + C.6 — Real Billing SDK and Ad SDK swaps (each gated on its ADR stub).
-4. Phase B.4 — FollowOnPipeline extraction from `DailyStepManager` (debt, not blocker).
+1. Phase C.2 — Cosmetic rendering pipeline PRs 1–2 (ship one cosmetic end-to-end). Release critical path.
+2. Phase C.5 + C.6 — Real Billing SDK and Ad SDK swaps (each gated on its ADR stub).
+3. Phase B.4 — FollowOnPipeline extraction from `DailyStepManager` (debt, not blocker).
+4. Phase B.5 — `UpdateMissionProgress` use case (debt, not blocker; removes 2 forbidden-direction imports).
 5. Phase D — Plan 31 Play Console setup, AAB upload, Firebase pre-launch.
 
 ## Next actions (explicit order)
-1. B.3 PR 2 — `onCleared` guard so mid-nav deep-links no longer silently lose round progress. Uses `ProcessLifecycleOwner.lifecycleScope` to outlive VM cleanup. Closes RO-03.
-2. Open ADR-0005 (Billing SDK) and ADR-0006 (Ad SDK) stubs, then land C.5 + C.6.
-3. C.2 cosmetic pipeline can land anywhere after B.1 — pick first cosmetic (gap_analysis §5.2 proposes jade-ziggurat recolour).
-4. Finish with Phase D (Plan 31 Play Console setup, AAB upload, Firebase pre-launch).
+1. Open ADR-0005 (Billing SDK) and ADR-0006 (Ad SDK) stubs, then land C.5 + C.6.
+2. C.2 cosmetic pipeline can land anywhere after B.1 — pick first cosmetic (gap_analysis §5.2 proposes jade-ziggurat recolour).
+3. B.4 FollowOnPipeline extraction from `DailyStepManager` — debt cleanup; removes 4 of the 12 forbidden-direction imports.
+4. B.5 `UpdateMissionProgress` use case — debt cleanup; removes 2 forbidden imports; composes with B.4.
+5. Finish with Phase D (Plan 31 Play Console setup, AAB upload, Firebase pre-launch).
 
 ## Do-not-touch / fragile zones
 - `domain/model/` — stable, all constants validated by balance tests.
@@ -72,5 +74,5 @@
 - Codebase cleanup inventory (Phase 13): devdocs/archaeology/cleanup_inventory.md — removal/consolidation/quarantine candidates; Dynamic-risk register §F pins classes invisible to grep
 - Evolution (Phase 14, Part 1): devdocs/evolution/refactoring_opportunities.md — top-10 highest-ROI refactors (RO-01..RO-10) with current pattern, proposed abstraction, benefits, effort, risk+mitigation, ROI, first safe step, verification, rollback, non-goals
 - Evolution (Phase 14, Part 2): devdocs/evolution/implementation_roadmap.md — phased plan (A Foundation, B Core Refactoring, C Gap Filling, D Integration & Polish); each item has files / dependencies / success criteria / risk / verification / PR size / rollback / owner role
-- Critical path: 01→…→30→R→R2→ Battle Step Rewards → **Phase A done** → B.1 done → **B.2 done (RO-02 complete)** → B.3 PR 1 done → B.3 PR 2 + B.4–B.5 → C → D → 31
-- Last run: 2026-05-08 (Phase B.2 PR 5 — BattleViewModel.runEndRoundPersistence wrapped in AppDatabase.withTransaction; 468 → 470 tests, all green; lintDebug green; **RO-02 COMPLETE — 5/5 atomic sites landed**)
+- Critical path: 01→…→30→R→R2→ Battle Step Rewards → **Phase A done** → B.1 done → **B.2 done (RO-02 complete)** → **B.3 done (RO-03 complete)** → B.4–B.5 → C → D → 31
+- Last run: 2026-05-08 (Phase B.3 PR 2 — onCleared guard via @ApplicationScope CoroutineScope; 470 → 473 tests, all green; lintDebug green; **RO-03 COMPLETE**)

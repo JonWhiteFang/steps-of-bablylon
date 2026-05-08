@@ -1,5 +1,89 @@
 # Run Log
 
+## 2026-05-08 — Phase B.3 PR 2 (RO-03, FINAL): onCleared guard via @ApplicationScope CoroutineScope
+
+- **Goal:** Land the final RO-03 unit per `devdocs/evolution/refactoring_opportunities.md` §RO-03. `BattleViewModel.onCleared` currently nulls the step-reward callback and calls `super.onCleared()` — which cancels `viewModelScope`. If a deep-link navigation teardown fires mid-round (e.g. a supply-drop notification replaces the Battle route), any in-flight round-persistence work is silently discarded. The spec calls for a scope that outlives VM cancellation; we fill in that gap.
+- **Preflight:** read `START_HERE`, `STATE`, `CONSTRAINTS`, `RUN_LOG` head (B.2 PR 1–5 and B.3 PR 1 entries). `git status` clean on `main`, up to date with origin (last commit `a95ea00 refactor: Room @Transaction around runEndRoundPersistence (B.2 PR 5)`). Read `BattleViewModel`, `BattleViewModelTest` (21 cases), `StepCounterService` (existing `CoroutineScope(SupervisorJob() + Dispatchers.Default)` precedent), `StepsOfBabylonApp` (no app-level scope yet), `libs.versions.toml` (confirmed `lifecycle-process` NOT on classpath), existing Hilt modules for the @Qualifier + @Module precedent. Grep-confirmed zero current `ProcessLifecycleOwner` usage anywhere in the codebase.
+
+### Design
+
+**Scope-idiom choice: deviated from the RO-03 spec.** The spec's "First safe step" suggested `ProcessLifecycleOwner.lifecycleScope`, claiming `androidx.lifecycle:lifecycle-process` is "transitively available". That claim is *wrong* — the dep is not on the classpath, `libs.versions.toml` only declares `lifecycle-viewmodel-compose` and `lifecycle-runtime-compose`, and `grep -r lifecycle-process` returns zero matches. Rather than pull in a new dep, I used a Hilt-injected `@ApplicationScope` `CoroutineScope(SupervisorJob() + Dispatchers.Default)`. Reasons:
+1. **No new dependency.** `kotlinx.coroutines` is already on the classpath; the scope is pure Kotlin.
+2. **Right dispatcher.** `ProcessLifecycleOwner.lifecycleScope` defaults to `Dispatchers.Main` — wrong for DB writes. `Dispatchers.Default` matches the `StepCounterService` precedent in the same project.
+3. **More testable.** The scope is DI-injected, so tests inject a `CoroutineScope(SupervisorJob() + dispatcher)` bound to `StandardTestDispatcher` — `advanceUntilIdle()` deterministically drains the launched work. A `ProcessLifecycleOwner.get()` singleton would need mocking.
+4. **Matches project conventions.** Every other cross-cutting infrastructure piece (DB, Hilt Work, TimeProvider) is Hilt-injected. Adding a new `ProcessLifecycleOwner.get()` call site would introduce a second paradigm.
+
+**`@ApplicationScope` qualifier.** New file `di/CoroutineScopeModule.kt` with a `@Qualifier` annotation and a `@Singleton @Provides` method. KDoc explains the scope semantics (lifetime = JVM process, SupervisorJob isolation, Default dispatcher) and the spec-deviation rationale. Follows the same shape as the existing `BillingModule`, `AdModule`, `TimeModule` precedent — adding a new cross-cutting Hilt provider is a well-trodden path.
+
+**`GameEngine.hasWaveProgress()`.** The RO-03 spec's code snippet references `engine.hasWaveProgress()` as the guard that prevents persisting a zero-progress round (user opens Battle then immediately backs out). The method didn't exist; added as a pure-read boolean over two `@Volatile` fields (`elapsedTimeSeconds > 0f || totalEnemiesKilled > 0`). Thread-safe, no state mutation, no dispatcher concerns.
+
+**`markEndedAndLaunchPersistence(scope, engine)` helper.** Rather than duplicate the "claim `roundEnded` guard + mark engine.roundOver + compute wave + launch persistence" sequence between the existing `endRound()` path and the new `onCleared` path, extracted a shared helper. Takes the scope as a parameter. `endRound()` passes `viewModelScope` (normal teardown), `onCleared` passes `applicationScope` (survives VM cancellation). Centralises future changes and guarantees both paths stay in sync.
+
+**`onCleared` guard.** New override:
+```kotlin
+override fun onCleared() {
+    val eng = engine
+    if (eng != null && !roundEnded && eng.hasWaveProgress()) {
+        markEndedAndLaunchPersistence(applicationScope, eng)
+    }
+    eng?.onStepReward = null
+    super.onCleared()
+}
+```
+Three-way guard: engine must exist, round must not have already ended (`roundEnded` guard in `markEndedAndLaunchPersistence` prevents double-persist), AND wave must have made observable progress (`hasWaveProgress` prevents bounce-through phantoms).
+
+**Order of operations.** Check → launch — then null the callback — then super.onCleared(). The `applicationScope.launch` captures `eng` by value before `super.onCleared()` cancels `viewModelScope`, so the work is already queued on a scope that survives. The callback-nulling stays *after* the launch decision because a mid-launch kill of onStepReward is fine (the persistence coroutine owns its own engine ref).
+
+**Annotation target.** `@ApplicationScope` on the constructor parameter produced a Kotlin KT-73255 forward-compat warning about future application to both parameter and property. Fixed with explicit `@param:ApplicationScope` to future-proof the annotation target. The `@param:` qualifier is the sanctioned migration path.
+
+### Files touched
+
+- `app/src/main/java/.../di/CoroutineScopeModule.kt` (new file: `@ApplicationScope` qualifier + `@Singleton @Provides fun provideApplicationScope()` returning `CoroutineScope(SupervisorJob() + Dispatchers.Default)`; KDoc explains scope semantics and the ProcessLifecycleOwner deviation rationale)
+- `app/src/main/java/.../presentation/battle/engine/GameEngine.kt` (+`hasWaveProgress(): Boolean` with KDoc explaining the mid-nav persistence-guard semantics; reads existing `@Volatile` fields only)
+- `app/src/main/java/.../presentation/battle/BattleViewModel.kt` (+imports: `ApplicationScope`, `CoroutineScope`; +constructor param `@param:ApplicationScope applicationScope: CoroutineScope` (12 → 13 params); +`markEndedAndLaunchPersistence(scope, eng)` helper; `endRound()` delegates to helper via `viewModelScope`; new `onCleared()` override checks guard trio and launches via `applicationScope` when applicable)
+- `app/src/test/java/.../presentation/battle/BattleViewModelTest.kt` (+imports: `CoroutineScope`, `SupervisorJob`; +`applicationScope: CoroutineScope` fixture rebuilt in @BeforeEach as `CoroutineScope(SupervisorJob() + dispatcher)` so test-dispatcher advancement drains launches; threaded through `createVm` + both direct `BattleViewModel(...)` constructions in the RO-03 failure tests; +`invokeOnCleared(vm)` reflection helper; +`installEngineWithProgress(vm, elapsedSeconds, kills)` reflection helper that sets the `@Volatile` fields directly; +3 B.3 PR 2 tests)
+
+### Tests added (3 new cases in `BattleViewModelTest`, bringing it to 24 total)
+
+1. **`B3PR2 - onCleared mid-round launches persistence on the application scope`** — installs an engine with `elapsedSeconds=30f, kills=7`, calls `invokeOnCleared(vm)`, advances the test dispatcher. Asserts `playerRepo.profile.value.totalRoundsPlayed` advanced by 1 and `totalEnemiesKilled` = 7. Before B.3 PR 2 this would fail because `viewModelScope` is cancelled before `runEndRoundPersistence` runs.
+2. **`B3PR2 - onCleared with no wave progress is a no-op`** — installs a fresh engine (no reflection into `@Volatile` fields, so `elapsedTimeSeconds=0f`, `totalEnemiesKilled=0`), calls `invokeOnCleared(vm)`. Asserts `totalRoundsPlayed` unchanged. Proves the `hasWaveProgress()` guard short-circuits the bounce-through case (user opens Battle then backs out before any wave ticks).
+3. **`B3PR2 - onCleared after quitRound is a no-op (roundEnded guard holds)`** — installs engine with progress, calls `quitRound()` (persists once), then `invokeOnCleared(vm)`. Asserts `totalRoundsPlayed` stays at 1 after both calls. Proves the `roundEnded` guard holds across both teardown paths — prevents a normal quit-and-nav sequence from double-persisting.
+
+### Verification
+
+- First build: `./run-gradle.sh :app:compileDebugKotlin :app:testDebugUnitTest :app:lintDebug` — BUILD SUCCESSFUL with 2 Kotlin warnings about `@ApplicationScope` annotation target (KT-73255 forward-compat).
+- Second build after adding `@param:ApplicationScope` explicit target — BUILD SUCCESSFUL, **zero warnings**.
+- Test suite: **470 → 473 JVM tests** (+3, matches the 3 new atomicity cases exactly), 0 failures, 0 errors, 0 skipped. `BattleViewModelTest`: 21 → 24 cases.
+- Lint: clean.
+- Hilt KSP compiled the new qualifier + provider cleanly — `BattleViewModel`'s Hilt graph now includes the `@ApplicationScope CoroutineScope` binding without any manual wiring changes outside the new module.
+- **RO-03 site count: 2/2 complete.** The R03 family (B.3 PR 1 resilient extraction + B.3 PR 2 mid-nav scope guard) is closed.
+
+### Surface changes
+
+- `BattleViewModel` constructor grew 12 → 13 params. Hilt graph picks up the new `@ApplicationScope CoroutineScope` via `CoroutineScopeModule`. 3 test construction sites (createVm + 2 RO-03 failure tests) updated.
+- New public module `di/CoroutineScopeModule.kt` with `@ApplicationScope` qualifier; first use of this annotation in the codebase. Any future long-lived background work that should outlive a VM (e.g. fire-and-forget notification posting, background analytics) can reuse this qualifier.
+- New public method `GameEngine.hasWaveProgress(): Boolean`. Small, pure read; safe surface addition.
+- No changes to any existing public API. No new production dependencies. No ADR — RO-03 spec already covers the site with alternatives; the ProcessLifecycleOwner deviation is documented in the module's KDoc.
+
+### Open questions / blockers
+
+- **None. RO-03 is complete.** The mid-nav round-loss gap is closed at the VM level. Process-kill between `launch` and first write still loses the round (same as the spec's mitigation statement); RO-02 PR 5's transaction wrap closes the only remaining observability gap (partial-commit on crash).
+- B.4 (`FollowOnPipeline` extraction) and B.5 (`UpdateMissionProgress` use case) remain as Phase B debt. Both are maintainability refactors, not blockers; can land any time before or during Phase C.
+
+### Follow-ups
+
+- **RO-03 milestone:** 2/2 sites complete. The resilience family (B.3 PR 1 extraction + PR 2 guard) is closed.
+- **Phase C can proceed.** C.2 (cosmetic rendering pipeline) is the next release-critical path item. C.5 and C.6 (real Billing + Ad SDK swaps) are gated on their respective ADR stubs.
+- **B.4/B.5** are pure debt; schedule opportunistically. Both share a common theme (removing forbidden-direction imports from presentation → data.local) and compose with each other.
+- Doc drift: `AGENTS.md` still says "455 JVM tests" — now stale by six PRs (+3+3+2+3+2+3 = +16). Continue bundling into the next A.1-style sweep; a single doc-sync PR at the end of Phase B will handle it.
+- `.kiro/steering/source-files.md` should add `di/CoroutineScopeModule.kt` on next doc sweep.
+
+### Memory updated
+
+- `STATE.md` ✅ — current objective now "RO-03 is COMPLETE"; B.3 PR 2 added to "what works"; known-issues/debt line updated (both RO-02 and RO-03 complete); priorities/next-actions reshuffled (Phase C.2 top); test count 470 → 473; critical-path line updated to mark B.3 complete; last-run date 2026-05-08.
+- `RUN_LOG.md` ✅ — this entry.
+- ADR: not warranted — RO-03 spec already covers this site with alternatives and rollback. The one genuine deviation (Hilt scope vs ProcessLifecycleOwner) is documented in the `CoroutineScopeModule` KDoc, which is discoverable at the point of use.
+
 ## 2026-05-08 — Phase B.2 PR 5 (RO-02 site #5, FINAL): AppDatabase.withTransaction for BattleViewModel.runEndRoundPersistence
 
 - **Goal:** Land the final RO-02 site per `devdocs/evolution/refactoring_opportunities.md` §RO-02. `BattleViewModel.runEndRoundPersistence` (extracted in B.3 PR 1 specifically to enable this wrap) has 5 SQLite writes in the end-of-round fan-out: `updateBestWave`, `awardWaveMilestone`, `updateHighestUnlockedTier` (behind a profile-read), `incrementBattleStats`, `dailyMissionDao.updateProgress`. Without a transaction boundary, external readers (other ViewModels observing reactive Flows) can observe a partially-applied end-of-round state; e.g. `totalRoundsPlayed` advances but `bestWavePerTier` hasn't yet, or vice versa. Wrapping the writes in a single Room transaction closes this window.
