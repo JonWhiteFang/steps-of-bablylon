@@ -1,8 +1,8 @@
 # Project State
 
 ## Current objective
-- **ADR-0005 (Billing SDK) + ADR-0006 (Ad SDK) stubs landed** — prerequisites for Phase C.5 + C.6 real-SDK swaps. Both use a matching 3-PR rollout shape (impl + BuildConfig-flagged binding swap + stub deletion after closed-track confirmation). 5 open questions for Billing PR 1 scoping, 6 for Ad PR 1 scoping. Doc-only PR; test count unchanged at 488.
-- Plan 31: Play Console & Store Publication — still the only release-blocker; Phase C.5/C.6 (real Billing/Ad SDKs) are its prerequisites.
+- **C.5 PR 1 landed** — real Google Play Billing v8 `BillingManagerImpl` + `BillingClientAdapter` seam + `billing_receipts` Room table (DB v8→v9) + unit tests. `@Binds` still points at `StubBillingManager`; the flag-gated swap is PR 2. ADR-0005 promoted Proposed → Accepted with v8 pin (v7 sunsets 2026-08-31) + 5 answered open questions. Test count 488 → 510.
+- Plan 31: Play Console & Store Publication — still the only release-blocker; C.5 PRs 2–3 + C.6 PRs 1–3 are its remaining prerequisites.
 
 ## What works
 - Plans 01–30 + 10b + R (R01–R12) + R2 (R2-01–R2-12) complete.
@@ -23,29 +23,28 @@
 - `ensureSeedData` count-gate fix landed: `CosmeticRepositoryImpl.ensureSeedData` now reads existing ids once (`observeAll().first().mapTo(HashSet())`), computes `missing = SEED_COSMETICS.filter { it.cosmeticId !in existingIds }`, and `upsertAll(missing)` only when non-empty. Replaces the all-or-nothing `dao.count() > 0` short-circuit that prevented any new seed row from landing on already-installed devices. Fresh install behaviour unchanged (empty existingIds → all rows inserted). Partial-catalogue upgrade now works (only the missing ids get inserted; legacy rows + player state on them are untouched because the filter skips them entirely). CosmeticEntity's auto-gen primary key means a naive re-upsert would create duplicates — the filter sidesteps that by not passing existing rows to the DAO. 2 new CosmeticRepositoryImplTest cases: partial-catalogue upgrade inserts `zig_jade` alongside 7 legacy rows; existing `zig_jade` with `isOwned=true, isEquipped=true` survives ensureSeedData with player state intact.
 - Phase C.2 PR 3 (IRON_SOLES milestone cosmetic) landed: `CosmeticRepositoryImpl.SEED_COSMETICS` gained `lapis_lazuli_skin` (ZIGGURAT_SKIN, 500 💎, positioned second after `zig_jade`). `ZIGGURAT_COLOR_LOOKUP` gained the 5-color lapis palette `[0xFF1A1F5C, 0xFF2A3880, 0xFF3B4FAB, 0xFF4F68C8, 0xFFD4A84A]` (deep lapis base → bright lapis → pyrite-gold crown). With this seeded, `CosmeticRepository.idExists("lapis_lazuli_skin")` returns `true` and the C.4 pre-flight check passes for `ClaimMilestone(Milestone.IRON_SOLES)` — the atomic credit runs, 200 Gems + 50 Power Stones land in the wallet. ClaimMilestoneTest rewired: removed the stale IRON_SOLES UnknownCosmetic test (prod semantics flipped), repointed the rejection-before-atomic regression guard at MARATHON_WALKER (garden_ziggurat_skin still unknown), rewrote the positive-path test to use the real `CosmeticRepositoryImpl(FakeCosmeticDao())` end-to-end (proves `SEED_COSMETICS → ensureSeedData → idExists → ClaimMilestone atomic credit → wallet`). CosmeticRepositoryImplTest added the `lapis_lazuli_skin propagates lapis palette` exact-value assertion and updated 3 existing count assertions (8 → 9 rows). Store UI: `lapis_lazuli_skin` NOT in `ENABLED_COSMETIC_ID`, so still shows "Coming Soon" in the Store; primary acquisition path is the milestone.
 - Phase C.2 PR 3b + 3c (MARATHON_WALKER + GLOBE_TROTTER milestone cosmetics, combined content PR) landed: `CosmeticRepositoryImpl.SEED_COSMETICS` gained 2 more rows — `garden_ziggurat_skin` (600 💎, MARATHON_WALKER reward, Hanging Gardens palette terracotta → foliage → pale bloom canopy) and `sandals_of_gilgamesh` (500 💎, GLOBE_TROTTER reward, bronze ziggurat palette dark weathered → polished → gold crown). Total seed count: 9 → 11. `sandals_of_gilgamesh` implementation decision: kept `ZIGGURAT_SKIN` category (reframed via description as a bronze Gilgamesh-themed ziggurat variant; "Bronze ziggurat in honour of Gilgamesh, whose sandals walked the edges of the world"); no new `PLAYER_AVATAR` category, no schema change — the footwear-to-ziggurat semantic gap is bridged narratively. ClaimMilestoneTest: removed 2 UnknownCosmetic tests (both targets are now seeded), added 2 end-to-end success tests via real `CosmeticRepositoryImpl + FakeCosmeticDao`. Now every Milestone with a Cosmetic reward (IRON_SOLES / MARATHON_WALKER / GLOBE_TROTTER) has a dedicated end-to-end success test. Synthetic rejection-before-atomic regression guard preserved — still uses MARATHON_WALKER against the empty fake, but narrative now says "protects against future content work introducing a Milestone with an unseeded Cosmetic reward". CosmeticRepositoryImplTest: +2 palette tests (garden + sandals, each with exact 5-int assertions); count assertions 9 → 11. **Milestone-cosmetic gap fully closed** — no prod mismatches remain.
-- **488 JVM tests** green (+76 vs pre-Phase-A 412 baseline; +33 vs pre-B.2 455 baseline).
+- **510 JVM tests** green (+98 vs pre-Phase-A 412 baseline; +22 vs pre-C.5 488 baseline).
 
 ## Known issues / debt
-- Billing/ads still use stub implementations — real SDK integration pending Phase C.5/C.6.
+- C.5 PR 1 landed the billing impl but `@Binds` still points at `StubBillingManager`; the flag-gated swap + MainActivity lifecycle wiring of `ActivityProvider` + `reconcilePendingPurchases` hook on Store entry land in C.5 PR 2. Ads still use stub implementations pending C.6.
 - Cosmetic visual application plumbed end-to-end for 4 cosmetics (zig_jade store + 3 milestone rewards: lapis_lazuli_skin, garden_ziggurat_skin, sandals_of_gilgamesh); 3 non-milestone ziggurat skins (zig_obsidian, zig_crystal, zig_golden) + 4 non-ziggurat seeds (proj_fire, proj_lightning, enemy_shadow, enemy_neon) still show "Coming Soon" in the Store pending their visual content.
 - Sound assets are placeholder sine wave tones.
 - No app icon resources.
 - Phase B core refactors (@Transaction for 5 multi-write sites, resilient endRound, FollowOnPipeline extraction, UpdateMissionProgress use case) are debt, not blockers. B.1 TimeProvider landed. **B.2 PRs 1–5 all landed — RO-02 complete.** **B.3 PRs 1–2 all landed — RO-03 complete.** B.4/B.5 (FollowOnPipeline + UpdateMissionProgress) remain.
 
 ## Top priorities (next 5)
-1. Open ADR-0005 (Billing SDK) — records the real Google Play Billing Library v7 decision (pending-purchase handling, receipt verification, SKU drift mitigation). Prerequisite for C.5.
-2. Open ADR-0006 (Ad SDK) — records the real AdMob + mediation decision. Prerequisite for C.6.
-3. Phase C.5 — Real Billing SDK swap. High-risk PR family: new `BillingManagerImpl`, `BuildConfig.USE_REAL_BILLING` flag for beta rollout, StubBillingManager removal only after internal + closed-track confirmation.
-4. Phase C.6 — Real Ad SDK swap. Same shape as C.5.
-5. Phase D — Plan 31 Play Console setup, AAB upload, Firebase pre-launch. Depends on real SDKs + public privacy policy URL.
+1. C.5 PR 2 — `BuildConfig.USE_REAL_BILLING` flag + `@Binds` swap from `StubBillingManager` to `BillingManagerImpl`. Wire `MainActivity.onResume/onPause` to `ActivityProvider.set/clear`. Call `billingManager.reconcilePendingPurchases()` on Store entry. Internal test track verification.
+2. C.6 PR 1 — Real AdMob `RewardAdManagerImpl` per ADR-0006. Can land in parallel with C.5 PR 2. Answer the 6 ADR-0006 open questions in the PR description (promotes ADR-0006 Proposed → Accepted).
+3. C.5 PR 3 — delete `StubBillingManager` after ~1 week of closed-track confirmation.
+4. C.6 PR 2 / PR 3 — same rollout shape as C.5.
+5. Phase D — Plan 31 Play Console setup, AAB upload, Firebase pre-launch report. Depends on real SDKs live + public privacy policy URL.
 
 ## Next actions (explicit order)
-1. C.5 PR 1 — new `BillingManagerImpl` in `data/billing/` per ADR-0005. Room `billing_receipts` entity + `Migration 8→9`. Unit tests against mocked `BillingClient` for every `PurchaseResult` variant. `@Binds` still points at `StubBillingManager`; flag swap in PR 2. Answer the 5 open questions in the PR description (promotes ADR-0005 from Proposed → Accepted).
+1. C.5 PR 2 — introduce `BuildConfig.USE_REAL_BILLING` (default: false in debug, true in release) + flip `@Binds` conditionally. `MainActivity` lifecycle wiring of `ActivityProvider`. Add `viewModelScope.launch { billingManager.reconcilePendingPurchases() }` to `StoreViewModel.init`. Add one integration test that `StubBillingManager` + `BillingManagerImpl` produce equivalent Success results on the golden path (where possible without Play Services).
 2. C.6 PR 1 — new `RewardAdManagerImpl` in `data/ads/` per ADR-0006. UMP consent glue. Unit tests against mocked `RewardedAd` for every `AdResult` variant. `@Binds` still points at `StubRewardAdManager`; flag swap in PR 2. Answer the 6 open questions in the PR description (promotes ADR-0006 from Proposed → Accepted).
-3. C.5 PR 2 / C.6 PR 2 — flag-gated binding swaps. Internal test track verification.
-4. C.5 PR 3 / C.6 PR 3 — stub deletions after ~1 week of closed-track confirmation.
-5. B.4 FollowOnPipeline extraction + B.5 UpdateMissionProgress use case — debt cleanup; can land opportunistically in parallel with C.5/C.6.
-6. Finish with Phase D (Plan 31 Play Console setup, AAB upload, Firebase pre-launch).
+3. C.5 PR 3 / C.6 PR 3 — stub deletions after ~1 week of closed-track confirmation.
+4. B.4 FollowOnPipeline extraction + B.5 UpdateMissionProgress use case — debt cleanup; can land opportunistically in parallel with C.6.
+5. Phase D (Plan 31 Play Console setup, AAB upload, Firebase pre-launch).
 
 ## Do-not-touch / fragile zones
 - `domain/model/` — stable, all constants validated by balance tests.
@@ -83,5 +82,5 @@
 - Codebase cleanup inventory (Phase 13): devdocs/archaeology/cleanup_inventory.md — removal/consolidation/quarantine candidates; Dynamic-risk register §F pins classes invisible to grep
 - Evolution (Phase 14, Part 1): devdocs/evolution/refactoring_opportunities.md — top-10 highest-ROI refactors (RO-01..RO-10) with current pattern, proposed abstraction, benefits, effort, risk+mitigation, ROI, first safe step, verification, rollback, non-goals
 - Evolution (Phase 14, Part 2): devdocs/evolution/implementation_roadmap.md — phased plan (A Foundation, B Core Refactoring, C Gap Filling, D Integration & Polish); each item has files / dependencies / success criteria / risk / verification / PR size / rollback / owner role
-- Critical path: 01→…→30→R→R2→ Battle Step Rewards → **Phase A done** → B.1 done → **B.2 done (RO-02 complete)** → **B.3 done (RO-03 complete)** → B.4–B.5 → **C.2 PRs 1+2+3+3b+3c + C.4 + ensureSeedData fix done** → C.5 + C.6 → D → 31
-- Last run: 2026-05-08 (ADR-0005 Billing SDK + ADR-0006 Ad SDK stubs drafted as prerequisites for C.5/C.6 — Play Billing v7 with Room receipt-idempotency + BuildConfig flag rollout; AdMob direct + UMP consent + preload-on-trigger; both use matching 3-PR rollout shape; doc-only, 488 tests unchanged)
+- Critical path: 01→…→30→R→R2→ Battle Step Rewards → **Phase A done** → B.1 done → **B.2 done (RO-02 complete)** → **B.3 done (RO-03 complete)** → B.4–B.5 → **C.2 PRs 1+2+3+3b+3c + C.4 + ensureSeedData fix done** → **C.5 PR 1 done** → C.5 PRs 2–3 + C.6 → D → 31
+- Last run: 2026-05-11 (C.5 PR 1 — real Play Billing v8 `BillingManagerImpl` + `BillingClientAdapter` seam + `billing_receipts` DB v9 + 22 new tests; ADR-0005 Proposed → Accepted with v8 pin + 5 answered open questions; `@Binds` still at Stub for the flag swap in PR 2)

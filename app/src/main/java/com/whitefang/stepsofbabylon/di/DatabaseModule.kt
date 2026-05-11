@@ -40,4 +40,5 @@ object DatabaseModule {
     @Provides fun provideMilestoneDao(db: AppDatabase): MilestoneDao = db.milestoneDao()
     @Provides fun provideDailyMissionDao(db: AppDatabase): DailyMissionDao = db.dailyMissionDao()
     @Provides fun provideCosmeticDao(db: AppDatabase): CosmeticDao = db.cosmeticDao()
+    @Provides fun provideBillingReceiptDao(db: AppDatabase): BillingReceiptDao = db.billingReceiptDao()
 }

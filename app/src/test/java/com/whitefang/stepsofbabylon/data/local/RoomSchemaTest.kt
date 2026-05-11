@@ -63,4 +63,36 @@ class RoomSchemaTest {
         assertNotNull(loaded)
         assertEquals(5, loaded!!.level)
     }
+
+    @Test
+    fun `billing receipt round-trip with all optional fields`() = runTest {
+        // Exercises the v8→v9 schema added by C.5 PR 1 / MIGRATION_8_9. Hits every column
+        // including the nullable orderId / grantedAt / acknowledgedAt / consumedAt so a later
+        // DDL drift (e.g. a forgotten `@ColumnInfo(defaultValue = ...)`) regression-fails here.
+        val entity = BillingReceiptEntity(
+            purchaseToken = "GPB.token.0001",
+            orderId = "GPA.1234-5678-9012-3456",
+            productId = "GEM_PACK_MEDIUM",
+            purchaseTime = 1_720_000_000L,
+            granted = true,
+            grantedAt = 1_720_000_001L,
+            acknowledged = true,
+            acknowledgedAt = 1_720_000_002L,
+            consumed = true,
+            consumedAt = 1_720_000_003L,
+        )
+        db.billingReceiptDao().upsert(entity)
+
+        val loaded = db.billingReceiptDao().getByToken("GPB.token.0001")
+        assertNotNull(loaded)
+        assertEquals("GPA.1234-5678-9012-3456", loaded!!.orderId)
+        assertEquals("GEM_PACK_MEDIUM", loaded.productId)
+        assertEquals(1_720_000_000L, loaded.purchaseTime)
+        assertEquals(true, loaded.granted)
+        assertEquals(1_720_000_001L, loaded.grantedAt)
+        assertEquals(true, loaded.acknowledged)
+        assertEquals(1_720_000_002L, loaded.acknowledgedAt)
+        assertEquals(true, loaded.consumed)
+        assertEquals(1_720_000_003L, loaded.consumedAt)
+    }
 }

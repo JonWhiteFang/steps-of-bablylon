@@ -18,6 +18,15 @@
 # --- SQLCipher ---
 -keep class net.zetetic.** { *; }
 
+# --- Google Play Billing Library v8 (C.5 PR 1 / ADR-0005) ---
+# Play Billing uses reflection/AIDL for cross-process Play Services communication; the keep
+# rules below are the union of what Google's Play Billing sample apps and the "missing rules
+# report" flag in R8 recommend. Over-broad on purpose — billing classes are a stable surface
+# and R8 gets aggressive with `billingclient.*` without explicit keeps.
+-keep class com.android.billingclient.** { *; }
+-keep interface com.android.billingclient.** { *; }
+-dontwarn com.android.billingclient.**
+
 # --- Health Connect SDK (uses reflection internally) ---
 -keep class androidx.health.connect.** { *; }
 

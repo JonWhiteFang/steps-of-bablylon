@@ -107,6 +107,10 @@ dependencies {
     implementation(libs.sqlcipher)
     implementation(libs.sqlite)
 
+    // Google Play Billing (C.5 PR 1 / ADR-0005). Real impl exists but @Binds still points at
+    // StubBillingManager; PR 2 introduces the BuildConfig.USE_REAL_BILLING flag + binding swap.
+    implementation(libs.billing.ktx)
+
     // Testing
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

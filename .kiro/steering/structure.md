@@ -9,7 +9,8 @@ app/src/main/java/com/whitefang/stepsofbabylon/
 │   ├── repository/     # Repository implementations (Room-backed, @Inject constructors)
 │   ├── sensor/         # Step sensor data source, rate limiter, velocity analyzer, ingestion preferences, daily step manager
 │   ├── healthconnect/  # Health Connect client, step reader, cross-validator, gap filler, activity minutes
-│   ├── billing/        # StubBillingManager (simulated IAP purchases)
+│   ├── billing/        # StubBillingManager (stub) + BillingManagerImpl (real, C.5 PR 1, @Binds still stub until PR 2)
+│   │   └── internal/   # BillingClientAdapter (SDK-neutral seam) + RealBillingClientAdapter (concrete v8 glue) + ActivityProvider (C.5 PR 1)
 │   └── ads/            # StubRewardAdManager (simulated reward ads)
 ├── domain/             # Pure Kotlin — no Android imports
 │   ├── model/          # Data classes and enums
@@ -118,7 +119,7 @@ All in `domain/model/`:
 - `MilestoneReward` — sealed class: Gems, PowerStones, Cosmetic
 - `DailyMissionType` — 6 daily mission types (walking/battle/upgrade)
 - `MissionCategory` — mission categories: WALKING, BATTLE, UPGRADE
-- `BillingProduct` — 5 billing products + PurchaseResult sealed class
+- `BillingProduct` — 5 billing products + PurchaseResult sealed class + opt-in Companion for `BillingProduct.fromSkuIdOrNull` lookup in the data layer (C.5 PR 1)
 - `AdPlacement` — 3 ad placements + AdResult sealed class
 - `CosmeticCategory` — 3 cosmetic categories (ziggurat, projectile, enemy)
 - `CosmeticItem` — cosmetic item domain model
@@ -132,7 +133,7 @@ All in `domain/model/`:
 | `di/RepositoryModule.kt` | Hilt module: binds all 8 repository interfaces to impls |
 | `di/StepModule.kt` | Hilt module: provides SensorManager |
 | `di/HealthConnectModule.kt` | Hilt module: Health Connect organizational module |
-| `di/BillingModule.kt` | Hilt module: binds BillingManager to stub |
+| `di/BillingModule.kt` | Hilt module: binds BillingManager to stub (flag-gated swap to BillingManagerImpl lands in C.5 PR 2) |
 | `di/AdModule.kt` | Hilt module: binds RewardAdManager to stub |
 | `di/TimeModule.kt` | Hilt module: binds TimeProvider to SystemTimeProvider (B.1, RO-01) |
 | `di/CoroutineScopeModule.kt` | Hilt module: provides @ApplicationScope CoroutineScope(SupervisorJob + Dispatchers.Default) that outlives VM cancellation (B.3 PR 2, RO-03) |

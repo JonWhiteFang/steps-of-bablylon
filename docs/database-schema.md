@@ -167,6 +167,25 @@ Cosmetic store items (ziggurat skins, projectile effects, enemy skins).
 | isOwned | Boolean | Whether player owns this item |
 | isEquipped | Boolean | Whether currently equipped |
 
+### BillingReceipt
+
+Play Billing idempotency record. One row per Play-recorded purchase. Keyed by `purchaseToken` (non-null, unique per Play Billing docs; `orderId` is nullable on pending purchases). Introduced by C.5 PR 1 / ADR-0005.
+
+| Column | Type | Notes |
+|---|---|---|
+| purchaseToken | String (PK) | Play Billing-issued token; stable across re-queries |
+| orderId | String? | Play Billing `orderId`; null while pending |
+| productId | String | Uppercase `BillingProduct.name` (e.g. `GEM_PACK_SMALL`) |
+| purchaseTime | Long | Epoch millis when Play Services recorded the purchase |
+| granted | Boolean | `true` once wallet credit committed inside `grantOnceAtomic` |
+| grantedAt | Long? | Epoch millis when `granted` flipped true |
+| acknowledged | Boolean | `true` once `acknowledgePurchaseAsync` succeeded (non-consumable + subscription path) |
+| acknowledgedAt | Long? | Epoch millis when `acknowledged` flipped true |
+| consumed | Boolean | `true` once `consumeAsync` succeeded (consumable path) |
+| consumedAt | Long? | Epoch millis when `consumed` flipped true |
+
+The DAO exposes `grantOnceAtomic(receipt, grantedAt, walletCredit)` — a `@Transaction` default method that flips `granted = true` and runs the wallet-credit lambda inside one SQLite transaction, returning `true` only if this call transitioned the row from un-granted (idempotent short-circuit otherwise). Consume/acknowledge RPCs deliberately run OUTSIDE the transaction; `getGrantedButUnresolved()` drives the retry path.
+
 ## Relationships
 
 ```
@@ -198,9 +217,10 @@ Each entity gets its own DAO:
 - `WalkingEncounterDao` — unclaimed list, claim, history
 - `WeeklyChallengeDao` — weekly challenge tracking, tier claims
 - `DailyLoginDao` — daily login tracking, streak queries
-- `MilestoneDao` — milestone claim state
-- `DailyMissionDao` — daily mission tracking, refresh queries
-- `CosmeticDao` — cosmetic store items, purchase/equip state
+- `MilestoneDao` — walking milestone tracking, atomic claim (`claimMilestoneAtomic` @Transaction; B.2 PR 4)
+- `DailyMissionDao` — daily mission queries, progress updates, completion tracking
+- `CosmeticDao` — cosmetic queries, purchase, equip/unequip
+- `BillingReceiptDao` — Play Billing idempotency (C.5 PR 1): `getByToken`, `upsert`, `markConsumed`/`markAcknowledged`, `getGrantedButUnresolved` filter for reconciliation, `grantOnceAtomic` @Transaction combining receipt flip + wallet-credit lambda
 
 ## Migration Strategy
 
@@ -209,7 +229,8 @@ Each entity gets its own DAO:
 - Write manual migrations for complex changes (column renames, data transforms)
 - Version numbering: increment by 1 per plan that touches the schema
 - Test migrations with `MigrationTestHelper` in instrumented tests
-- Current schema version: 8
+- Current schema version: 9
+- Active migrations: `MIGRATION_7_8` (adds `battleStepsEarned`), `MIGRATION_8_9` (adds `billing_receipt` table, C.5 PR 1)
 - v1→v2: Added `highestUnlockedTier` column to `player_profile` (Plan 13). Uses `fallbackToDestructiveMigration` during development.
 - v2→v3: Added `labSlotCount` column to `player_profile` (Plan 16). Uses `fallbackToDestructiveMigration` during development.
 - v3→v4: Added `WeeklyChallengeEntity`, `DailyLoginEntity`, streak fields on `player_profile` (Plan 20). Uses `fallbackToDestructiveMigration`.

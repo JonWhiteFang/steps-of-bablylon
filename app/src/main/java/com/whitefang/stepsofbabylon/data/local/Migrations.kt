@@ -26,6 +26,37 @@ object AppMigrations {
         }
     }
 
+    /**
+     * v8 → v9: Adds the `billing_receipt` table — the local Play Billing idempotency store
+     * keyed by `purchaseToken`. Introduced by C.5 PR 1 / ADR-0005 to guarantee wallet credits
+     * run exactly once per purchase across crash/retry boundaries. No existing rows to migrate;
+     * the table is created empty.
+     *
+     * Schema mirrors [BillingReceiptEntity] — any field change requires a new migration and a
+     * schema version bump.
+     */
+    val MIGRATION_8_9 = object : Migration(8, 9) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `billing_receipt` (
+                    `purchaseToken` TEXT NOT NULL,
+                    `orderId` TEXT DEFAULT NULL,
+                    `productId` TEXT NOT NULL,
+                    `purchaseTime` INTEGER NOT NULL,
+                    `granted` INTEGER NOT NULL DEFAULT 0,
+                    `grantedAt` INTEGER DEFAULT NULL,
+                    `acknowledged` INTEGER NOT NULL DEFAULT 0,
+                    `acknowledgedAt` INTEGER DEFAULT NULL,
+                    `consumed` INTEGER NOT NULL DEFAULT 0,
+                    `consumedAt` INTEGER DEFAULT NULL,
+                    PRIMARY KEY(`purchaseToken`)
+                )
+                """.trimIndent(),
+            )
+        }
+    }
+
     /** All migrations in version order. Wire this into the Room builder. */
-    val ALL: Array<Migration> = arrayOf(MIGRATION_7_8)
+    val ALL: Array<Migration> = arrayOf(MIGRATION_7_8, MIGRATION_8_9)
 }

@@ -1,5 +1,95 @@
 # Run Log
 
+## 2026-05-11 — C.5 PR 1: real Play Billing v8 `BillingManagerImpl`
+
+- **Goal:** Land the first of three PRs swapping `StubBillingManager` for a real Google Play Billing implementation, per ADR-0005 and implementation-roadmap §C.5. PR 1 introduces the real impl + receipt table + migration + unit tests without flipping the DI binding; PR 2 adds the `BuildConfig.USE_REAL_BILLING` flag + binding swap + MainActivity lifecycle wiring; PR 3 deletes the stub once the closed-track confirms. PR 1 must also promote ADR-0005 from Proposed → Accepted with concrete answers to the 5 open questions.
+- **Preflight:** read `STATE`, `RUN_LOG` head (2026-05-08 ADR stubs entry), `CONSTRAINTS`, ADR-0005 (proposed), implementation-roadmap §C.5, existing `StubBillingManager` / `BillingManager` / `BillingProduct` / `FakeBillingManager` / `PlayerProfileDao` / `MilestoneDao.claimMilestoneAtomic` (as the @Transaction pattern precedent). `git status` clean on `main`, up to date with origin (last commit `1666f27 docs(adr): add ADR-0005 (Billing SDK) + ADR-0006 (Ad SDK) stubs`).
+
+### Library-version pivot: v7 → v8
+
+The proposed ADR pinned Play Billing v7. Web search during preflight surfaced that **v7 sunsets 2026-08-31 per Google's two-year deprecation window** (revenuecat migration guide + Google release notes), and **v8.3.0 is the current stable line (released 2025-12-23)**. Pinning v7 would mean the library sunsets ~3 months after ship. The ADR's proposed decision explicitly allowed "or the most-recent stable when C.5 PR 1 lands", so the PR targets v8 and the ADR was amended accordingly.
+
+Bonus: v8 introduces `BillingClient.Builder.enableAutoServiceReconnection()` which eliminates the custom reconnection-policy work the proposed ADR had flagged as Q1.
+
+### Design decisions
+
+- **SDK-neutral adapter seam.** An `internal` `BillingClientAdapter` interface (in `data/billing/internal/`) with plain-Kotlin sealed result types (`SdkBillingResult`, `SdkPurchase`, `SdkProductDetails`, `QueryProductDetailsResult`, `StartPurchaseResult`, `QueryPurchasesResult`) is the only dependency the impl has on the SDK. `RealBillingClientAdapter` is the one class that imports `com.android.billingclient.*`. This shape lets `BillingManagerImplTest` mock the adapter with mockito-kotlin's default subclass mock-maker — no `mockito-inline` dependency required. Version-upgrade blast radius stays contained to one class.
+- **`billing_receipts` table keyed by `purchaseToken`.** Play Billing's `orderId` is nullable on pending purchases; `purchaseToken` is guaranteed non-null and stable across re-queries. DB v8 → v9 with explicit `MIGRATION_8_9`. `BillingReceiptDao.grantOnceAtomic(receipt, grantedAt, walletCredit)` is a `@Transaction` default method that flips `granted = true` and runs the wallet-credit lambda in one SQLite transaction — mirrors the RO-02 pattern from `MilestoneDao.claimMilestoneAtomic` (B.2 PR 4). Idempotent short-circuit when `granted` is already true.
+- **Consume/ack AFTER the grant transaction.** The Google Play Services RPC runs outside the Room transaction so SQLite locks are never held across a round-trip to Google. Failures are logged and retried by `retryUnresolvedConsumeOrAck()` on the next reconciliation sweep — wallet is NOT re-credited because the `granted = true` guard short-circuits `grantOnceAtomic`.
+- **Pending purchases persist with `granted = false`.** `BillingManagerImpl` never credits on a PENDING state; it writes the receipt row (so the reconciliation sweep can track it) and returns `PurchaseResult.Error("Purchase pending …")`. The next `reconcilePendingPurchases()` call observes the PURCHASED promotion and routes through `grantOnceAtomic`, producing exactly-once credit.
+- **`reconcilePendingPurchases` as a default-no-op interface extension.** Adding `suspend fun reconcilePendingPurchases() { /* no-op */ }` to `BillingManager` means `StubBillingManager` and `FakeBillingManager` inherit the no-op without code changes — zero churn in existing callers.
+- **`ActivityProvider` + deferred MainActivity wiring.** `BillingClient.launchBillingFlow` needs an Activity (not a Context). `ActivityProvider` is a `WeakReference`-backed Singleton that MainActivity will populate on resume in PR 2. PR 1 leaves the class wired in DI but dormant (no caller registers into it), because `@Binds` still points at Stub so `ActivityProvider.current()` is never read.
+- **`obfuscatedAccountId` anti-fraud.** SHA-256 hex of a random UUID stored in `SharedPreferences("billing_anti_fraud")`. No PII leaves the device; cleared SharedPreferences regenerates the UUID, which is acceptable because the signal is probabilistic. `obfuscatedProfileId` stays unused (no in-app profile concept).
+- **`BillingProduct` domain model got an empty `companion object`** so the data-layer `BillingProduct.fromSkuIdOrNull(skuId)` extension could attach. Domain stays pure Kotlin — no Android import introduced.
+
+### Files touched
+
+New:
+- `app/src/main/java/…/data/local/BillingReceiptEntity.kt` (88 lines). PK=purchaseToken; 4 nullable fields with `@ColumnInfo(defaultValue = "NULL")` so the migration DDL byte-matches the Room-generated schema export.
+- `app/src/main/java/…/data/local/BillingReceiptDao.kt` (106 lines). `grantOnceAtomic` + `markConsumed` + `markAcknowledged` + `getGrantedButUnresolved`.
+- `app/src/main/java/…/data/billing/BillingManagerImpl.kt` (381 lines). `internal` class implementing the full 3 methods + `reconcilePendingPurchases`. Session-Mutex guards race between `purchase` and `reconcile`.
+- `app/src/main/java/…/data/billing/internal/BillingClientAdapter.kt` (192 lines). Interface + 6 sealed types.
+- `app/src/main/java/…/data/billing/internal/RealBillingClientAdapter.kt` (296 lines). `enableAutoServiceReconnection()` + `PendingPurchasesParams.enableOneTimeProducts` + Mutex-guarded `launchPurchase` bridging the `PurchasesUpdatedListener` callback through a `CompletableDeferred`. Device-only testable.
+- `app/src/main/java/…/data/billing/internal/ActivityProvider.kt` (48 lines). `@Singleton`, `@Volatile var activityRef: WeakReference<Activity>?`.
+- `app/src/test/java/…/data/local/BillingReceiptDaoTest.kt` (229 lines, 7 tests). Robolectric + real in-memory Room.
+- `app/src/test/java/…/data/billing/BillingManagerImplTest.kt` (480 lines, 14 tests). Robolectric + real in-memory Room for `@Transaction` semantics + mockito-kotlin for adapter + mock Activity (pass-through only).
+- `app/schemas/…/9.json` (23,382 bytes). Generated by KSP from the bumped `AppDatabase`; `billing_receipt` CREATE SQL byte-matches `MIGRATION_8_9`.
+
+Modified:
+- `gradle/libs.versions.toml` — added `billingPlay = "8.3.0"` + `billing-ktx` library alias.
+- `app/build.gradle.kts` — `implementation(libs.billing.ktx)`.
+- `app/src/main/java/…/data/local/AppDatabase.kt` — 13 entities + 13 DAOs, version 9, adds `billingReceiptDao()`.
+- `app/src/main/java/…/data/local/Migrations.kt` — added `MIGRATION_8_9`; `ALL` is now `arrayOf(MIGRATION_7_8, MIGRATION_8_9)`.
+- `app/src/main/java/…/di/DatabaseModule.kt` — `provideBillingReceiptDao`.
+- `app/src/main/java/…/domain/repository/BillingManager.kt` — added default-no-op `reconcilePendingPurchases`.
+- `app/src/main/java/…/domain/model/BillingProduct.kt` — empty `companion object` opt-in.
+- `app/proguard-rules.pro` — `-keep class com.android.billingclient.** { *; }` + `-keep interface` + `-dontwarn`.
+- `app/src/test/java/…/data/local/RoomSchemaTest.kt` — +1 billing_receipt round-trip test touching every column.
+- `docs/agent/DECISIONS/ADR-0005-billing-sdk.md` — Status Proposed → Accepted; Decision section rewritten with concrete commitments; 5 open questions replaced by a "Resolved open questions" section with Q1–Q5 decisions; References list expanded to every PR 1 file.
+- `AGENTS.md` — coverage line 488 → 510.
+- `CHANGELOG.md` — new Phase C.5 PR 1 section at the top of Unreleased.
+- `.kiro/steering/source-files.md` — 5 new data/billing files + 2 new Room entities + Migrations.kt ADR-0005 reference + updated test entries.
+- `.kiro/steering/structure.md` — `data/billing/internal/` subdirectory documented + DI note.
+- `.kiro/steering/tech.md` — Play Billing 8.3.0 row added to library table.
+- `.kiro/steering/lib-room.md` — schema version 8 → 9.
+- `docs/database-schema.md` — BillingReceipt entity section + BillingReceiptDao row + MIGRATION_8_9 in migrations list; removed 3 duplicate DAO entries.
+
+### Test changes (+22 net: 488 → 510)
+
+- `BillingReceiptDaoTest`: **+7 tests**. Upsert/getByToken round-trip, getByToken-not-found null return, `grantOnceAtomic` flip + walletCredit-ran-once, `grantOnceAtomic` idempotent (2nd call returns false + walletCredit NOT run + grantedAt from 1st call preserved), `markConsumed`/`markAcknowledged` target-only (no cross-row contamination), `getGrantedButUnresolved` excludes the 3 states that are NOT unresolved (consumed-already, acked-already, pending), `getAll` orders by purchaseTime DESC.
+- `RoomSchemaTest`: **+1 test**. billing_receipt round-trip with every column populated (incl. the 4 nullables).
+- `BillingManagerImplTest`: **+14 tests**. 3 happy paths (GEM_PACK_SMALL consume / AD_REMOVAL ack / SEASON_PASS 30-day expiry); 5 failure paths (user-cancel, product-unavailable, no-activity, connect-fails, pending-purchase-persists-receipt-without-credit); idempotency (same purchaseToken → Success + no double-credit); 2 reconciliation cases (PENDING→PURCHASED grants exactly once across repeated sweeps; `retryUnresolvedConsumeOrAck` retries consume without re-crediting); `isAdRemoved` / `isSeasonPassActive` delegation to `PlayerRepository`.
+
+### Verification
+
+- `./run-gradle.sh :app:compileDebugKotlin` — BUILD SUCCESSFUL after making `BillingManagerImpl` `internal` (it was initially `public` which leaked `internal` `BillingClientAdapter`/`ActivityProvider` params through its constructor). 2 forward-compat Kotlin warnings about `@ApplicationContext` param-vs-field annotation targeting (KT-73255) — not actionable.
+- `./run-gradle.sh test` — first run had 1 failure: the happy-path `isSeasonPassActive returns true when flag is set and expiry is in the future` test had a bogus `verifyNoInteractions(/* comment */)` with an empty arg list (comment-only). Replaced with `verify(playerRepository, never()).updateSeasonPass(any(), any())` which correctly asserts the expiry-clear branch was NOT taken. Re-ran: BUILD SUCCESSFUL, 510 tests completed, 0 failures, 0 errors.
+- Schema 9.json generated + the `billing_receipt` CREATE SQL in the schema export matches MIGRATION_8_9 byte-for-byte (verified via grep). This is the critical consistency check — fresh install and migration paths will produce identical schemas.
+- `@Binds` in `BillingModule` still points at `StubBillingManager`; no runtime behaviour change in PR 1.
+
+### Open questions / blockers
+
+- None for PR 1.
+- PR 2 scoping (next agent session):
+  - `BuildConfig.USE_REAL_BILLING` default strategy: debug=false, release=true. Override via `keystore.properties` for internal-track testing.
+  - `MainActivity.onResume` → `ActivityProvider.set(this)`; `onPause` → `ActivityProvider.clear()`.
+  - `StoreViewModel.init { viewModelScope.launch { billingManager.reconcilePendingPurchases() } }` — side effect before existing `ensureSeedData()` to pick up any pending purchases from prior sessions.
+  - One integration test demonstrating `BillingManagerImpl` golden-path Success parity with the stub (where possible without Play Services).
+
+### Follow-ups
+
+- **C.5 PR 2 is now the top code-facing task.** Flag + binding swap + MainActivity wiring.
+- **C.6 PR 1 can land in parallel** with C.5 PR 2 — different files, no coupling. AdMob `RewardAdManagerImpl` + UMP + answer ADR-0006's 6 open questions.
+- **C.5 PR 3** deletes the stub after ~1 week of closed-track confirmation.
+- After C.5 and C.6 land, Phase D (Plan 31 Play Console setup) is unblocked.
+- B.4 FollowOnPipeline + B.5 UpdateMissionProgress stay as opportunistic debt cleanup.
+
+### Memory updated
+
+- `STATE.md` ✅ — current objective now "C.5 PR 1 landed"; What-works gained a C.5 PR 1 line (will be folded into the main bullet when C.5 PR 3 lands); Known-issues swapped stub-related line for a more specific C.5 PR 2 pointer; test count 488 → 510; priorities rotated (PR 1 removed, new PRs 2–3 + C.6 top); Next actions rotated; last-run line updated; critical path gained "C.5 PR 1 done" marker.
+- `RUN_LOG.md` ✅ — this entry.
+- `ADR-0005` ✅ — status Proposed → Accepted; 5 open questions resolved with concrete decisions; v7 → v8 library pin with rationale; references list expanded.
+
 ## 2026-05-08 — ADR-0005 (Billing SDK) + ADR-0006 (Ad SDK) stubs
 
 - **Goal:** Draft both ADR stubs named as prerequisites for Phase C.5 / C.6 in the implementation roadmap, so C.5 PR 1 and C.6 PR 1 can cite a recorded architectural commitment instead of discovering the shape in-PR. Matches the pattern of ADR-0004 (FollowOnPipeline stub written before B.4 PR 1) — record the commitment now, promote Proposed → Accepted when the concrete decisions are made in the first real PR of each family.
