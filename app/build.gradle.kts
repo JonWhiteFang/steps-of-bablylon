@@ -32,9 +32,12 @@ android {
         // C.5 PR 2 / ADR-0005.
         buildConfigField("boolean", "USE_REAL_BILLING", "false")
 
-        // Default USE_REAL_ADS value. Debug binds StubRewardAdManager; release binds
-        // RewardAdManagerImpl once C.6 PR 2 lands (PR 1 leaves @Binds at stub; the flag
-        // is read by nothing until PR 2). C.6 PR 1 / ADR-0006.
+        // Default USE_REAL_ADS value. Post-C.6 PR 3 the flag no longer gates the
+        // `RewardAdManager` binding (there is only `RewardAdManagerImpl`). It still
+        // gates the UMP consent prefetch in MainActivity.onResume so debug emulators
+        // without Play Services do not pay the UMP init cost. Release builds prefetch
+        // so the first reward-ad tap doesn't pay the ~200-500ms UMP init latency.
+        // Kept symmetric with USE_REAL_BILLING. C.6 PR 1 / PR 2 / PR 3 / ADR-0006.
         buildConfigField("boolean", "USE_REAL_ADS", "false")
 
         // AdMob ad-unit IDs per AdPlacement. Debug uses Google's documented test-ad unit
@@ -72,8 +75,10 @@ android {
             // Debug builds bind StubBillingManager so running on a device without a Play
             // Store account (e.g. emulator cold-start) still exercises the Store UI.
             buildConfigField("boolean", "USE_REAL_BILLING", "false")
-            // C.6 PR 1: debug binds StubRewardAdManager pending PR 2. Flag is read by
-            // nothing yet but symmetry with USE_REAL_BILLING makes the PR 2 diff smaller.
+            // Debug skips the MainActivity UMP consent prefetch so emulators without
+            // Play Services don't log spurious UMP errors on every app start. The real
+            // RewardAdManagerImpl is still bound; the first ad tap will initialise UMP
+            // lazily (and most likely return AdResult.Error on a bare emulator). C.6 PR 3.
             buildConfigField("boolean", "USE_REAL_ADS", "false")
         }
         release {
@@ -85,8 +90,8 @@ android {
             }
             // Release builds bind BillingManagerImpl (real Play Billing v8). C.5 PR 2.
             buildConfigField("boolean", "USE_REAL_BILLING", "true")
-            // Release flag is true so C.6 PR 2's Provider switch picks RewardAdManagerImpl
-            // automatically once wired. C.6 PR 1 leaves @Binds at stub either way.
+            // Release enables the MainActivity UMP consent prefetch on first resume so
+            // the first reward-ad tap doesn't pay the ~200-500ms UMP init latency. C.6 PR 3.
             buildConfigField("boolean", "USE_REAL_ADS", "true")
         }
     }
@@ -160,9 +165,10 @@ dependencies {
     // StubBillingManager; PR 2 introduces the BuildConfig.USE_REAL_BILLING flag + binding swap.
     implementation(libs.billing.ktx)
 
-    // Google Mobile Ads SDK + UMP (C.6 PR 1 / ADR-0006). Real RewardAdManagerImpl exists but
-    // @Binds still points at StubRewardAdManager; C.6 PR 2 introduces the
-    // BuildConfig.USE_REAL_ADS flag + binding swap + MainActivity consent-flow wiring.
+    // Google Mobile Ads SDK + UMP (C.6 PR 1 / PR 2 / PR 3 / ADR-0006). `RewardAdManagerImpl`
+    // is the only `RewardAdManager` binding post-PR 3; debug + release both use it, with
+    // the UMP consent prefetch in MainActivity gated by BuildConfig.USE_REAL_ADS so debug
+    // emulators skip Play Services init.
     implementation(libs.play.services.ads)
     implementation(libs.user.messaging.platform)
 

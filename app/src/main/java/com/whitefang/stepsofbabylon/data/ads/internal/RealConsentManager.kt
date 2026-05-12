@@ -40,9 +40,12 @@ import javax.inject.Singleton
  * whatever UMP's cached state is. The caller checks [canRequestAds] to decide whether
  * to proceed with a load.
  *
- * **Not wired into MainActivity in PR 1.** The first invocation happens the first time a
- * user triggers a reward ad in a release build (which, for PR 1, never happens — `@Binds`
- * still points at `StubRewardAdManager`). PR 2 changes that.
+ * **MainActivity consent prefetch.** On the first release-build resume, MainActivity
+ * calls [ensureInitialized] so the first reward-ad tap doesn't pay the UMP init latency.
+ * Debug builds skip the prefetch via the `BuildConfig.USE_REAL_ADS` gate, so UMP is not
+ * contacted from a bare emulator. Post-C.6 PR 3 there is no longer a stub binding —
+ * [com.whitefang.stepsofbabylon.data.ads.RewardAdManagerImpl] is the only impl for
+ * both build types.
  *
  * Device-only testable — the UMP SDK requires a live Play Services connection and its
  * classes cannot be mocked. Unit coverage for the consent flow runs against a mocked

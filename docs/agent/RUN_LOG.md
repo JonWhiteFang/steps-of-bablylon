@@ -1,5 +1,52 @@
 # Run Log
 
+## 2026-05-12 — C.6 PR 3: delete StubRewardAdManager, collapse AdModule to @Binds RewardAdManagerImpl
+
+- **Goal:** Land the final PR in the C.6 ad-SDK series: remove `StubRewardAdManager` now that C.6 PR 2 device-track verification passed earlier this session, collapse the flag-gated Provider-switch in `AdModule` back to a plain `@Binds RewardAdManagerImpl`, drop `RewardAdManagerParityTest` (nothing left to compare), sweep stale stub references from KDoc / build comments, sync current-state docs. Expected shape: single-file-ish deletion PR, mechanically simpler than C.6 PRs 1–2.
+- **Preflight:** read `STATE` (objective: C.6 PR 2 landed + verified PASS, `stub deletion now unblocked` per top priority §1), read head of `RUN_LOG` (this-session's earlier entries: battle-step-credit hotfix + C.6 PR 2 device-track verification PASS both committed to `main`), `CONSTRAINTS`, `AGENTS.md` section on AdModule + FakeRewardAdManager. Read current `AdModule.kt` / `StubRewardAdManager.kt` / `RewardAdManagerParityTest.kt` / `BillingModule.kt` (reference shape for the post-collapse Provider analogue — which will become C.5 PR 3's work) / `MainActivity.kt` consent prefetch section / `app/build.gradle.kts` USE_REAL_ADS comment blocks. `git status` clean on `main`, last commit `12f5bf9 fix(battle): NOT NULL crash on fresh-install first kill + C.6 PR 2 device-track PASS`.
+
+### Design decision: keep `BuildConfig.USE_REAL_ADS`
+
+- Without the stub, the flag no longer gates the Hilt binding — the Provider-switch in AdModule becomes dead code. But `MainActivity.onResume`'s UMP consent prefetch still uses the flag to skip Play Services contact on bare debug emulators. Two options:
+  - **(a) Keep flag:** preserve symmetry with `USE_REAL_BILLING` (which still gates its binding via `BillingModule`'s Provider-switch until C.5 PR 3); preserve the emulator-friendly consent-prefetch skip.
+  - **(b) Drop flag + consent-prefetch gate:** every debug session hits UMP; emulators without Play Services log spurious UMP errors on every start.
+- STATE.md already recorded the preference: "Likely keep `BuildConfig.USE_REAL_ADS` around as it's symmetric with `USE_REAL_BILLING` and cheap to leave." Went with (a). If a later C.5 PR 3 follow-up drops `USE_REAL_BILLING`, revisit; for now, the two stay symmetric.
+
+### Execution
+
+- **Deleted** `app/src/main/java/.../data/ads/StubRewardAdManager.kt` (16-line file). Verified no remaining `@Inject constructor` references to it anywhere in `app/`.
+- **Deleted** `app/src/test/java/.../data/ads/RewardAdManagerParityTest.kt` (4 tests, 140 lines). Without the stub there's no second implementation to compare — `RewardAdManagerImplTest`'s 8 cases remain the full coverage surface for the real impl.
+- **Rewrote** `di/AdModule.kt`. Previous shape: `internal object AdModule` + `@Provides @Singleton fun provideRewardAdManager(stub: Provider<StubRewardAdManager>, real: Provider<RewardAdManagerImpl>): RewardAdManager = if (BuildConfig.USE_REAL_ADS) real.get() else stub.get()`. Collapsed to: `internal abstract class AdModule` + single `@Binds @Singleton abstract fun bindRewardAdManager(impl: RewardAdManagerImpl): RewardAdManager`. Kept module `internal` (RewardAdManagerImpl is internal; a public abstract would fail to compile). `AdInternalModule` untouched (still needed — `RewardAdManagerImpl` constructor takes `RewardedAdAdapter` + `ConsentManager`, and `MainActivity` directly injects `ConsentManager`). KDoc rewritten as a three-PR history (PR 1 → PR 2 → PR 3) with an explicit note that `BuildConfig.USE_REAL_ADS` outlives this module because MainActivity still reads it.
+- **Updated** `app/build.gradle.kts` across 3 comment blocks on `USE_REAL_ADS`: defaultConfig ("Post-C.6 PR 3 the flag no longer gates the binding; it still gates MainActivity UMP consent prefetch"), debug block ("Debug skips the MainActivity UMP consent prefetch; RewardAdManagerImpl is still bound"), release block ("Release enables the UMP consent prefetch on first resume"), and the `play-services-ads` + `user-messaging-platform` dependency comment ("`RewardAdManagerImpl` is the only binding post-PR 3").
+- **Swept KDoc** in 4 main-source files:
+  - `RewardAdManagerImpl.kt` — replaced the "PR 1 wiring status" block with a three-PR history bullets; tweaked the "Frequency-cap ownership" tail to say "matches the prior stub's behaviour"; dropped "in PR 1" qualifier from `isAdAvailable` KDoc.
+  - `ConsentManager.kt` — rewrote the "Scope" paragraph ("PR 1 ships this abstraction but does NOT wire it into MainActivity yet...") to reflect current wiring + PR 3 state.
+  - `RealConsentManager.kt` — replaced the "Not wired into MainActivity in PR 1" block with "MainActivity consent prefetch" describing release-build prefetch + debug-build flag-skip + PR 3 single-binding state.
+  - `MainActivity.kt` — updated the `onResume()` consent-prefetch comment to explain that the real impl is now bound in debug too, and the flag skip is purely to avoid UMP-on-emulator noise.
+- Post-sweep grep: only 4 remaining `StubRewardAdManager` mentions in `app/`, all historical backticked KDoc in `AdModule.kt` + `RewardAdManagerImpl.kt` explaining what PR 3 did. Zero code-level references (no imports, no `@Inject`, no class references).
+
+### Verification
+
+- `./run-gradle.sh testDebugUnitTest` — BUILD SUCCESSFUL. Test count 531 → 527 (-4), exactly the `RewardAdManagerParityTest` drop.
+- `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL. Hilt graph resolves with the collapsed `@Binds` + sibling `AdInternalModule`. No missing-binding errors.
+- Only warnings in the build are the pre-existing Kotlin KT-73255 `@ApplicationContext` param-vs-field deprecation warnings on 4 files (`RealConsentManager.kt`, `RealRewardedAdAdapter.kt`, `BillingManagerImpl.kt`, `RealBillingClientAdapter.kt`) — unrelated to this PR, slated for a batch cleanup when `-Xannotation-default-target=param-property` flips.
+
+### Current-state doc sync
+
+- **`AGENTS.md`** — test count 531 → 527; `FakeRewardAdManager` fakes-list entry annotated "sole ad-manager test double post-C.6 PR 3".
+- **`.kiro/steering/source-files.md`** — removed `data/ads/StubRewardAdManager.kt` line + `data/ads/RewardAdManagerParityTest.kt` line; rewrote `di/AdModule.kt` description ("@Binds RewardAdManager → RewardAdManagerImpl (C.6 PR 3: stub deleted, single binding...)"); updated `RewardAdManagerImpl.kt` entry ("Sole `RewardAdManager` binding post-C.6 PR 3").
+- **`.kiro/steering/structure.md`** — ads directory tree comment + AdModule Key Files row updated.
+- **`.kiro/steering/tech.md`** — Google Mobile Ads SDK row rewritten (no more debug=stub/release=real; now "sole binding for debug + release as of C.6 PR 3; flag retained only for MainActivity consent prefetch").
+- **`CHANGELOG.md`** — prepended new `Phase C.6 PR 3 — Delete StubRewardAdManager, collapse AdModule to @Binds RewardAdManagerImpl (2026-05-12)` section above the battle-step-credit hotfix entry.
+- **`STATE.md`** — reshaped Current objective / What works / Known issues / Top priorities / Next actions to reflect C.6 PR 3 landing. Reordered priorities: Plan 31 now the §1 release-blocker (was §2), C.5 PR 3 now §2 (gated on Plan 31, mechanically identical to this PR). Ad-error UX gap moved up a slot given that debug no longer masks it.
+
+### What remains next
+
+- **Plan 31 Play Console setup** — still the only release-blocker. Signs the release keystore, creates Play Console listing, defines SKUs matching `BillingProduct` enum, adds license testers, uploads signed AAB to internal test track. Unblocks C.5 PR 2 device verification.
+- **C.5 PR 3** (post Plan 31) — mechanically identical to today's work: delete `StubBillingManager`, collapse `BillingModule` Provider-switch to `@Binds`, drop `BillingManagerParityTest`, sync docs.
+- **Ad-error UX gap fix** (3 call sites) — opportunistic, now slightly more pressing since debug builds bind the real impl and don't mask the silent-swallow.
+- Phase D follows after Plan 31 + C.5 PR 3.
+
 ## 2026-05-12 — Battle-step-credit NOT NULL crash hotfix + C.6 PR 2 device-track verification PASS
 
 - **Goal:** Execute C.6 PR 2 device-track verification on the connected emulator, fix the fresh-install first-kill crash uncovered during that verification, then resume ad verification on the now-stable device. Close out C.6 PR 2 as PASS.

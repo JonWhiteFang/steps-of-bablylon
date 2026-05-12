@@ -18,10 +18,11 @@ import android.app.Activity
  * watched the ad, the reward contract is fulfilled. This manager does not branch on
  * personalised vs. non-personalised; that is AdMob's concern.
  *
- * **Scope.** PR 1 ships this abstraction but does NOT wire it into MainActivity yet. The
- * real in-app consent form will surface the first time a user triggers a reward ad in
- * release builds (C.6 PR 2 flags that on). Debug builds bind `StubRewardAdManager` and
- * never construct this class.
+ * **Scope.** Debug builds construct [RealConsentManager] but skip the MainActivity
+ * consent prefetch via the `BuildConfig.USE_REAL_ADS` gate, so on a bare emulator UMP
+ * is never contacted. The first release-build resume prefetches consent so the first
+ * reward-ad tap doesn't pay the ~200-500ms UMP init latency. Post-C.6 PR 3,
+ * [RewardAdManagerImpl] is the only `RewardAdManager` binding — the stub is gone.
  *
  * Introduced by C.6 PR 1 / ADR-0006.
  */

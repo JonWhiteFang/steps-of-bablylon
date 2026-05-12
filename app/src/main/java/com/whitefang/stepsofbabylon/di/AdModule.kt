@@ -1,8 +1,6 @@
 package com.whitefang.stepsofbabylon.di
 
-import com.whitefang.stepsofbabylon.BuildConfig
 import com.whitefang.stepsofbabylon.data.ads.RewardAdManagerImpl
-import com.whitefang.stepsofbabylon.data.ads.StubRewardAdManager
 import com.whitefang.stepsofbabylon.data.ads.internal.ConsentManager
 import com.whitefang.stepsofbabylon.data.ads.internal.RealConsentManager
 import com.whitefang.stepsofbabylon.data.ads.internal.RealRewardedAdAdapter
@@ -10,70 +8,65 @@ import com.whitefang.stepsofbabylon.data.ads.internal.RewardedAdAdapter
 import com.whitefang.stepsofbabylon.domain.repository.RewardAdManager
 import dagger.Binds
 import dagger.Module
-import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import javax.inject.Provider
 import javax.inject.Singleton
 
 /**
- * Hilt wiring for [RewardAdManager]. C.6 PR 2 introduced the
- * [BuildConfig.USE_REAL_ADS] flag and the runtime switch between
- * [StubRewardAdManager] (debug + any build type without AdMob provisioning)
- * and [RewardAdManagerImpl] (release, real Google Mobile Ads SDK v25 + UMP).
+ * Hilt wiring for [RewardAdManager].
  *
- * Mirrors the [BillingModule] shape landed in C.5 PR 2. See that module's KDoc
- * for the full `@Provides` + [Provider] rationale; the recap:
+ * **History.**
  *
- * **Why `@Provides` + [Provider] instead of `@Binds`.** Hilt's `@Binds` is
- * resolved at compile time and cannot branch on a runtime value like
- * `BuildConfig.USE_REAL_ADS`. Two `@Provides` methods marked with the same
- * return type would collide. Injecting both candidates as [Provider]s defers
- * construction — whichever branch is not selected is never instantiated, so the
- * stub's `delay(1000)` never fires in a release build and the real impl's
- * AdMob + UMP clients never start in a debug build.
+ * - **Plan 26** introduced the seam with a stub (`StubRewardAdManager`) so the UI could
+ *   be built without real AdMob provisioning.
+ * - **C.6 PR 1** landed the real [RewardAdManagerImpl] + adapter + UMP consent. `@Binds`
+ *   still pointed at the stub pending PR 2.
+ * - **C.6 PR 2** introduced a runtime [com.whitefang.stepsofbabylon.BuildConfig.USE_REAL_ADS]
+ *   switch between stub (debug) and real (release) via a `@Provides` + [javax.inject.Provider]
+ *   pair. That shape was required only while two implementations coexisted.
+ * - **C.6 PR 3 (this file)** deleted `StubRewardAdManager` after the C.6 PR 2 internal-track
+ *   verification passed across two sessions / two placements (`DAILY_FREE_CARD_PACK` →
+ *   AdMob `NO_FILL`; `POST_ROUND_GEM` → DNS failure — both paths mapped correctly to
+ *   [com.whitefang.stepsofbabylon.domain.model.AdResult.Error]). With only one implementation
+ *   left, the Provider-switch is unnecessary and this module collapses back to a plain
+ *   `@Binds`.
  *
- * **Why `internal`.** [RewardAdManagerImpl], [RealRewardedAdAdapter], and
- * [RealConsentManager] are all `internal` (they expose internal adapter types
- * through their constructors), so a `public` provider method cannot legally
- * reference them. Making the whole module `internal` matches Hilt's
- * "single Gradle module" assumption for this app.
+ * **Why still `internal`.** [RewardAdManagerImpl] is `internal` (it takes internal adapter
+ * + consent types through its constructor), so a `public` binding method cannot legally
+ * reference it. Matching the module visibility to the impl visibility is simpler than
+ * annotating every member.
  *
- * C.6 PR 2 / ADR-0006.
+ * **[BuildConfig.USE_REAL_ADS] outlives this module.** The flag no longer gates the binding
+ * but still gates the UMP consent prefetch in
+ * [com.whitefang.stepsofbabylon.presentation.MainActivity.onResume]: debug emulators
+ * without Play Services don't pay the UMP init cost, and release builds prefetch consent
+ * before the first reward-ad tap. The flag stays symmetric with `USE_REAL_BILLING`.
+ *
+ * C.6 PR 3 / ADR-0006.
  */
 @Module
 @InstallIn(SingletonComponent::class)
-internal object AdModule {
+internal abstract class AdModule {
 
-    @Provides
+    @Binds
     @Singleton
-    fun provideRewardAdManager(
-        stub: Provider<StubRewardAdManager>,
-        real: Provider<RewardAdManagerImpl>,
-    ): RewardAdManager = if (BuildConfig.USE_REAL_ADS) real.get() else stub.get()
+    abstract fun bindRewardAdManager(impl: RewardAdManagerImpl): RewardAdManager
 }
 
 /**
- * Internal bindings for the ad SDK adapter layer. Separate module from [AdModule]
- * because [AdModule] is an `object` (for `@Provides`) and this uses `@Binds`
- * (which requires an abstract class). Both are `internal` so they can reference
- * [RealRewardedAdAdapter] and [RealConsentManager], which are themselves `internal`.
+ * Internal bindings for the ad SDK adapter layer. Unchanged by C.6 PR 3.
  *
- * Flow (mirrors the `BillingInternalModule` precedent from C.5 PR 2):
+ * Flow:
  *
- * - The `@Provides provideRewardAdManager` method in [AdModule] asks Hilt for
- *   `Provider<RewardAdManagerImpl>` even in debug builds (where the Provider is
- *   never invoked). Dagger therefore needs routes from
- *   `RewardAdManagerImpl.adapter: RewardedAdAdapter` and
- *   `RewardAdManagerImpl.consentManager: ConsentManager` to concrete types,
- *   which these bindings supply.
- * - [MainActivity][com.whitefang.stepsofbabylon.presentation.MainActivity] also
- *   injects [ConsentManager] directly for the release-build consent prefetch
- *   on resume — this binding is what resolves that dependency.
- * - Unit tests mock [RewardedAdAdapter] + [ConsentManager] directly and
- *   construct [RewardAdManagerImpl] by hand — this module is not consulted there.
+ * - [RewardAdManagerImpl]'s constructor takes [RewardedAdAdapter] + [ConsentManager];
+ *   these bindings supply the concrete implementations.
+ * - [com.whitefang.stepsofbabylon.presentation.MainActivity] also injects [ConsentManager]
+ *   directly for the release-build consent prefetch on resume — this binding resolves
+ *   that dependency too.
+ * - Unit tests mock [RewardedAdAdapter] + [ConsentManager] directly and construct
+ *   [RewardAdManagerImpl] by hand — this module is not consulted there.
  *
- * C.6 PR 2 / ADR-0006.
+ * C.6 PR 2 / C.6 PR 3 / ADR-0006.
  */
 @Module
 @InstallIn(SingletonComponent::class)

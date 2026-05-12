@@ -19,11 +19,16 @@ import javax.inject.Singleton
  * Real [RewardAdManager] implementation wiring Google Mobile Ads SDK v25 + UMP consent.
  * Introduced by C.6 PR 1 / ADR-0006.
  *
- * **PR 1 wiring status.** The Hilt `@Binds` in
- * [com.whitefang.stepsofbabylon.di.AdModule] still points at [StubRewardAdManager]. This
- * class exists as the target for C.6 PR 2's flag-gated binding swap
- * (`BuildConfig.USE_REAL_ADS`). Until PR 2 flips the flag, nothing constructs this class
- * in a release build — all ad traffic flows through the stub.
+ * **Wiring history.**
+ *
+ * - **C.6 PR 1** — landed this class + adapter + UMP seam; Hilt `@Binds` still pointed
+ *   at `StubRewardAdManager`.
+ * - **C.6 PR 2** — flipped the binding behind `BuildConfig.USE_REAL_ADS` (debug→stub,
+ *   release→real) via a Provider-based switch; MainActivity began prefetching UMP consent
+ *   on first resume in release builds.
+ * - **C.6 PR 3** — deleted `StubRewardAdManager` after internal-track verification. This
+ *   class is now the only `RewardAdManager` binding for both debug and release. See
+ *   [com.whitefang.stepsofbabylon.di.AdModule].
  *
  * **ActivityProvider is shared with billing.** The existing
  * [com.whitefang.stepsofbabylon.data.billing.internal.ActivityProvider] (C.5 PR 2)
@@ -63,7 +68,7 @@ import javax.inject.Singleton
  * `RoundEndState.gemAdWatched` or `PlayerProfile.freeCardPackAdUsedToday` — those remain
  * the caller's responsibility. An ad shown via direct `billingManager.showRewardAd()`
  * call (e.g. during testing) will therefore succeed even in states where the UI would
- * hide the button. This is intentional and matches the stub's behaviour.
+ * hide the button. This is intentional and matches the prior stub's behaviour.
  */
 @Singleton
 internal class RewardAdManagerImpl @Inject constructor(
@@ -116,10 +121,9 @@ internal class RewardAdManagerImpl @Inject constructor(
     }
 
     /**
-     * Always returns `true` in PR 1 — the real availability check happens inside
-     * [showRewardAd] where a load failure surfaces as [AdResult.Error]. A cached
-     * availability query was considered (ADR-0006 decision #4) and rejected as
-     * post-v1.0 work.
+     * Always returns `true` — the real availability check happens inside [showRewardAd]
+     * where a load failure surfaces as [AdResult.Error]. A cached availability query was
+     * considered (ADR-0006 decision #4) and rejected as post-v1.0 work.
      */
     override fun isAdAvailable(placement: AdPlacement): Boolean = true
 

@@ -238,11 +238,13 @@ class MainActivity : ComponentActivity() {
         }
         // Prefetch UMP consent so the first reward-ad tap doesn't pay the
         // ~200-500ms UMP init latency. Flag-gated on BuildConfig.USE_REAL_ADS so debug
-        // builds (stub binding) don't hit UMP / Play Services — emulator-friendly.
+        // emulators without Play Services don't hit UMP on every resume — the real
+        // RewardAdManagerImpl is still bound in debug (C.6 PR 3 deleted the stub), but
+        // a bare emulator would just log UMP errors on every start.
         // One-shot per Activity lifecycle via [consentPrefetchAttempted]; UMP itself is
         // idempotent across calls, so a stray second invocation is harmless but wasteful.
         // RealConsentManager catches errors internally and logs them, so no try/catch here.
-        // C.6 PR 2 / ADR-0006.
+        // C.6 PR 2 / PR 3 / ADR-0006.
         if (BuildConfig.USE_REAL_ADS && consentPrefetchAttempted.compareAndSet(false, true)) {
             activityScope.launch {
                 consentManager.ensureInitialized(this@MainActivity)
