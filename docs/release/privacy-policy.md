@@ -42,6 +42,24 @@ We do **not** sell, trade, or share your personal data with third parties, excep
 
 Your game data persists on your device until you uninstall the app or clear the app's data through your device settings. We have no ability to access or delete your data remotely, as it exists only on your device.
 
+<a name="delete-data"></a>
+## Data Deletion
+
+All data collected by Steps of Babylon is stored **locally on your device only**. We have no servers and cannot access or delete your data remotely.
+
+To delete your data:
+
+1. Open your device **Settings**.
+2. Go to **Apps** (or **Application Manager**).
+3. Select **Steps of Babylon**.
+4. Tap **Storage** → **Clear Data**.
+
+This permanently deletes all game progress, step history, purchase records, and any other data stored by the app.
+
+**Types of data deleted:** step count history, player profile and progress, workshop upgrades, purchase receipts, all other game state.
+
+**Retention after deletion:** none — all data is removed immediately from your device. We retain no copies.
+
 ## Children's Privacy
 
 Steps of Babylon does not knowingly collect personal information from children under 13. The app does not require account creation or collect identifying information.
