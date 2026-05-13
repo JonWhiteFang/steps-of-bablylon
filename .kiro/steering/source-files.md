@@ -308,7 +308,9 @@ layout/                                 # Widget layout (battle renderer is Surf
 
 ```
 tools/render_play_store_icon.py                       # Pillow-only renderer that reproduces the in-app vector adaptive icon as a 512×512 PNG for Play Store hi-res upload. Re-renders pixel-for-pixel from the same 108-viewport path coords + 3-stop gradient stops as the XML drawables. Supersamples to 2048×2048 before LANCZOS downsample for crisp anti-aliased edges. Run via `python3 tools/render_play_store_icon.py`; if the icon design ever changes, edit BOTH this script AND the matching XML.
-docs/release/store-assets/play-store-icon-512.png     # Play Store hi-res app icon, 512×512, ~3.8 KB. Generated artifact — regenerate via the script above when source changes. Tracked in git as a release asset (Play Store assets repository pattern).
+docs/release/store-assets/StepsOfBabylonArt.png                              # User-supplied source for the Play Store feature graphic. 1376×768 pixel-art Tower of Babel scene (ziggurat tower, swirling sky, walking figure, framing ruins). Preserved in-repo for re-crops.
+docs/release/store-assets/play-store-icon-512.png                            # Play Store hi-res app icon, 512×512, ~3.8 KB. Generated artifact — regenerate via the script above when source changes. Tracked in git as a release asset (Play Store assets repository pattern).
+docs/release/store-assets/play-store-feature-graphic-1024x500.png            # Play Store feature graphic, 1024×500, ~621 KB. Center-vertical-cropped (y=48..720) from StepsOfBabylonArt.png + LANCZOS-downscaled. PNG (not JPEG) preserves pixel-art crispness.
 ```
 
 ## Service Layer

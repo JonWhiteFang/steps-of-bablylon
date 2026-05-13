@@ -4,6 +4,15 @@ All notable changes to Steps of Babylon are documented here.
 
 ## [Unreleased]
 
+### Play Store feature graphic — 1024×500 PNG (2026-05-13)
+
+- **`docs/release/store-assets/play-store-feature-graphic-1024x500.png`** — 1024×500, 621.5 KB, 8-bit RGB. 40% under Play Store's 1024 KB cap.
+- **Source.** User supplied `docs/release/store-assets/StepsOfBabylonArt.png` (1376×768, 1.2 MB pixel-art Tower of Babel scene — ziggurat-style tower under a swirling-cloud sky, walking figure on the lower-left third, path leading to the tower base, ruined Mesopotamian buildings framing left and right). Aspect mismatch: source 1.792 vs target 2.048 means 96 px of total height needs cropping.
+- **Crop choice.** Center vertical crop `y=48..720` (lose 48 px top + 48 px bottom) for a 1376×672 intermediate, then LANCZOS-downsampled to 1024×500. Considered top-aligned (would clip the character's feet — rejected) and bottom-aligned (would lose dramatic sky-swirl detail — rejected). Center balances composition: full tower retained, character whole, ~85% of swirl pattern preserved, path + framing ruins intact. The minor AI-tool sparkle artifact at the source's bottom-right is sub-perceptual at storefront sizes.
+- **PNG over JPEG** because pixel-art crispness matters; JPEG would smear the chunky pixel grid. PNG palette compression on this many distinct colors produced 621.5 KB — well within budget.
+- **Source preserved in-repo** for future re-crops. If the Play Store presentation ever wants a different framing (e.g., tighter on the tower, more sky bias), regenerate from the original PNG.
+- **Plan 31 raster blocker count: 3 → 1.** Only screenshots remain on the raster-asset list.
+
 ### Play Store hi-res icon — 512×512 PNG rendered from vector source (2026-05-13)
 
 - **`docs/release/store-assets/play-store-icon-512.png`** — 512×512, 3.8 KB, 8-bit RGB. Generated artifact, tracked in git as a Play Store release asset.

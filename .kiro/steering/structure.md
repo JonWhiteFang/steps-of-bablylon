@@ -173,6 +173,8 @@ All in `domain/model/`:
 | `res/mipmap-anydpi-v26/ic_launcher.xml` + `ic_launcher_round.xml` | Adaptive-icon XML wrappers referencing the two drawables above. minSdk=34 means these are the sole icon source — no raster density fallbacks needed |
 | `tools/render_play_store_icon.py` | Pillow-only Python script that re-renders the Play Store 512×512 hi-res PNG icon from the same coordinates / gradient stops as the in-app vector XML. Run via `python3 tools/render_play_store_icon.py` |
 | `docs/release/store-assets/play-store-icon-512.png` | Play Store hi-res icon (512×512, ~3.8 KB). Generated artifact — regenerate via the script above |
+| `docs/release/store-assets/StepsOfBabylonArt.png` | User-supplied 1376×768 pixel-art source for the feature graphic |
+| `docs/release/store-assets/play-store-feature-graphic-1024x500.png` | Play Store feature graphic (1024×500, ~621 KB). Center-vertical-cropped + LANCZOS-downscaled from the source PNG |
 | `gradle/libs.versions.toml` | All dependency versions |
 | `app/schemas/` | Room schema exports (commit these) |
 | `docs/plans/` | Numbered implementation plans (01–30) |

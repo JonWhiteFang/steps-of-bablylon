@@ -1,5 +1,52 @@
 # Run Log
 
+## 2026-05-13 — Play Store feature graphic: 1024×500 from user-supplied source
+
+- **Goal:** User created a pixel-art Tower of Babel scene (`StepsOfBabylonArt.png`, 1376×768) and asked it to be resized to Play Store feature-graphic spec (1024×500 PNG, max 1 MB). Earlier today I'd flagged the feature graphic as still pending; the user closed that gap by producing the artwork themselves.
+- **Preflight:** located the source via `find` — user had already moved a copy into `docs/release/store-assets/`, with the original still at `~/Downloads/`. Confirmed dimensions match (both 1376×768 RGB, 1.2 MB). `git status` clean on `main`, last commit `3eb55a4 feat(release): render Play Store 512x512 hi-res icon`.
+
+### Composition + crop choice
+
+- Used `read` Image mode to view the source. Pixel-art Tower of Babel scene: dominant ziggurat-style tower in the upper-middle, walking figure (head+torso+legs) on the lower-left third, swirling cloud pattern across the sky, path leading to the tower base, ruined Mesopotamian buildings framing left and right.
+- Aspect mismatch: source 1.792 vs target 2.048. Need to lose 96 px of total height. Three options considered:
+  - **Center crop y=48..720**: preserves character feet, retains ~85% of dramatic sky swirl, keeps path and framing ruins. Picked this.
+  - **Top-aligned y=0..672**: would clip the character's feet — rejected as ugly.
+  - **Bottom-aligned y=96..768**: would lose 96 px of the most dramatic sky-swirl detail — rejected as the swirl is a key atmospheric element.
+- Identified a minor AI-generation sparkle artifact at the source's bottom-right (~x=1340, y=710); kept in the center crop because removing it would have required clipping the character's feet. Sub-perceptual at storefront sizes.
+
+### Execution
+
+- Inline Python (no script file — this is a one-shot transform of a user-provided image, not generative work like the icon script that's worth keeping reproducible):
+  ```python
+  src = Image.open('StepsOfBabylonArt.png')
+  cropped = src.crop((0, 48, 1376, 720))   # 1376×672, 2.048 aspect
+  out = cropped.resize((1024, 500), Image.Resampling.LANCZOS)
+  out.save('play-store-feature-graphic-1024x500.png', 'PNG', optimize=True)
+  ```
+- PNG over JPEG to preserve pixel-art crispness (the source has chunky deliberate pixels; JPEG compression would smear them).
+
+### Verification
+
+- `file` reports: "PNG image data, 1024 x 500, 8-bit/color RGB, non-interlaced". Format correct.
+- File size: 621.5 KB — 40% under Play Store's 1024 KB cap.
+- Visual verification via `read` Image: full tower preserved + whole character + dominant swirl pattern + path + framing ruins all visible. The crop reads cleanly as a banner; the character's left-third placement creates a natural reading entry point that draws the eye toward the tower.
+
+### Doc sync
+
+- **`docs/release/release-checklist.md`** — ticked the feature graphic line with path + crop summary.
+- **`.kiro/steering/source-files.md`** — added 2 entries to the Tools & Release Assets section: source `StepsOfBabylonArt.png` + final `play-store-feature-graphic-1024x500.png`.
+- **`.kiro/steering/structure.md`** — added 2 rows to the Key Files table.
+- **`CHANGELOG.md`** — prepended `Play Store feature graphic — 1024×500 PNG (2026-05-13)` section under `[Unreleased]`, above the icon entry from earlier today.
+- **`STATE.md`** — added a new current-objective bullet documenting the feature graphic landing; updated the icon bullet (no longer says "feature graphic remains pending"); updated `Last run`.
+
+### What remains (Plan 31)
+
+- ~~512×512 hi-res PNG~~ ✅ done.
+- ~~1024×500 feature graphic~~ ✅ done.
+- **Screenshots** — last raster blocker. Need device capture from the running app on a phone (≥2, recommended 8). Best done after Plan 31 internal-track upload so screenshots include the real launcher icon + a real Play Billing test purchase flow.
+- Release upload keystore + AdMob account + Play Console developer account — still external.
+- Plan 31 raster-asset blocker count: 3 → 1.
+
 ## 2026-05-13 — Play Store hi-res icon: rendered 512×512 PNG from vector source
 
 - **Goal:** Resolve the 512×512 Play Store hi-res icon blocker that was flagged yesterday as needing external raster tooling. User asked whether I could do the export myself.
