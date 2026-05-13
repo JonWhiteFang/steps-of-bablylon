@@ -1,5 +1,92 @@
 # Run Log
 
+## 2026-05-13 (afternoon/evening) — Plan 31 walk-through session: Phases A-E mostly landed, ADV registered, AAB built
+
+- **Goal:** User asked "what's next?" then "walk me through Plan 31 step by step" and I drove through `docs/release/plan-31-walkthrough.md` interactively, pausing at each step for user confirmation. Multi-hour session covering Phases A1, A2, B, C, D1+D2, E1, E2, E3, E4, E5, E6 plus the new-to-me Android Developer Verification (ADV) flow that the walk-through doc didn't anticipate. Stopped at SKU creation due to a Play Console requirement that didn't match our `BillingProduct` enum naming.
+- **Preflight:** read STATE.md, START_HERE.md, CONSTRAINTS.md, RUN_LOG head (covers C.6 PR 3 + Play Store icon + feature graphic from earlier today), AGENTS.md test-count + plan status. `git status` clean on `main`, last commit `8fcc52f Update contact email for Play Store listing`. Read `docs/release/plan-31-walkthrough.md` + `docs/release/release-checklist.md` to know the full route through Plan 31.
+
+### Step-by-step external work completed
+
+- **Phase A1 (Play Console developer account).** User signed up at <https://play.google.com/console/signup>, paid the $25 one-time fee, completed identity verification under their personal Google account `jonwhitefang@gmail.com`. "A1 is done and verified" — fast turnaround.
+- **Phase A2 (AdMob account).** Created at <https://admob.google.com/> using the same Google account. "A2 is done and verified".
+- **Phase B (privacy hosting).** User chose GitHub Pages, copied `docs/release/privacy-policy.md` to `docs/index.md` (separate prior commit `7760653 added index.md`), enabled Pages on `https://jonwhitefang.github.io/steps-of-bablylon/`. Verified reachable in incognito via `web_fetch`. Mid-session the data-safety form (Phase E4) demanded a `delete-data` URL; I added a `Data Deletion` section with `<a name="delete-data"></a>` anchor to BOTH `docs/release/privacy-policy.md` (commit `cc6d4a8`) AND `docs/index.md` (commit `9f7db0a`) and pushed both to `main` mid-flow. Final URL: `https://jonwhitefang.github.io/steps-of-bablylon/#delete-data`.
+- **Phase C (release upload keystore).** User generated `release/upload-keystore.jks` via `keytool -genkeypair -v -keystore release/upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload`. Backed up the password to their password manager. SHA-256 fingerprint extracted via `keytool -list -v`: `C4:00:72:90:D8:40:32:92:86:06:C0:E1:E4:CB:8E:86:95:80:6A:FE:54:81:A1:15:9A:74:93:62:F2:BE:BA:E8`. Created `keystore.properties` at project root with the credentials. First `bundleRelease` smoke test failed with "Keystore file '.../app/release/upload-keystore.jks' not found" because `app/build.gradle.kts` was resolving `storeFile` via `file(...)` (relative to `app/`), but the signing guide and walk-through both consistently document `storeFile=release/upload-keystore.jks` as a project-root path. Fixed with `storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))`. Re-ran: BUILD SUCCESSFUL, signed AAB at 19.4 MB.
+- **Phase D1 (AdMob registration + ad units).** User created the Android app in AdMob (manual entry, package `com.whitefang.stepsofbabylon`) and three rewarded ad units, one per `AdPlacement` enum value. Pasted me the 4 IDs in `local.properties` format: `admob.appId=ca-app-pub-2428895909953191~4165048274` + 3 ad unit IDs.
+- **Phase D2 (build script wiring).** Appended the 4 IDs to `local.properties` (already gitignored) and updated `app/build.gradle.kts` to load them: introduced `localPropertiesFile` + `localProperties` loaders next to the existing `keystoreProperties` block, declared `ADMOB_TEST_APP_ID` + `ADMOB_TEST_REWARDED_AD_UNIT` constants for the safe fallback, and overrode the 3 `buildConfigField AD_UNIT_*` + 1 `manifestPlaceholders["admobAppId"]` inside the `release { }` block with `localProperties.getProperty(...) ?: <test-id>`. Verified by inspecting the generated release `BuildConfig.java` (production IDs flow through) + the merged release `AndroidManifest.xml` (production app ID flows through), and confirming debug `BuildConfig.java` still reads Google's test IDs from `defaultConfig`.
+- **Phase E1 (create app in Play Console).** User created "Steps of Babylon" as Game / Free / English (US). When prompted for the package name they entered `com.whitefang.stepsofbabylon`. Then Play Console asked them to register the package, which kicked off the Android Developer Verification flow.
+- **Phase E1 detour: Android Developer Verification.** Play Console showed user the message "First add an eligible public key by selecting its SHA-256 certificate fingerprint" and offered ONLY the fingerprint `47:E8:9F:0A:3D:C1:8C:EA:B4:F5:A5:80:4D:74:B0:9E:C6:67:92:3B:C6:49:5E:C6:05:2A:26:AD:48:9D:75:5D` to select — not the production keystore I'd just helped them generate. Initial confusion: was this a different developer's key? A test cert? After looking at the Google support article they pointed me at (<https://support.google.com/googleplay/android-developer/answer/16641489>), and following the breadcrumb from there to the "Registering Android package names" article (16761053), I recognised this as Google's new Android Developer Verification policy where Play Console routes packages already known to Android (i.e. installed at least once on a Google-account-signed-in device) into Step 2B ("existing package") instead of Step 2A ("new package"). The mystery fingerprint was the **local Android debug keystore** at `~/.android/debug.keystore`. Confirmed by running `keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android | grep SHA256` — exact match.
+  - **Decision:** register with the debug keystore (Path A) rather than going through the rationale-and-Google-review path with the release keystore (Path B). Trade-offs documented in ADR-0007.
+  - **Cert export.** Used `keytool -exportcert -rfc -keystore release/upload-keystore.jks -alias upload -storepass <from keystore.properties> -file release/upload-cert.pem` to export the release keystore's public cert to `release/upload-cert.pem`. Initially planned to use this for Path A's "Add key" flow, but pivoted to Path B (debug-keystore path) once Play Console's available-fingerprint list was understood. Cert kept on disk anyway for future "add additional ADV key" flow.
+  - **gitignore tightening.** Added `release/` directory ignore so the keystore + cert + screenshots all stay out of git. Verified `git status` was clean of `release/` after the change.
+- **ADV proof-of-ownership APK upload.** User clicked "Upload APK" in Play Console and copied the snippet `CHE2JNVSSL3U4AAAAAAAAAAAAA`. I created `app/src/main/assets/` directory + `adi-registration.properties` file with the snippet on a single line (matching Google's sample format from `android/security-samples` repo, fetched to confirm). Built debug APK via `./run-gradle.sh assembleDebug`, verified with `apksigner verify --print-certs`: `Signer #1 certificate SHA-256 digest: 47e89f0a3dc18ceab4f5a5804d74b09ec667923bc6495ec6052a26ad489d755d` (matches registered fingerprint exactly with colons stripped) + `unzip -l` confirmed `assets/adi-registration.properties` is at the expected path. User uploaded `app/build/outputs/apk/debug/app-debug.apk` (70 MB) to Play Console. Returned later: "its registered now". Snippet file deleted post-verification (one-time use); also added `app/src/main/assets/adi-registration.properties` to `.gitignore` so it can't accidentally land in git.
+- **Phase E2 (main store listing).** User pasted the short description (57 chars), full description (2,389 chars from `docs/release/play-store-listing.md`), uploaded `play-store-icon-512.png` + `play-store-feature-graphic-1024x500.png`. Tried to save without screenshots; Play Console blocked with "can't leave phone and tablet screenshots blank."
+- **Screenshot capture detour.** Confirmed `emulator-5554` was still up from earlier sessions (`adb devices`) with the app installed. Resolution 1080×2400 (9:20 ratio, taller than Play Store's max 9:16). Captured 5 screens via `adb shell input tap` to drive bottom-nav navigation (Home, Workshop, Battle, Labs, Stats) + `adb -s emulator-5554 exec-out screencap -p > raw-{name}.png`. Centre-cropped each to 1080×1920 (drop 240 px top + 240 px bottom — strips the status bar and bottom-nav text labels) via inline Pillow + flattened to 24-bit RGB to satisfy Play Store's preferred format. All 5 saved to gitignored `release/screenshots/`. Battle screenshot is the visual hero — 5-tier ziggurat in Hanging Gardens biome with full HUD. User uploaded all 5 and the listing saved.
+- **Phase E2c (store settings).** Category Games → Strategy, tags Casual / Strategy / Tower defense, contact email `jonwhitefang@gmail.com`.
+- **Phase E2d (privacy policy URL).** Pasted `https://jonwhitefang.github.io/steps-of-bablylon/`.
+- **Phase E3 (content rating).** Submitted the IARC questionnaire with the matrix from `docs/release/play-store-listing.md`: mostly No, Yes only on IAP + reward ads. Ratings issued.
+- **Phase E4 (data safety).** Submitted: collects step/health (functionality, encrypted at rest, can request deletion) + purchase history (third-party Play Billing); shares with Google Play Billing + AdMob (third-party SDKs); SQLCipher at rest; delete-data URL = `https://jonwhitefang.github.io/steps-of-bablylon/#delete-data`. Mid-form Play Console required the URL which is what triggered the privacy-policy edit + push above.
+- **Phase E5 (target audience).** Set to `18+` per ADR-0006 Q5. Avoids COPPA / Families program complications.
+- **Phase E6 (pricing & distribution).** User asked "where is it?" and shared `~/Desktop/Screenshot2.png` showing the modern Play Console dashboard. Reading the screenshot: left nav has Dashboard / Statistics / Publishing overview / Test and release / Monitor and improve / Grow users / Monetize with Play — no standalone "Pricing & distribution" section. The walk-through doc pre-dated this layout. Country/region selection now happens INSIDE the release flow (Phase G), not as a separate form. Free pricing was locked in at app creation. So Phase E6 is effectively a no-op in modern Play Console.
+- **Closed-testing prerequisite discovery.** That same dashboard screenshot also revealed Google's new policy: "Have at least 12 testers opted-in" + "Run your closed test with at least 12 testers, for at least 14 days" before applying for production. Adds ~14 days to the launch timeline. Internal track is still our immediate target (verifies the AAB on a real device + exercises Play Billing); closed track recruitment becomes a separate workstream.
+
+### Code-side changes (one commit on `main`)
+
+All changes batched into one commit, `bb6b253 feat(release): Plan 31 prep — keystore path fix, AdMob ID wiring, BILLING permission`:
+
+- **`app/build.gradle.kts`** — keystore path fix (`file(...)` → `rootProject.file(...)`) + AdMob production-ID wiring from gitignored `local.properties` with safe Google-test-ID fallback. Two new constants `ADMOB_TEST_APP_ID` + `ADMOB_TEST_REWARDED_AD_UNIT` declared at the top alongside the existing keystore-properties loader.
+- **`app/src/main/AndroidManifest.xml`** — added `<uses-permission android:name="com.android.vending.BILLING" />` explicitly. Discovered later in the session when SKU creation failed: Play Console gates SKU creation on the uploaded AAB declaring this permission, and Play Billing Library v8 no longer auto-merges it (older versions did).
+- **`.gitignore`** — added `release/` directory ignore (covers `upload-keystore.jks`, `upload-cert.pem`, `screenshots/*.png`) + `app/src/main/assets/adi-registration.properties` (account-specific ADV one-time-use snippet).
+
+### Verification
+
+- `./run-gradle.sh testDebugUnitTest` — BUILD SUCCESSFUL, 527 tests pass (no test changes).
+- `./run-gradle.sh bundleRelease` — BUILD SUCCESSFUL twice (once before BILLING permission was added; once after). Signed AAB at `app/build/outputs/bundle/release/app-release.aab`, 19,396,531 bytes (≈19.4 MB). `jarsigner -verify` reports `jar verified` (PKIX warning is normal for self-signed upload keystores; Play App Signing handles the upstream chain). After the BILLING permission addition: merged release manifest at `app/build/intermediates/merged_manifest/release/processReleaseMainManifest/AndroidManifest.xml` contains `com.android.vending.BILLING`. Generated release `BuildConfig.java` shows production AdMob IDs (`ca-app-pub-2428895909953191/...`); generated debug `BuildConfig.java` still uses Google's test IDs (`ca-app-pub-3940256099942544/5224354917`).
+- `./run-gradle.sh assembleDebug` — BUILD SUCCESSFUL. Debug APK at `app/build/outputs/apk/debug/app-debug.apk` (70 MB, signed with `~/.android/debug.keystore`).
+- `apksigner verify --print-certs app/build/outputs/apk/debug/app-debug.apk` — SHA-256 matches the ADV-registered fingerprint exactly (`47e89f0a3dc18ceab4f5a5804d74b09ec667923bc6495ec6052a26ad489d755d`).
+- `unzip -l app/build/outputs/apk/debug/app-debug.apk | grep adi-registration` — confirmed `assets/adi-registration.properties` at the expected path.
+
+### Where we stopped + immediate next steps
+
+User tried to create the first SKU at Play Console → Monetize with Play → In-app products. Play Console rejected with: "Product ID must start with a number or lowercase letter. Can contain numbers, lowercase letters, underscores, and periods."
+
+Our `BillingProduct` enum constants are UPPER_SNAKE_CASE: `GEM_PACK_SMALL`, `GEM_PACK_MEDIUM`, `GEM_PACK_LARGE`, `AD_REMOVAL`, `SEASON_PASS`. The wire-format mapping is `BillingManagerImpl.skuId(): String = name` (returns `BillingProduct.name` directly). Need to lowercase the wire format. Decision deferred to next session.
+
+**Recommendation for next session:** keep enum constants idiomatic UPPER_SNAKE_CASE, change only the wire format. `BillingManagerImpl.skuId()` returns `name.lowercase()`. `BillingProduct.fromSkuIdOrNull(skuId)` compares against lowercased input. Audit existing tests (`BillingManagerImplTest`, `BillingManagerParityTest`, `BillingReceiptDaoTest`) for any hardcoded `"GEM_PACK_SMALL"` strings; update.
+
+**Next session's task list (in dependency order):**
+
+1. Land `feat(billing): lowercase SKU wire format` PR. Update mapping + tests. `./run-gradle.sh test` green. `./run-gradle.sh bundleRelease` green. Commit + push.
+2. Upload `app/build/outputs/bundle/release/app-release.aab` to Play Console → Test and release → Internal testing → Create new release. Save (don't roll out yet). Wait for AAB processing (1-3 min).
+3. Create 5 SKUs in Play Console with lowercase IDs: `gem_pack_small` ($0.99 / 50 Gems / consumable), `gem_pack_medium` ($4.99 / 300 Gems / consumable), `gem_pack_large` ($9.99 / 700 Gems / consumable), `ad_removal` ($3.99 / one-time / non-consumable), `season_pass` ($4.99/month / monthly subscription / 3-day grace / 30-day account hold / no free trial). Activate each.
+4. Add license testers to internal track. Roll out the release. Install on a real device via the opt-in URL.
+5. Real Play Billing test purchase end-to-end. If wallet credits correctly: land C.5 PR 3 (mechanical deletion of `StubBillingManager` + collapse `BillingModule` Provider-switch to `@Binds BillingManagerImpl`).
+6. Promote internal → closed track. Recruit ≥12 testers. Wait ≥14 days.
+7. Apply for production access. Promote closed → production. Google review 1-7 days.
+
+### Local artifacts created this session (gitignored)
+
+- `release/upload-keystore.jks` — RSA 2048 production upload key. Backed up to user's password manager.
+- `release/upload-cert.pem` — public cert exported for ADV (would have gone via Path B if ADV had not auto-routed via debug keystore). Kept on disk for the future "add additional ADV key" flow.
+- `release/screenshots/screenshot-{1..5}-{home,workshop,battle,labs,stats}.png` — 5× 1080×1920 24-bit RGB phone screenshots used in the Play Store listing.
+- `keystore.properties` — Gradle signing credentials at project root.
+- `local.properties` (existing file) — 4 new `admob.*` keys appended.
+- `~/Desktop/Screenshot 2026-05-13 at 13.43.19.png` + `~/Desktop/Screenshot2.png` (user-supplied) — Play Console UI screenshots used to diagnose ADV + pricing-form flows.
+
+### Doc sync done in this commit-cycle
+
+- `docs/release/privacy-policy.md` + `docs/index.md` — added Data Deletion section + anchor (separate commits `cc6d4a8` + `9f7db0a`, pushed mid-flow).
+- `app/build.gradle.kts` + `app/src/main/AndroidManifest.xml` + `.gitignore` — batched into commit `bb6b253`.
+- This entry + STATE.md rewrite + ADR-0007 (ADV decision) + CHANGELOG section + AGENTS.md test count line — final doc-sync commit at end of session.
+- ADR-0007 records the meaningful decision (debug keystore for ADV) so it's not lost.
+
+### Memory updated
+
+- `STATE.md` ✅ — fully rewritten to capture the Plan 31 walk-through position. Top priorities reordered around the SKU lowercase fix + internal-track AAB upload + on-device billing verification + closed-testing recruitment + production rollout. Last-run line + critical-path line updated.
+- `RUN_LOG.md` ✅ — this entry.
+- `AGENTS.md` ✅ — Plan 31 status updated to "in progress (resumes next session at SKU creation step)". Test count unchanged at 527.
+- `CHANGELOG.md` ✅ — prepended a Plan 31 walk-through session entry capturing every external + code-side action.
+- `ADR-0007` ✅ — new ADR capturing the debug-keystore-for-ADV decision with both alternatives, rationale, consequences, and follow-ups.
+
 ## 2026-05-13 — Play Store feature graphic: 1024×500 from user-supplied source
 
 - **Goal:** User created a pixel-art Tower of Babel scene (`StepsOfBabylonArt.png`, 1376×768) and asked it to be resized to Play Store feature-graphic spec (1024×500 PNG, max 1 MB). Earlier today I'd flagged the feature graphic as still pending; the user closed that gap by producing the artwork themselves.

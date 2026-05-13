@@ -212,7 +212,7 @@ graph TD
 - [x] **Plan 30: Release Prep** ✓
 - [x] **Plan R: Remediation** (R01–R12 complete)
 - [x] **Plan R2: Remediation 2** (R2-01–R2-12) ✓
-- [ ] **Plan 31: Play Console & Store Publication**
+- [ ] **Plan 31: Play Console & Store Publication** *(in progress — Phases A-E landed 2026-05-13: developer account verified, AdMob ad units created + wired, privacy policy hosted, upload keystore + Play App Signing enrolled, package registered via Android Developer Verification (debug keystore path, see ADR-0007), main store listing populated with copy + icon + feature graphic + 5 phone screenshots, content rating + data safety + target audience submitted. Stopped at Phase F SKU creation due to Play Console lowercase-product-id requirement; resumes next session with `feat(billing): lowercase SKU wire format` PR, then internal-track AAB upload + SKU creation + on-device billing verification + closed-track recruitment + production rollout.)*
 
 ### Parallelizable Branches (after dependencies met)
 
