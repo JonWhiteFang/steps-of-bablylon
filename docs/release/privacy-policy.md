@@ -2,7 +2,7 @@
 
 **Effective Date:** March 10, 2026
 
-White Fang Games ("we", "us", "our") built Steps of Babylon as a free-to-play Android game. This page informs you of our policies regarding the collection, use, and disclosure of information when you use our app.
+Whitefang Games ("we", "us", "our") built Steps of Babylon as a free-to-play Android game. This page informs you of our policies regarding the collection, use, and disclosure of information when you use our app.
 
 ## Information We Collect
 
@@ -54,4 +54,4 @@ We may update this privacy policy from time to time. Changes will be posted on t
 
 If you have questions about this privacy policy, contact us at:
 
-**Email:** support@whitefanggames.com
+**Email:** jonwhitefang@gmail.com
