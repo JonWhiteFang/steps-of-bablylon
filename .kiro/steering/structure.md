@@ -171,6 +171,8 @@ All in `domain/model/`:
 | `res/drawable/ic_launcher_background.xml` | Solid #0E2247 deep-lapis vector background for the adaptive launcher icon |
 | `res/drawable/ic_launcher_foreground.xml` | 5-tier stepped-ziggurat silhouette with Gold → SandStone → lightened-DeepBronze vertical gradient |
 | `res/mipmap-anydpi-v26/ic_launcher.xml` + `ic_launcher_round.xml` | Adaptive-icon XML wrappers referencing the two drawables above. minSdk=34 means these are the sole icon source — no raster density fallbacks needed |
+| `tools/render_play_store_icon.py` | Pillow-only Python script that re-renders the Play Store 512×512 hi-res PNG icon from the same coordinates / gradient stops as the in-app vector XML. Run via `python3 tools/render_play_store_icon.py` |
+| `docs/release/store-assets/play-store-icon-512.png` | Play Store hi-res icon (512×512, ~3.8 KB). Generated artifact — regenerate via the script above |
 | `gradle/libs.versions.toml` | All dependency versions |
 | `app/schemas/` | Room schema exports (commit these) |
 | `docs/plans/` | Numbered implementation plans (01–30) |

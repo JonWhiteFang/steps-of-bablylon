@@ -4,6 +4,14 @@ All notable changes to Steps of Babylon are documented here.
 
 ## [Unreleased]
 
+### Play Store hi-res icon — 512×512 PNG rendered from vector source (2026-05-13)
+
+- **`docs/release/store-assets/play-store-icon-512.png`** — 512×512, 3.8 KB, 8-bit RGB. Generated artifact, tracked in git as a Play Store release asset.
+- **`tools/render_play_store_icon.py`** — reproducible Pillow-only renderer. Reads the same 108-viewport polygon coords (20 vertices) + the same 3-stop vertical gradient stops as the in-app vector XML drawables, supersamples 4× to 2048×2048 for crisp polygon edges, then LANCZOS-downsamples to the final 512×512. No external SVG renderer needed (no rsvg-convert, ImageMagick, or Inkscape install) — the path data + gradient model are reimplemented directly in Pillow drawing primitives.
+- **Source-of-truth coordinates duplicated, not symlinked.** The Android adaptive icon uses Android-specific XML schema (`<aapt:attr>` gradient, `android:pathData` SVG-subset) that no off-the-shelf vector renderer accepts directly. The script duplicates the polygon vertex list + gradient stops verbatim and includes a header docstring telling future-you to edit BOTH files when changing the design. Cleaner than maintaining an SVG-XML translation pipeline for a single icon.
+- **Pixel sanity check** validates the output: corner `#0E2247` exact match; ziggurat top `#D3A846` (vs Gold `#D4A843`, within 1 channel of perfect — gradient interpolation + LANCZOS blend); middle exact `#C2B280`; bottom `#8D5E3D` (vs lightened DeepBronze `#8B5A3A`, within 4 channels at the polygon edge). All deviations are sub-perceptual at icon-render sizes.
+- **Plan 31 status update.** App icon (512×512 PNG) blocker for Play Console upload — resolved. Remaining raster assets: 1024×500 feature graphic + screenshots. The feature graphic is a different composition problem (banner + tagline, not a logo); a future render script could plausibly do it but a designer or image-gen prompt is more cost-effective. Screenshots need device capture from the running app.
+
 ### App launcher icon — vector adaptive icon (2026-05-12)
 
 - **Closes the "No app icon resources" debt item** tracked in STATE.md since Plan 30. Four new vector XML resources + `AndroidManifest.xml` wiring; `./run-gradle.sh assembleDebug` BUILD SUCCESSFUL.

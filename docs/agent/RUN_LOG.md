@@ -1,5 +1,61 @@
 # Run Log
 
+## 2026-05-13 — Play Store hi-res icon: rendered 512×512 PNG from vector source
+
+- **Goal:** Resolve the 512×512 Play Store hi-res icon blocker that was flagged yesterday as needing external raster tooling. User asked whether I could do the export myself.
+- **Preflight:** read prior session's `RUN_LOG` head (vector adaptive icon landed 2026-05-12, design coords in `app/src/main/res/drawable/ic_launcher_{background,foreground}.xml`). `git status` clean on `main`, last commit `cf53a49 feat(icon): vector adaptive launcher icon`.
+
+### Tooling discovery + chosen path
+
+- Probed for SVG→PNG converters: no `rsvg-convert`, no ImageMagick, no Inkscape, no `cairosvg` Python package. Pillow 11.3.0 IS installed. Homebrew is available.
+- Considered four paths:
+  1. `brew install librsvg` and convert via `rsvg-convert`. Cleanest external tool but requires the Android XML→SVG translation step (different schemas: `<aapt:attr>` gradient + `android:pathData`) and a Homebrew install (~30s, network-dependent).
+  2. `pip install cairosvg` + render. Same XML→SVG translation problem.
+  3. Use AGP's bundled vector→bitmap pipeline. Build-time, awkward to invoke directly.
+  4. **Write a Pillow-only renderer that draws the same shape directly from the source coordinates.** No translation step, no install, full control over output dimensions, easy to re-run. Picked this.
+- Single-source-of-truth tradeoff considered: keeping coords in two places (XML + Python) means a divergence risk if someone tweaks one and not the other. Mitigated by (a) inline header in the Python script telling future-you to edit both, (b) CHANGELOG entry calling out the duplication, (c) only one icon to maintain.
+
+### Execution
+
+- **Wrote `tools/render_play_store_icon.py`** (166 lines, Pillow-only):
+  - Constants block at top mirroring the XML: `VIEWPORT = 108`, `OUT_SIZE = 512`, `SUPERSAMPLE = 4`, `BACKGROUND_RGB`, `ZIGGURAT_POLYGON` (20 vertices traced clockwise from bottom-left, identical to the foreground XML's pathData), `GRADIENT_STOPS` (3 stops at y=29 / 54 / 79).
+  - `gradient_color_at(y)` linearly interpolates between the 3 stops; clamps outside [29, 79] to the nearest stop's color (matches Android's gradient extend behaviour at silhouette edges).
+  - `render_icon`:
+    1. Solid background fill at 2048×2048 (`OUT_SIZE * SUPERSAMPLE`).
+    2. Vertical gradient image at the same supersample resolution (per-row sample of `gradient_color_at`).
+    3. Polygon mask in 'L' mode — silhouette filled white, rest black.
+    4. `canvas.paste(gradient, (0, 0), mask)` composites gradient onto background through the mask.
+    5. `Image.Resampling.LANCZOS` downsample 2048×2048 → 512×512 for crisp anti-aliased edges.
+    6. Save with `optimize=True`.
+  - Output path resolution via `Path(__file__).resolve().parent.parent` so it works from any CWD.
+
+### Verification
+
+- `python3 tools/render_play_store_icon.py` — wrote `docs/release/store-assets/play-store-icon-512.png` (3.8 KB).
+- `file` reports: "PNG image data, 512 x 512, 8-bit/color RGB, non-interlaced". Format correct.
+- 4-point pixel sanity check at known coordinates:
+  - bg corner (47, 47): expected `#0E2247`, got `#0E2247` (exact)
+  - ziggurat top (256, 142): expected `#D4A843`, got `#D3A846` (within 1 channel of Gold)
+  - ziggurat mid (256, 256): expected `#C2B280`, got `#C2B280` (exact)
+  - ziggurat bottom (256, 369): expected `#8B5A3A`, got `#8D5E3D` (within 4 channels of lightened DeepBronze — LANCZOS edge blend with the gradient just below the polygon).
+- 3.8 KB is a tiny fraction of Play Store's 1024 KB cap; geometric simplicity + PNG palette compression do their job.
+
+### Doc sync
+
+- **`docs/release/release-checklist.md`** — ticked "App icon: 512×512 PNG" with path + tool reference.
+- **`.kiro/steering/source-files.md`** — added new `## Tools & Release Assets` section documenting both the script and the rendered PNG.
+- **`.kiro/steering/structure.md`** — added 2 rows to the Key Files table.
+- **`CHANGELOG.md`** — prepended `Play Store hi-res icon — 512×512 PNG rendered from vector source (2026-05-13)` section under `[Unreleased]`, above yesterday's vector adaptive icon entry.
+- **`STATE.md`** — added a one-line note to the existing app-icon current-objective bullet documenting the 512×512 render; updated `Last run`.
+
+### What remains (Plan 31)
+
+- ~~512×512 hi-res PNG~~ ✅ done.
+- 1024×500 feature graphic — still external (different composition problem, designer or image-gen prompt).
+- Screenshots — still need device capture from running app.
+- Release upload keystore + AdMob account + Play Console developer account — still external.
+- The Plan 31 raster-asset blocker count drops from 3 to 2.
+
 ## 2026-05-12 — App launcher icon: vector adaptive icon
 
 - **Goal:** Close the "No app icon resources" debt item tracked in STATE.md since Plan 30. User asked whether I could create art assets for Plan 31; I was upfront about the capability split — I can produce vector XML (Android adaptive icons, drawables) but not raster PNGs (no image-gen tool access). User approved proceeding with the vector adaptive launcher icon; the 512×512 hi-res PNG / 1024×500 feature graphic / screenshots remain external work.
