@@ -184,7 +184,7 @@ class BillingManagerImplTest {
         adapter.stub {
             onBlocking { connect() } doReturn SdkBillingResult.Ok
             onBlocking { queryProductDetails(any(), any()) } doReturn QueryProductDetailsResult.Success(
-                listOf(SdkProductDetails("GEM_PACK_SMALL", SdkProductType.INAPP, "$0.99")),
+                listOf(SdkProductDetails("gem_pack_small", SdkProductType.INAPP, "$0.99")),
             )
             onBlocking { launchPurchase(any(), any(), any()) } doReturn StartPurchaseResult.NotCompleted(
                 SdkBillingResult.UserCanceled("user backed out"),
@@ -215,7 +215,7 @@ class BillingManagerImplTest {
         assertTrue(result is PurchaseResult.Error)
         assertTrue(
             "message surfaces SKU + Play Console hint",
-            (result as PurchaseResult.Error).message.contains("GEM_PACK_SMALL"),
+            (result as PurchaseResult.Error).message.contains("gem_pack_small"),
         )
         assertTrue(receiptDao.getAll().isEmpty())
     }
@@ -306,7 +306,7 @@ class BillingManagerImplTest {
         receiptDao.upsert(
             com.whitefang.stepsofbabylon.data.local.BillingReceiptEntity(
                 purchaseToken = "tok_promoted",
-                productId = "GEM_PACK_SMALL",
+                productId = "gem_pack_small",
                 purchaseTime = 0L,
                 granted = false,
             ),
@@ -316,7 +316,7 @@ class BillingManagerImplTest {
             onBlocking { queryPurchases(SdkProductType.INAPP) } doReturn QueryPurchasesResult.Success(
                 listOf(
                     SdkPurchase(
-                        productId = "GEM_PACK_SMALL",
+                        productId = "gem_pack_small",
                         orderId = "GPA.777",
                         purchaseToken = "tok_promoted",
                         purchaseTime = 42L,
@@ -353,7 +353,7 @@ class BillingManagerImplTest {
         receiptDao.upsert(
             com.whitefang.stepsofbabylon.data.local.BillingReceiptEntity(
                 purchaseToken = "tok_retry",
-                productId = "GEM_PACK_MEDIUM",
+                productId = "gem_pack_medium",
                 purchaseTime = 0L,
                 granted = true,
                 grantedAt = 1L,
@@ -423,9 +423,9 @@ class BillingManagerImplTest {
         consumeResult: SdkBillingResult = SdkBillingResult.Ok,
         acknowledgeResult: SdkBillingResult = SdkBillingResult.Ok,
     ) {
-        val details = SdkProductDetails(product.name, productType, product.priceDisplay)
+        val details = SdkProductDetails(product.skuId(), productType, product.priceDisplay)
         val purchase = SdkPurchase(
-            productId = product.name,
+            productId = product.skuId(),
             orderId = "GPA.$purchaseToken",
             purchaseToken = purchaseToken,
             purchaseTime = purchaseTime,

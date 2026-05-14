@@ -136,7 +136,7 @@ domain/model/Milestone.kt               # 6 walking milestones with step thresho
 domain/model/MilestoneReward.kt          # Sealed class: Gems, PowerStones, Cosmetic
 domain/model/DailyMissionType.kt         # 6 daily mission types (walking/battle/upgrade)
 domain/model/MissionCategory.kt          # Mission categories: WALKING, BATTLE, UPGRADE (in DailyMissionType.kt)
-domain/model/BillingProduct.kt           # 5 billing products + PurchaseResult sealed class + opt-in Companion for data-layer `BillingProduct.fromSkuIdOrNull(skuId)` reverse lookup (C.5 PR 1)
+domain/model/BillingProduct.kt           # 5 billing products + PurchaseResult sealed class + public `skuId()` returning `name.lowercase()` (Plan 31 Phase F unblocker, refines ADR-0005 decision #6 to the lowercase wire format Play Console requires) + opt-in Companion for data-layer `BillingProduct.fromSkuIdOrNull(skuId)` reverse lookup (C.5 PR 1)
 domain/model/AdPlacement.kt              # 3 ad placements + AdResult sealed class
 domain/model/CosmeticCategory.kt         # 3 cosmetic categories (ziggurat, projectile, enemy)
 domain/model/CosmeticItem.kt             # Cosmetic item domain model (+ optional overrideColors: List<Int>? for renderer override, C.2 PR 1)

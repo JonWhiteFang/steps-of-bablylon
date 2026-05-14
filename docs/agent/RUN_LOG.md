@@ -1,5 +1,48 @@
 # Run Log
 
+## 2026-05-14 (morning) — Plan 31 Phase F unblocker: `feat(billing): lowercase SKU wire format`
+
+- **Goal:** User asked "what's next?" and I pointed to STATE.md's #1 priority — the lowercase SKU code change that blocks Plan 31 Phase F SKU creation in Play Console. User said "yes", so I drove the PR end-to-end: 3 source files + 4 test files + 4 current-state docs + this RUN_LOG entry. Single, focused PR.
+- **Preflight:** read STATE.md (well-trodden — covers exactly this PR as the next action), source-files.md + structure.md (what's there now, what changed in C.5 PR 1), AGENTS.md Plan 31 status. `git status` clean on `main`. Last commit `0fc9f89 docs: end-of-session sync after Plan 31 walk-through`. Ran `grep` to enumerate hardcoded SKU strings across `app/src/main` + `app/src/test` so I could plan all the call-site updates upfront before editing.
+
+### Code changes (production)
+
+- **`domain/model/BillingProduct.kt`** — added a public `skuId(): String` method on the enum returning `name.lowercase()`. KDoc cites Play Console's `[a-z0-9._]` rule and explains this is the canonical wire format end-to-end. This is now the stable public API for any reverse-lookup helpers; `Companion` still exists as the opt-in extension point for `fromSkuIdOrNull`.
+- **`data/billing/BillingManagerImpl.kt`** — deleted the private `BillingProduct.skuId(): String = name` extension (the call sites at `purchase()` queryProductDetails + error message + `reconcileType()` PENDING + PURCHASED branches all auto-pick-up the new public method via name resolution). KDoc invariant #4 updated from "uppercase enum name" to "lowercase enum name (per ADR-0005 decision #6, refined post-Plan 31 Phase F to match Play Console's `[a-z0-9._]` product-id requirement)" with concrete examples `gem_pack_small`, `ad_removal`, `season_pass`. The `fromSkuIdOrNull` companion extension now compares `it.skuId() == skuId` instead of `it.name == skuId` — this is the correct comparison post-change because `Play Billing` will hand us lowercase productId strings (which match the lowercase Play Console SKU IDs we're about to create).
+- **`data/local/BillingReceiptEntity.kt`** — productId column KDoc rewritten from "matches `BillingProduct.<variant>` names per ADR-0005 decision #6" to "the lowercase `BillingProduct.<variant>` name produced by `BillingProduct.skuId()` (e.g. `gem_pack_small`, `ad_removal`, `season_pass`)" with the Play Console `[a-z0-9._]` rationale inline. No DB schema or migration change — `productId TEXT NOT NULL` accepts any case; existing devices with uppercase rows from prior debug builds aren't in the wild because Plan 31 hasn't entered closed testing yet.
+
+### Code changes (tests)
+
+- **`BillingManagerImplTest.kt`** — 5 hardcoded uppercase strings switched to lowercase: `SdkProductDetails("gem_pack_small", ...)` line 187, message-contains assertion at line 218 (`"gem_pack_small"`), reconciliation receipt fixtures at 309/319 (`"gem_pack_small"`), and 356 (`"gem_pack_medium"`). The `stubHappyPath` helper (used by 3 happy-path tests) switched from `SdkProductDetails(product.name, ...)` + `SdkPurchase(productId = product.name, ...)` to `product.skuId()` for both. The `stubHappyPath` change is the important one — it means the SdkPurchase that the impl receives back from `launchPurchase` carries the lowercase productId, and the reconcile-side `BillingProduct.fromSkuIdOrNull(purchase.productId)` lookup now resolves correctly via the new lowercase comparison.
+- **`BillingManagerParityTest.kt`** — 1-line helper change at `stubAdapterHappyPath`: `productId = product.name` → `productId = product.skuId()`. Same rationale as `BillingManagerImplTest.stubHappyPath`. Parity assertions on `gems` / `adRemoved` / `seasonPassActive` are case-insensitive (they compare wallet state, not SKU strings) so no other changes needed.
+- **`BillingReceiptDaoTest.kt`** — 10 hardcoded strings updated from `"GEM_PACK_SMALL"` / `"GEM_PACK_MEDIUM"` / `"GEM_PACK_LARGE"` / `"AD_REMOVAL"` to lowercase. The DAO is opaque to the productId value — it just stores and retrieves the string — so these tests would have passed either way. Updated for consistency with the production wire format so the fixtures match what `BillingManagerImpl.handleCompletedPurchase` and `reconcileType` will write in production.
+- **`RoomSchemaTest.kt`** — 2 strings in the billing-receipt round-trip test updated to lowercase. Same consistency rationale.
+
+### Verification
+
+- **Diagnostic noise (ignored).** LSP `get_diagnostics` returned ~hundreds of "unresolved reference" errors against every external import (`androidx.*`, `org.junit.*`, `org.mockito.*`, `kotlinx.*`). This was a workspace-init issue, not a real failure of my changes. Gradle is the source of truth.
+- **`./run-gradle.sh test` — BUILD SUCCESSFUL, 527 tests pass.** Same count as before the PR; all the test changes were string-fixture and helper-internals tweaks that don't add or remove tests. Compile produced one pre-existing Kotlin warning about `@ApplicationContext` parameter target — unrelated to this PR (KT-73255 follow-up). Confirmed test count via `find app/build/test-results/testDebugUnitTest -name "*.xml" -exec grep -h "<testsuite " {} \; | sed -E 's/.*tests="([0-9]+)".*/\1/' | awk '{s+=$1} END {print s, "tests"}'` → `527 tests`.
+- **`./run-gradle.sh bundleRelease` — BUILD SUCCESSFUL.** Lint vital + R8 minify + signing all clean. Signed AAB at `app/build/outputs/bundle/release/app-release.aab`, ~18 MB. `ls -lh` confirmed. The new AAB is the one that should be uploaded to Play Console Phase G; the previous Plan-31-prep AAB (also at this path, since AGP overwrites) had the uppercase wire format and would silently fail product-details queries against lowercase Play Console SKUs.
+
+### Current-state docs synced
+
+- **`CHANGELOG.md`** — prepended a new "Phase F unblocker — lowercase SKU wire format (2026-05-14)" section under `[Unreleased]` above the existing Plan 31 walk-through entry. Documents the production + test changes, verification, no-DB-migration rationale, and links to next-session Phase G work.
+- **`AGENTS.md`** — Plan 31 status line in the Current Status checklist updated from "Stopped at Phase F SKU creation due to Play Console lowercase-product-id requirement; resumes next session with `feat(billing): lowercase SKU wire format` PR" to "Phase F unblocker landed 2026-05-14: `feat(billing): lowercase SKU wire format` — `BillingProduct.skuId()` now returns `name.lowercase()` to satisfy Play Console's `[a-z0-9._]` product-id rule." Phrasing now matches the rest of the Plan 31 status as a chronological "what landed" list.
+- **`.kiro/steering/source-files.md`** — `BillingProduct.kt` entry expanded to mention the new public `skuId()` method + lowercase wire format + ADR-0005 decision-#6 refinement. Single line in a one-line-per-file table.
+- **`.kiro/steering/structure.md`** — `BillingProduct` bullet in the Domain Models section expanded with the same skuId() + lowercase wire format mention. Mirrors source-files.md.
+- **`STATE.md`** — rewritten current-objective + what-works + next-actions to reflect Phase F unblocker landed; top priorities renumbered (the SKU code fix is no longer #1; Phase G is now #1).
+
+### What's left for next session
+
+1. Commit `feat(billing): lowercase SKU wire format` on `main`. 11 files: 3 prod + 4 tests + 4 docs (CHANGELOG, AGENTS, source-files, structure) + STATE.md + RUN_LOG.md.
+2. External: Upload the AAB to Play Console Internal Testing → save release → create 5 lowercase SKUs → license testers → on-device verification of a real Play Billing test purchase. The on-device PASS unblocks C.5 PR 3 (delete `StubBillingManager`).
+3. External (parallelizable): Closed-track recruitment (≥12 testers, ≥14 days) before Phase I production rollout.
+
+### Decision footprint
+
+- **No new ADR.** This PR is a refinement to ADR-0005 decision #6 (uppercase → lowercase wire format), not a new architectural choice. Documented inline in the `BillingManagerImpl` class KDoc and `BillingReceiptEntity.productId` KDoc; AGENTS.md + STATE.md References block now both note "decision #6 refined to lowercase wire format 2026-05-14". If a future session wants to crystallise this as a stand-alone amendment, the natural spot is an ADR-0005-amendment-1 stub, but the surface area didn't justify it.
+- **Did NOT amend ADR-0005 file directly.** Per `.kiro/steering/11-agent-protocol.md` "Historical artifacts — NEVER modify as part of a current-PR doc sweep" — individual ADRs are amended only when the PR explicitly warrants it. The lowercase change is well-documented in 3 KDocs (BillingProduct, BillingManagerImpl, BillingReceiptEntity) plus the changelog and AGENTS, which is the right level of friction for a wire-format refinement.
+
 ## 2026-05-13 (afternoon/evening) — Plan 31 walk-through session: Phases A-E mostly landed, ADV registered, AAB built
 
 - **Goal:** User asked "what's next?" then "walk me through Plan 31 step by step" and I drove through `docs/release/plan-31-walkthrough.md` interactively, pausing at each step for user confirmation. Multi-hour session covering Phases A1, A2, B, C, D1+D2, E1, E2, E3, E4, E5, E6 plus the new-to-me Android Developer Verification (ADV) flow that the walk-through doc didn't anticipate. Stopped at SKU creation due to a Play Console requirement that didn't match our `BillingProduct` enum naming.

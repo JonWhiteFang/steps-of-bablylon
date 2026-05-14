@@ -4,6 +4,26 @@ All notable changes to Steps of Babylon are documented here.
 
 ## [Unreleased]
 
+### Phase F unblocker — lowercase SKU wire format (2026-05-14)
+
+Unblocks Play Console SKU creation. Play Console rejects product IDs that don't match `[a-z0-9._]`; our wire format previously sent `BillingProduct.name` (UPPER_SNAKE_CASE) byte-for-byte (per ADR-0005 decision #6), which Play Console refused.
+
+- **`BillingProduct.skuId(): String`** — promoted from a private extension in `BillingManagerImpl` to a **public** method on the `BillingProduct` enum, returning `name.lowercase()`. KDoc cites Play Console's `[a-z0-9._]` rule. Any code that needs to compute the wire id should use `product.skuId()`; tests can do the same.
+- **`BillingManagerImpl`** — KDoc invariant #4 updated from "uppercase enum name" to "lowercase enum name, e.g. `gem_pack_small`, `ad_removal`, `season_pass`". Private `BillingProduct.skuId()` extension deleted; the existing call sites at `purchase()` (queryProductDetails + error message) and `reconcileType()` (PENDING + PURCHASED branches) automatically pick up the new public method via name resolution. `fromSkuIdOrNull` companion extension now compares `it.skuId() == skuId` so reverse lookup matches the lowercase wire format.
+- **`BillingReceiptEntity.productId` KDoc** — now refers to `BillingProduct.skuId()` and the lowercase wire format directly (refines ADR-0005 decision #6 post-Plan 31 Phase F).
+- **Tests updated** — 4 test files. `BillingManagerImplTest` (5 hardcoded uppercase strings + the `stubHappyPath` helper switched from `product.name` to `product.skuId()`); `BillingManagerParityTest` (helper switched to `product.skuId()`); `BillingReceiptDaoTest` (10 hardcoded strings, all now lowercase — productId is opaque to the DAO, but staying consistent with production wire format keeps the fixtures realistic); `RoomSchemaTest` (2 strings in the billing-receipt round-trip).
+- **No DB schema or migration change.** `productId TEXT NOT NULL` accepts any case; existing devices with uppercase rows from prior debug builds are not in the wild, so a one-time data migration is unnecessary. Plan 31 has not entered closed testing yet.
+
+#### Verification
+
+- `./run-gradle.sh test` — BUILD SUCCESSFUL, 527 tests pass (no count change, parity with last session).
+- `./run-gradle.sh bundleRelease` — BUILD SUCCESSFUL. Lint vital + R8 minify + signing all clean. Signed AAB at `app/build/outputs/bundle/release/app-release.aab`, ~18 MB. Rebuild required because Plan 31 Phase G AAB upload should carry the lowercase wire format from day one (Play Console SKUs will be created lowercase, and an old uppercase AAB in the same internal-testing track would silently route product-details queries to empty results).
+- One pre-existing Kotlin warning carries over (`@ApplicationContext` parameter-target annotation; unrelated to this PR; tracked to land alongside KT-73255 follow-up).
+
+#### Next session
+
+Plan 31 Phase G: upload the new AAB to Internal testing → create 5 lowercase SKUs (`gem_pack_small`, `gem_pack_medium`, `gem_pack_large`, `ad_removal`, `season_pass`) → license testers → on-device verification of a real Play Billing test purchase. The on-device PASS unblocks C.5 PR 3 (delete `StubBillingManager`) and the closed-testing recruitment workstream.
+
 ### Plan 31 walk-through session — Phases A-F mostly landed, ADV registered, AAB built (2026-05-13)
 
 Multi-hour live walk-through of the `docs/release/plan-31-walkthrough.md` doc. Most of Plan 31's external-account + listing work landed, plus three small code-side build-config changes batched into a single `feat(release): Plan 31 prep` commit. Stops at the SKU-creation step where Play Console requires lowercase product IDs (resumes next session).

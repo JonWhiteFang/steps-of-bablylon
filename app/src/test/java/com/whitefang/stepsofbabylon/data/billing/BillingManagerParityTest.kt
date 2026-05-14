@@ -228,9 +228,9 @@ class BillingManagerParityTest {
         purchaseToken: String,
         purchaseTime: Long = 0L,
     ) {
-        val details = SdkProductDetails(product.name, productType, product.priceDisplay)
+        val details = SdkProductDetails(product.skuId(), productType, product.priceDisplay)
         val purchase = SdkPurchase(
-            productId = product.name,
+            productId = product.skuId(),
             orderId = "GPA.$purchaseToken",
             purchaseToken = purchaseToken,
             purchaseTime = purchaseTime,

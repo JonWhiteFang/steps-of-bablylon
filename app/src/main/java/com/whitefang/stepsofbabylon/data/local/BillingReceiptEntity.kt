@@ -44,7 +44,12 @@ data class BillingReceiptEntity(
     @ColumnInfo(defaultValue = "NULL")
     val orderId: String? = null,
 
-    /** SKU identifier — matches `BillingProduct.<variant>` names per ADR-0005 decision #6. */
+    /**
+     * SKU identifier — the lowercase `BillingProduct.<variant>` name produced by
+     * [com.whitefang.stepsofbabylon.domain.model.BillingProduct.skuId] (e.g. `gem_pack_small`,
+     * `ad_removal`, `season_pass`). Play Console's `[a-z0-9._]` product-id requirement made
+     * lowercase the canonical wire format post-Plan 31 Phase F (refines ADR-0005 decision #6).
+     */
     val productId: String,
 
     /** Epoch millis when Play Services recorded the purchase. */

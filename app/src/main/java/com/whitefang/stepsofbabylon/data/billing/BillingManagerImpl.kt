@@ -50,10 +50,11 @@ import javax.inject.Singleton
  *    `granted = false` but do not credit the wallet. The next reconciliation sweep
  *    observes the promotion to `PURCHASED` and routes through [grantOnceAtomic] — still
  *    exactly one credit.
- * 4. SKU IDs are the uppercase [BillingProduct] enum name, byte-for-byte
- *    (per ADR-0005 decision #6). `GEM_PACK_SMALL`, `AD_REMOVAL`, `SEASON_PASS`, etc.
- *    Play Console SKU configuration must match or product-details queries return empty
- *    results.
+ * 4. SKU IDs are the lowercase [BillingProduct] enum name, byte-for-byte
+ *    (per ADR-0005 decision #6, refined post-Plan 31 Phase F to match Play Console's
+ *    `[a-z0-9._]` product-id requirement). `gem_pack_small`, `ad_removal`,
+ *    `season_pass`, etc. — see [BillingProduct.skuId]. Play Console SKU configuration
+ *    must match or product-details queries return empty results.
  * 5. Anti-fraud obfuscatedAccountId (ADR-0005 Q5) is a SHA-256 hex of a device-local UUID
  *    stored in [ANTI_FRAUD_PREFS]; no PII leaves the device.
  *
@@ -349,8 +350,6 @@ internal class BillingManagerImpl @Inject constructor(
         else -> SdkProductType.INAPP
     }
 
-    private fun BillingProduct.skuId(): String = name // e.g. GEM_PACK_SMALL
-
     private fun SdkBillingResult.toUserMessage(): String = when (this) {
         is SdkBillingResult.Ok -> "OK"
         is SdkBillingResult.UserCanceled -> "Purchase cancelled"
@@ -378,4 +377,4 @@ internal class BillingManagerImpl @Inject constructor(
  * the same mapping without exposing internals.
  */
 internal fun BillingProduct.Companion.fromSkuIdOrNull(skuId: String): BillingProduct? =
-    BillingProduct.entries.firstOrNull { it.name == skuId }
+    BillingProduct.entries.firstOrNull { it.skuId() == skuId }

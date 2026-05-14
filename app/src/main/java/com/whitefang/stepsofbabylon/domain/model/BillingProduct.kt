@@ -9,6 +9,17 @@ enum class BillingProduct(val gemAmount: Long, val priceDisplay: String) {
     ;
 
     /**
+     * Wire-format product identifier for Play Console, Play Billing's `productId` field, and
+     * the [com.whitefang.stepsofbabylon.data.local.BillingReceiptEntity.productId] column.
+     *
+     * Returns the enum [name] lowercased — `gem_pack_small`, `ad_removal`, `season_pass`.
+     * Play Console rejects uppercase product IDs (only `[a-z0-9._]` are accepted), so this
+     * is the canonical way to compute the wire id end-to-end. Reverse lookup via
+     * [com.whitefang.stepsofbabylon.data.billing.fromSkuIdOrNull] in the data layer.
+     */
+    fun skuId(): String = name.lowercase()
+
+    /**
      * Opt-in Companion so extension functions can attach reverse-lookup helpers (e.g.
      * [com.whitefang.stepsofbabylon.data.billing.fromSkuIdOrNull] in the data layer, which
      * maps Play Billing `productId` strings back to enum entries during reconciliation).

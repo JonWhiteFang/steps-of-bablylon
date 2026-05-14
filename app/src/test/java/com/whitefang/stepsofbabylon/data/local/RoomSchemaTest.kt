@@ -72,7 +72,7 @@ class RoomSchemaTest {
         val entity = BillingReceiptEntity(
             purchaseToken = "GPB.token.0001",
             orderId = "GPA.1234-5678-9012-3456",
-            productId = "GEM_PACK_MEDIUM",
+            productId = "gem_pack_medium",
             purchaseTime = 1_720_000_000L,
             granted = true,
             grantedAt = 1_720_000_001L,
@@ -86,7 +86,7 @@ class RoomSchemaTest {
         val loaded = db.billingReceiptDao().getByToken("GPB.token.0001")
         assertNotNull(loaded)
         assertEquals("GPA.1234-5678-9012-3456", loaded!!.orderId)
-        assertEquals("GEM_PACK_MEDIUM", loaded.productId)
+        assertEquals("gem_pack_medium", loaded.productId)
         assertEquals(1_720_000_000L, loaded.purchaseTime)
         assertEquals(true, loaded.granted)
         assertEquals(1_720_000_001L, loaded.grantedAt)

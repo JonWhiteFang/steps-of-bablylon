@@ -48,7 +48,7 @@ class BillingReceiptDaoTest {
         val entity = BillingReceiptEntity(
             purchaseToken = "tok_1",
             orderId = "GPA.1234",
-            productId = "GEM_PACK_SMALL",
+            productId = "gem_pack_small",
             purchaseTime = 1_700_000_000L,
         )
         receiptDao.upsert(entity)
@@ -56,7 +56,7 @@ class BillingReceiptDaoTest {
         val loaded = receiptDao.getByToken("tok_1")
         assertNotNull(loaded)
         assertEquals("GPA.1234", loaded!!.orderId)
-        assertEquals("GEM_PACK_SMALL", loaded.productId)
+        assertEquals("gem_pack_small", loaded.productId)
         assertFalse("newly inserted rows default to granted=false", loaded.granted)
         assertNull(loaded.grantedAt)
     }
@@ -71,7 +71,7 @@ class BillingReceiptDaoTest {
         playerDao.upsert(PlayerProfileEntity(id = 1))
         val entity = BillingReceiptEntity(
             purchaseToken = "tok_grant",
-            productId = "GEM_PACK_MEDIUM",
+            productId = "gem_pack_medium",
             purchaseTime = 0L,
         )
 
@@ -103,7 +103,7 @@ class BillingReceiptDaoTest {
         playerDao.upsert(PlayerProfileEntity(id = 1))
         val entity = BillingReceiptEntity(
             purchaseToken = "tok_dedup",
-            productId = "GEM_PACK_SMALL",
+            productId = "gem_pack_small",
             purchaseTime = 0L,
         )
 
@@ -141,7 +141,7 @@ class BillingReceiptDaoTest {
         receiptDao.upsert(
             BillingReceiptEntity(
                 purchaseToken = "tok_c",
-                productId = "GEM_PACK_SMALL",
+                productId = "gem_pack_small",
                 purchaseTime = 0L,
                 granted = true,
                 grantedAt = 1L,
@@ -150,7 +150,7 @@ class BillingReceiptDaoTest {
         receiptDao.upsert(
             BillingReceiptEntity(
                 purchaseToken = "tok_a",
-                productId = "AD_REMOVAL",
+                productId = "ad_removal",
                 purchaseTime = 0L,
                 granted = true,
                 grantedAt = 1L,
@@ -172,7 +172,7 @@ class BillingReceiptDaoTest {
         receiptDao.upsert(
             BillingReceiptEntity(
                 purchaseToken = "unresolved",
-                productId = "GEM_PACK_SMALL",
+                productId = "gem_pack_small",
                 purchaseTime = 0L,
                 granted = true,
                 grantedAt = 1L,
@@ -182,7 +182,7 @@ class BillingReceiptDaoTest {
         receiptDao.upsert(
             BillingReceiptEntity(
                 purchaseToken = "resolved_consume",
-                productId = "GEM_PACK_SMALL",
+                productId = "gem_pack_small",
                 purchaseTime = 0L,
                 granted = true,
                 grantedAt = 1L,
@@ -194,7 +194,7 @@ class BillingReceiptDaoTest {
         receiptDao.upsert(
             BillingReceiptEntity(
                 purchaseToken = "resolved_ack",
-                productId = "AD_REMOVAL",
+                productId = "ad_removal",
                 purchaseTime = 0L,
                 granted = true,
                 grantedAt = 1L,
@@ -206,7 +206,7 @@ class BillingReceiptDaoTest {
         receiptDao.upsert(
             BillingReceiptEntity(
                 purchaseToken = "pending",
-                productId = "GEM_PACK_LARGE",
+                productId = "gem_pack_large",
                 purchaseTime = 0L,
                 granted = false,
             ),
@@ -219,9 +219,9 @@ class BillingReceiptDaoTest {
 
     @Test
     fun `getAll orders by purchaseTime DESC`() = runTest {
-        receiptDao.upsert(BillingReceiptEntity("a", null, "GEM_PACK_SMALL", purchaseTime = 100L))
-        receiptDao.upsert(BillingReceiptEntity("b", null, "GEM_PACK_SMALL", purchaseTime = 300L))
-        receiptDao.upsert(BillingReceiptEntity("c", null, "GEM_PACK_SMALL", purchaseTime = 200L))
+        receiptDao.upsert(BillingReceiptEntity("a", null, "gem_pack_small", purchaseTime = 100L))
+        receiptDao.upsert(BillingReceiptEntity("b", null, "gem_pack_small", purchaseTime = 300L))
+        receiptDao.upsert(BillingReceiptEntity("c", null, "gem_pack_small", purchaseTime = 200L))
 
         val all = receiptDao.getAll()
         assertEquals(listOf("b", "c", "a"), all.map { it.purchaseToken })

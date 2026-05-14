@@ -120,7 +120,7 @@ All in `domain/model/`:
 - `MilestoneReward` — sealed class: Gems, PowerStones, Cosmetic
 - `DailyMissionType` — 6 daily mission types (walking/battle/upgrade)
 - `MissionCategory` — mission categories: WALKING, BATTLE, UPGRADE
-- `BillingProduct` — 5 billing products + PurchaseResult sealed class + opt-in Companion for `BillingProduct.fromSkuIdOrNull` lookup in the data layer (C.5 PR 1)
+- `BillingProduct` — 5 billing products + PurchaseResult sealed class + public `skuId()` returning `name.lowercase()` (Plan 31 Phase F unblocker — Play Console requires `[a-z0-9._]` product IDs) + opt-in Companion for `BillingProduct.fromSkuIdOrNull` lookup in the data layer (C.5 PR 1)
 - `AdPlacement` — 3 ad placements + AdResult sealed class
 - `CosmeticCategory` — 3 cosmetic categories (ziggurat, projectile, enemy)
 - `CosmeticItem` — cosmetic item domain model
