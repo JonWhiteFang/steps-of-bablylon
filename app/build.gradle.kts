@@ -35,7 +35,7 @@ android {
         applicationId = "com.whitefang.stepsofbabylon"
         minSdk = 34
         targetSdk = 36
-        versionCode = 2
+        versionCode = 3
         versionName = "1.0.0"
 
         // Default USE_REAL_BILLING value for any build type that doesn't override it
@@ -100,6 +100,17 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
+            }
+
+            // Bundle native debug symbols (SQLCipher .so files etc.) inside the AAB so
+            // Play Console can deobfuscate native crash stack traces. Without this, the
+            // Play Console upload step warns "This App Bundle contains native code, and
+            // you've not uploaded debug symbols." Symbols ship in the AAB only — they're
+            // stripped from the on-device APK, so end-user install size is unchanged.
+            // FULL includes function names + line numbers; SYMBOL_TABLE drops line numbers
+            // for a smaller upload. FULL is fine for v1 — the upload-side bloat is small.
+            ndk {
+                debugSymbolLevel = "FULL"
             }
             // Release builds bind BillingManagerImpl (real Play Billing v8). C.5 PR 2.
             buildConfigField("boolean", "USE_REAL_BILLING", "true")

@@ -4,6 +4,17 @@ All notable changes to Steps of Babylon are documented here.
 
 ## [Unreleased]
 
+### Native debug symbols + versionCode 2 → 3 (2026-05-15)
+
+Play Console flagged the v2 internal-track AAB upload with the standard "This App Bundle contains native code, and you've not uploaded debug symbols" warning. Investigated whether AGP's `ndk { debugSymbolLevel = "FULL" }` could fix it.
+
+- **Added `ndk { debugSymbolLevel = "FULL" }` to the release build type.** AGP runs an `extractReleaseNativeDebugMetadata` task that pulls native debug info out of any `.so` files going into the AAB and packages it into `BUNDLE-METADATA/com.android.tools.build.debugsymbols/`. Inline comment block documents intent + the SDK_TABLE-vs-FULL trade-off.
+- **Findings.** AGP task ran cleanly but produced **zero bundled symbols**. The two native libraries in the AAB are SQLCipher (`libsqlcipher.so`, ~6 MB per ABI) and `androidx.graphics.path` — both ship as pre-stripped prebuilts. No debug info exists in those `.so` files for AGP to extract. Play Console warning will persist on every upload until either (a) we build SQLCipher from source ourselves, or (b) upstream SQLCipher AAR starts shipping with `.dbg` files. Both are out-of-scope for v1.
+- **Why keep the config anyway.** Documents intent for any future maintainer; correct config; cost is one extra Gradle task per release build (~seconds); auto-correct if dependencies start shipping symbols later.
+- **versionCode 2 → 3.** Forward-only counter bump for the next upload. Internal-track v2 from earlier today is staying as the rollout candidate — the symbol-warning is informational and not a release blocker, so we don't need to re-upload just to dismiss it.
+
+No test impact. Signed AAB rebuilt at `app/build/outputs/bundle/release/app-release.aab`, ~18 MB, merged manifest confirms `versionCode="3"`. Not uploaded — v2 stays the internal-track AAB pending smoke test.
+
 ### versionCode bump 1 → 2 (2026-05-14)
 
 Play Console retains every uploaded AAB's versionCode forever (even from withdrawn drafts), so an earlier `bundleRelease` smoke-test upload during the Plan 31 walk-through session permanently consumed `versionCode = 1`. Internal-track upload of the lowercase-SKU AAB rejected with "Version code 1 has already been used. Try another version code." One-line bump in `app/build.gradle.kts` (`versionCode = 1` → `versionCode = 2`); `versionName` stays `1.0.0` because nothing user-visible changed. Re-built signed AAB at `app/build/outputs/bundle/release/app-release.aab` (~18 MB), merged manifest confirms `versionCode="2"`. No test impact.

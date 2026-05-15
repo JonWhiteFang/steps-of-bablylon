@@ -27,7 +27,7 @@ Operating rules:
 - **Package:** `com.whitefang.stepsofbabylon`
 - **Min SDK:** 34 (Android 14)
 - **Target/Compile SDK:** 36
-- **Version:** 1.0.0 (versionCode 2 — bumped 2026-05-14 because Play Console retained `versionCode 1` from an earlier walk-through smoke-test upload)
+- **Version:** 1.0.0 (versionCode 3 — v2 was uploaded to internal track 2026-05-15; v3 is the local forward-only counter for the next upload after smoke test)
 - **Architecture:** MVVM + Clean Architecture
 - **UI:** Jetpack Compose (menus/screens) + SurfaceView (battle renderer)
 - **DI:** Hilt (with KSP)

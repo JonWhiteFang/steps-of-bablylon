@@ -1,5 +1,38 @@
 # Run Log
 
+## 2026-05-15 — Plan 31 Phase G: v2 AAB uploaded, SKUs created, native-debug-symbols investigation, versionCode 2 → 3
+
+- **Goal:** User said "AAB uploaded" then drove through Phase G external work (SKU creation, license testers, ad_removal pricing decision, native-debug-symbol Play Console warning). I drove the small code-side follow-up.
+- **Preflight:** read STATE.md (had Phase G as the next external step). `git status` clean on `main`, last commit `69801c4 chore(release): bump versionCode 1 -> 2`.
+
+### External work done (user)
+
+- **AAB upload.** v2 AAB (`app/build/outputs/bundle/release/app-release.aab`, signed, ~18 MB, versionCode 2, lowercase wire format) uploaded to Play Console → Test and release → Internal testing. Sat in Draft state pending review-and-rollout.
+- **5 SKUs created.** Monetize with Play → Products → In-app products (4 entries: `gem_pack_small`, `gem_pack_medium`, `gem_pack_large`, `ad_removal`) + Subscriptions (1 entry: `season_pass`, monthly base plan id `monthly`). Per-SKU Purchase option IDs took the hyphenated form (`gem-pack-small` etc.) since Play Console's purchase-option-id field requires `[a-z0-9-]` (hyphens, not underscores). Note that purchase option IDs never appear in our app code — `BillingManagerImpl` queries by productId and the SDK auto-resolves the offer/option.
+- **`ad_removal` pricing wobble.** User briefly priced `ad_removal` at $9.99 (matched `gem_pack_large` price). I flagged the UX mismatch — the in-app `BillingProduct.AD_REMOVAL.priceDisplay = "$3.99"` is shown directly in the Store screen as a static string, so Play Console at $9.99 would have meant Store-screen-shows-$3.99 + Billing-dialog-charges-$9.99 (bait-and-switch). User reverted Play Console price to $3.99 (matches the constant). Long-term proper fix is to read formatted price from `ProductDetails.priceDisplay` so Play Console becomes the source of truth, but that's a bigger refactor deferred to v1.x.
+- **License testers added.** Setup → License testing + Internal testing → Testers tab.
+
+### Native-debug-symbols Play Console warning investigation
+
+- **Trigger.** After v2 AAB upload, Play Console flagged "This App Bundle contains native code, and you've not uploaded debug symbols. We recommend you upload a symbol file to make your crashes and ANRs easier to analyze and debug."
+- **Hypothesis.** AGP 9 has `android.buildTypes.release.ndk.debugSymbolLevel = "FULL"` which extracts native debug info from .so files going into the AAB and bundles it into `BUNDLE-METADATA/com.android.tools.build.debugsymbols/` automatically.
+- **Implementation.** Added the `ndk { debugSymbolLevel = "FULL" }` block to the release build type in `app/build.gradle.kts` with an inline comment explaining the FULL-vs-SYMBOL_TABLE trade-off and the cost (one extra Gradle task per release build).
+- **Build attempt.** Bumped versionCode 2 → 3 (forward-only — v2 is the uploaded AAB, v3 is the next forward number). `./run-gradle.sh bundleRelease` ran cleanly; the new task `:app:extractReleaseNativeDebugMetadata` ran successfully.
+- **Findings.** `unzip -l app/build/outputs/bundle/release/app-release.aab | grep BUNDLE-METADATA` showed only the standard 6 entries (`gradle/`, `libraries/`, `obfuscation/`, `profiles/`, `r8.json`) — **no `com.android.tools.build.debugsymbols/` directory**. The AGP task ran but produced zero bundled symbols. Forensic check (`unzip -l ... | grep "\.so$"`) showed the native libraries in the AAB are SQLCipher (`libsqlcipher.so`, ~6 MB per ABI × 4 ABIs = ~22 MB) and `libandroidx.graphics.path.so` (~10 KB per ABI). Both are third-party prebuilt-and-stripped binaries — there's no debug info inside them for AGP to extract.
+- **Conclusion.** Play Console warning is **unfixable from our side** without either (a) building SQLCipher from source ourselves, or (b) upstream SQLCipher publishing a version with `.dbg` files. Both are out-of-scope for v1.0. Warning is informational, NOT a release blocker.
+- **Decision.** Keep the `ndk { debugSymbolLevel = "FULL" }` config block as good hygiene + intent documentation. Cost is one Gradle task per release build (~seconds). If we ever ship a custom .so or upgrade SQLCipher to a version that ships symbols, the config will pick them up automatically. Inline comment block in `app/build.gradle.kts` explains the rationale for any future maintainer.
+- **Don't re-upload.** v2 stays the internal-track AAB. The fact that v3 was built locally (versionCode 3 in the merged manifest, ~18 MB AAB on disk) doesn't mean we have to upload it. The symbol warning won't go away on v3 either, so re-uploading just to dismiss it would be theater. v3 remains the next forward-only counter for a real future upload (e.g. post-smoke-test bug fixes).
+
+### Docs synced
+
+- **CHANGELOG.md** — new "Native debug symbols + versionCode 2 → 3 (2026-05-15)" section under [Unreleased] above the prior versionCode 1 → 2 entry. Documents the investigation findings, the unfixable nature of the warning, the rationale for keeping the config anyway, and the deliberate "don't re-upload" decision.
+- **AGENTS.md** — Version line updated to "versionCode 3 — v2 was uploaded to internal track 2026-05-15; v3 is the local forward-only counter for the next upload after smoke test".
+- **STATE.md** — current-objective rewritten: Phase G in progress, v2 uploaded, SKUs created with $3.99 ad_removal, ndk config added but symbol warning unfixable, next step is review-and-rollout.
+
+### Next session
+
+User clicks "Review and roll out release" on the v2 internal-track draft. After Google's quick review (5–30 min) they get the opt-in URL, install on a test device, and run the smoke checklist. The Gem-pack-credit-correctly-on-real-Play-Billing test is the gate for C.5 PR 3 (delete `StubBillingManager` + collapse `BillingModule` to `@Binds BillingManagerImpl`). Then closed-testing recruitment (≥12 testers, ≥14 days), then production access application, then production rollout.
+
 ## 2026-05-14 (morning, mid-session) — versionCode 1 → 2 bump after Play Console rejected first internal-track upload
 
 - **Goal:** User attempted to upload `app/build/outputs/bundle/release/app-release.aab` to Play Console Internal testing as Step 1 of the Phase G plan. Play Console rejected with "Version code 1 has already been used. Try another version code." Cause: Play Console permanently retains every uploaded AAB's versionCode (even from withdrawn drafts), and an earlier `bundleRelease` smoke-test during the Plan 31 walk-through session permanently consumed versionCode 1 even though no track ever held a release with it.
