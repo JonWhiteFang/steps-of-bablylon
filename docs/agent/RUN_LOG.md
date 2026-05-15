@@ -1,5 +1,13 @@
 # Run Log
 
+## 2026-05-15 (later) — v3 rolled out to internal track, versionCode 3 → 4 forward-only bump
+
+- **Goal:** User said "I uploaded version 3 and released that" — they decided to ship v3 (with the `ndk { debugSymbolLevel = "FULL" }` config) instead of the v2 draft they originally uploaded. Functionally equivalent — the symbol warning is unfixable either way — but v3 is the cleaner build with the documented config intent.
+- **Code change:** versionCode 3 → 4 in `app/build.gradle.kts`. Forward-only because v3 is now a consumed counter in Play Console.
+- **Doc sync:** AGENTS.md version line updated. STATE.md current-objective + last-run lines updated. CHANGELOG.md gets a "v3 rolled out + versionCode 3 → 4" section under [Unreleased] above the prior entry.
+- **No new AAB build locally.** v4 is reserved for the next legitimate upload (post-smoke-test bug fix, or C.5 PR 3 deletion AAB). No need to rebuild now since we're not uploading anything.
+- **What's next.** User waits for Google's quick review (5–30 min after rollout), grabs the opt-in URL from the Internal testing release page, installs on a test device. Smoke test follows: Gem packs credit 50/300/700, Ad Removal sets the flag, Season Pass sets 30-day expiry + +10 Gems/day, reward ad plays. The Gem-pack-credit test on real Play Billing is the gate for C.5 PR 3.
+
 ## 2026-05-15 — Plan 31 Phase G: v2 AAB uploaded, SKUs created, native-debug-symbols investigation, versionCode 2 → 3
 
 - **Goal:** User said "AAB uploaded" then drove through Phase G external work (SKU creation, license testers, ad_removal pricing decision, native-debug-symbol Play Console warning). I drove the small code-side follow-up.

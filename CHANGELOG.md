@@ -4,6 +4,14 @@ All notable changes to Steps of Babylon are documented here.
 
 ## [Unreleased]
 
+### v3 rolled out to internal track + versionCode 3 → 4 (2026-05-15)
+
+User uploaded the v3 AAB (with the new `ndk { debugSymbolLevel = "FULL" }` config landed in the previous commit) and rolled it out to the internal-testing track instead of rolling out the earlier v2 draft. v3 is functionally equivalent to v2 — the symbol-warning is structurally unfixable for any AAB containing SQLCipher's pre-stripped .so prebuilts — but v3 is the cleaner build to ship.
+
+Local forward-only counter bump versionCode 3 → 4 in `app/build.gradle.kts`. v4 is reserved for the next upload (most likely a post-smoke-test bug fix or C.5 PR 3 deletion).
+
+No code change. No test impact. No new AAB built locally.
+
 ### Native debug symbols + versionCode 2 → 3 (2026-05-15)
 
 Play Console flagged the v2 internal-track AAB upload with the standard "This App Bundle contains native code, and you've not uploaded debug symbols" warning. Investigated whether AGP's `ndk { debugSymbolLevel = "FULL" }` could fix it.

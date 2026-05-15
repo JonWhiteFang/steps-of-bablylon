@@ -1,9 +1,9 @@
 # Project State
 
 ## Current objective
-- **Plan 31 Phase G in progress.** v2 AAB uploaded to Play Console Internal testing 2026-05-15. SKUs created (5 lowercase IDs: `gem_pack_small`, `gem_pack_medium`, `gem_pack_large`, `ad_removal`, `season_pass`) and license testers added. `ad_removal` priced at $3.99 (matches the in-app `BillingProduct.AD_REMOVAL.priceDisplay` constant; user briefly tried $9.99 then reverted in Play Console). Native-debug-symbols `ndk { debugSymbolLevel = "FULL" }` added to `app/build.gradle.kts` after the v2 upload triggered the standard "no debug symbols" warning — turns out warning is unfixable from our side because SQLCipher + androidx.graphics.path .so files ship pre-stripped. Config kept as good hygiene + future-proofing. Warning is informational, not a release blocker; v2 is fine to roll out.
-- **versionCode now at 3 in the build script** (forward-only) for the next legitimate upload. v2 is the AAB sitting in the Play Console internal-track draft pending review-and-rollout.
-- **Next external step:** Click "Review and roll out release" on the v2 internal-track draft → wait for Google quick review (5–30 min) → grab the opt-in URL → install on a test device → run the smoke checklist (Gem packs credit 50/300/700, Ad Removal sets the flag, Season Pass sets 30-day expiry + +10 Gems/day, reward ad plays).
+- **Plan 31 Phase G in progress — v3 rolled out to internal track 2026-05-15.** User opted to upload v3 (with the `ndk { debugSymbolLevel = "FULL" }` config) over v2, even though the symbol warning is unfixable from our side. Both AABs were functionally equivalent; v3 is the cleaner one to ship. SKUs created and active (5 lowercase IDs: `gem_pack_small`, `gem_pack_medium`, `gem_pack_large`, `ad_removal`, `season_pass`); license testers added; `ad_removal` priced at $3.99 to match the in-app `BillingProduct.AD_REMOVAL.priceDisplay` constant.
+- **versionCode now at 4 in the build script** (forward-only) for the next upload. v3 is the live internal-track AAB.
+- **Next external step:** Wait for Google's quick review (5–30 min after rollout) → grab the opt-in URL from the internal testing release page → install on a test device → run the smoke checklist (Gem packs credit 50/300/700, Ad Removal sets the flag, Season Pass sets 30-day expiry + +10 Gems/day, reward ad plays).
 
 ## What works
 - Plans 01–30 + 10b + R (R01–R12) + R2 (R2-01–R2-12) complete.
@@ -67,4 +67,4 @@
 - Play Store listing copy: docs/release/play-store-listing.md
 - Master plan: docs/plans/master-plan.md
 - Critical path: 01→…→30→R→R2→ Battle Step Rewards → Phase A done → B.1 done → B.2 done (RO-02 complete) → B.3 done (RO-03 complete) → B.4–B.5 → C.2 PRs done → C.4 done → C.5 PRs 1+2 done → C.6 PRs 1+2+3 done → battle-step-credit hotfix done → Plan 31 (Phases A–F + ADV done; Phase F unblocker `feat(billing): lowercase SKU wire format` lands 2026-05-14) → Phase G internal track + SKUs → C.5 PR 3 → Phase G2 closed track → Phases H+I production → D
-- Last run: 2026-05-15 (Phase G upload session — v2 AAB uploaded to internal track, 5 lowercase SKUs created, license testers added; `ndk { debugSymbolLevel = "FULL" }` config added but Play Console symbol warning is unfixable because dependencies are pre-stripped — informational warning only, not a blocker; versionCode 2 → 3 in build script; next is roll-out + on-device smoke test).
+- Last run: 2026-05-15 (Phase G upload + rollout session — v3 AAB uploaded and rolled out to internal track. SKUs + license testers in place. Next is on-device smoke test once Google's review finishes; versionCode bumped 3 → 4 for the next upload).

@@ -35,7 +35,7 @@ android {
         applicationId = "com.whitefang.stepsofbabylon"
         minSdk = 34
         targetSdk = 36
-        versionCode = 3
+        versionCode = 4
         versionName = "1.0.0"
 
         // Default USE_REAL_BILLING value for any build type that doesn't override it
