@@ -160,6 +160,17 @@ class GameEngine {
         const val RECOVERY_INTERVAL_SECONDS = 30f
         const val RECOVERY_PERCENT_PER_LEVEL = 0.01
         const val RECOVERY_PERCENT_PER_PULSE_CAP = 0.50
+
+        /**
+         * CHRONO_FIELD slow factor (RO-09 #1). The Ultimate Weapon's description claims
+         * "Slows all enemies to 10 % speed for duration"; pre-RO-09 [chronoActive] only
+         * drove a purple-tint render overlay and never reached enemy movement. The fix
+         * scales the per-tick `deltaTime` passed to each [EnemyEntity] by this factor in
+         * the entity-update loop when [chronoActive] is `true`. Projectiles, orbs, and
+         * the ziggurat continue to receive the unscaled `deltaTime` so player-side timing
+         * (shoot cooldowns, projectile travel) is unaffected.
+         */
+        const val CHRONO_SLOW_FACTOR = 0.10f
     }
 
     fun init(
@@ -324,7 +335,15 @@ class GameEngine {
 
         waveSpawner?.update(deltaTime, screenWidth, screenHeight)
         entities.addAll(pendingAdd); pendingAdd.clear()
-        entities.forEach { it.update(deltaTime) }
+        // RO-09 #1: scale `deltaTime` to CHRONO_SLOW_FACTOR (10 %) for EnemyEntity when
+        // CHRONO_FIELD is active. Projectiles, orbs, and the ziggurat receive the
+        // unscaled `deltaTime` so player-side timing is unaffected. Pre-RO-09 the only
+        // consumer of `chronoActive` was the render overlay — the UW had no gameplay
+        // effect despite the 75-Power-Stone unlock cost.
+        entities.forEach { e ->
+            val dt = if (chronoActive && e is EnemyEntity) deltaTime * CHRONO_SLOW_FACTOR else deltaTime
+            e.update(dt)
+        }
 
         // Spawn projectile trails
         if (!reducedMotion) {

@@ -1,13 +1,16 @@
 package com.whitefang.stepsofbabylon.presentation.battle.engine
 
+import com.whitefang.stepsofbabylon.domain.model.EnemyType
 import com.whitefang.stepsofbabylon.domain.model.OverdriveType
 import com.whitefang.stepsofbabylon.domain.model.ResolvedStats
 import com.whitefang.stepsofbabylon.domain.model.UpgradeType
+import com.whitefang.stepsofbabylon.presentation.battle.entities.EnemyEntity
+import com.whitefang.stepsofbabylon.presentation.battle.entities.ProjectileEntity
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 /**
- * RO-08 regression guards for the engine-side stats / cash / recovery wiring.
+ * RO-08 + RO-09 regression guards for the engine-side stats / cash / recovery / chrono wiring.
  *
  * Pre-RO-08:
  * - [ZigguratEntity] captured `attackInterval` and `attackRange` at construction; Overdrive
@@ -15,6 +18,10 @@ import org.junit.jupiter.api.Test
  * - The engine stored `workshopLevels` once at init; in-round CASH_BONUS / CASH_PER_WAVE /
  *   INTEREST / FREE_UPGRADES purchases never reached the cash math.
  * - RECOVERY_PACKAGES had no implementation.
+ *
+ * Pre-RO-09:
+ * - CHRONO_FIELD UW activation only set a render-overlay flag; raw `deltaTime` reached every
+ *   entity, so the description's "Slows all enemies to 10 % speed" had no gameplay effect.
  */
 class GameEngineTest {
 
@@ -183,6 +190,70 @@ class GameEngineTest {
         )
     }
 
+    // ---- RO-09 #1: CHRONO_FIELD UW slows enemies via deltaTime scaling ----
+
+    @Test
+    fun `RO09 CHRONO_FIELD active slows enemy movement to 10 percent of baseline`() {
+        val baseline = simulateEnemyMovement(activateChrono = false)
+        val slowed = simulateEnemyMovement(activateChrono = true)
+
+        // Baseline: speed=100 px/sec × 1 sec ≈ 100 px (modulo dist-based ratio).
+        // Chrono: 100 × CHRONO_SLOW_FACTOR (0.10) ≈ 10 px.
+        // Pre-fix: slowed == baseline (chronoActive only drove the render overlay).
+        org.junit.jupiter.api.Assertions.assertTrue(
+            baseline > 50f,
+            "Sanity: baseline movement should be measurable (~100 px); got $baseline",
+        )
+        val ratio = slowed / baseline
+        org.junit.jupiter.api.Assertions.assertTrue(
+            ratio in 0.08..0.12,
+            "Chrono active must slow enemy movement to ~10% of baseline; " +
+                "got ratio=$ratio (baseline=$baseline px, slowed=$slowed px)",
+        )
+    }
+
+    @Test
+    fun `RO09 CHRONO_FIELD inactive leaves enemies at full speed`() {
+        // Two fresh-engine runs with chrono inactive should produce the same movement —
+        // confirms the new entity-update branch has no behavioural drift on the default path.
+        val a = simulateEnemyMovement(activateChrono = false)
+        val b = simulateEnemyMovement(activateChrono = false)
+        assertEquals(
+            a,
+            b,
+            0.001f,
+            "Chrono-inactive baseline must be deterministic across fresh engines",
+        )
+    }
+
+    @Test
+    fun `RO09 CHRONO_FIELD does not slow projectile entities`() {
+        val eng = freshEngine()
+        // Projectile travels straight down at 200 px/sec toward a target 900 px away —
+        // far enough that the self-destruct (`dist < speed * deltaTime`) won't trigger
+        // even at full speed, so movement on this tick is exactly `speed * deltaTime`.
+        val proj = ProjectileEntity(
+            startX = 100f, startY = 100f,
+            targetX = 100f, targetY = 1000f,
+            speed = 200f,
+        )
+        eng.addEntity(proj)
+        setChronoActive(eng, true)
+
+        val yBefore = proj.y
+        eng.update(1f)
+        val movement = proj.y - yBefore
+
+        // Chrono must NOT slow projectiles — 200 px/sec × 1 sec ≈ 200 px movement.
+        // If the gate accidentally caught ProjectileEntity, movement would be ~20 px.
+        assertEquals(
+            200f,
+            movement,
+            5f,
+            "Chrono active must not slow projectiles; got movement=$movement (expected ~200)",
+        )
+    }
+
     // ---- Helpers: reach into private state via reflection ----
 
     /** Reads the engine's `ziggurat` and returns a snapshot of its live stats reference. */
@@ -224,5 +295,47 @@ class GameEngineTest {
             .getDeclaredMethod("tickRecoveryPackages", Float::class.javaPrimitiveType)
             .apply { isAccessible = true }
         method.invoke(eng, deltaTime)
+    }
+
+    /** Reflectively flips the engine's private `chronoActive` flag without going through
+     *  the full UW activation path (which would queue cooldowns + visual effects + sounds). */
+    private fun setChronoActive(eng: GameEngine, active: Boolean) {
+        val field = GameEngine::class.java.getDeclaredField("chronoActive")
+            .apply { isAccessible = true }
+        field.setBoolean(eng, active)
+    }
+
+    /**
+     * Spawns a single low-aggression test enemy 1000 px below the ziggurat with huge HP and
+     * speed 100 px/sec, ticks the engine once with `deltaTime = 1f`, and returns the
+     * upward displacement (positive = moved toward the ziggurat). The enemy is positioned
+     * far enough away that ziggurat projectiles (queued in `pendingAdd` this tick, not yet
+     * active) cannot reach it, and the huge HP makes incidental damage from any wave-spawner
+     * spawns a non-issue. Used by the RO-09 #1 chrono tests to compare chrono-active vs
+     * chrono-inactive movement deterministically.
+     */
+    private fun simulateEnemyMovement(activateChrono: Boolean): Float {
+        val eng = freshEngine()
+        val zig = eng.ziggurat!!
+        val enemy = EnemyEntity(
+            enemyType = EnemyType.BASIC,
+            currentHp = 1_000_000.0,
+            maxHp = 1_000_000.0,
+            speed = 100f,
+            damage = 0.0,
+            targetX = zig.originX,
+            targetY = zig.originY,
+            onDeath = { },
+        ).apply {
+            x = zig.originX
+            y = zig.originY + 1000f
+            initDistance()
+        }
+        eng.addEntity(enemy)
+        if (activateChrono) setChronoActive(eng, true)
+        val yBefore = enemy.y
+        eng.update(1f)
+        // Movement is upward (toward ziggurat at smaller y) → positive return.
+        return yBefore - enemy.y
     }
 }
