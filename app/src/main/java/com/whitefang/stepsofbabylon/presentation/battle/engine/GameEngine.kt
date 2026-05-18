@@ -184,7 +184,7 @@ class GameEngine {
         triggerWaveAnnouncement(1)
     }
 
-    fun setStats(resolvedStats: ResolvedStats) { stats = resolvedStats }
+    fun setStats(resolvedStats: ResolvedStats) { applyStats(resolvedStats) }
 
     fun activateOverdrive(type: OverdriveType, baseStats: ResolvedStats) {
         activeOverdrive = type
@@ -192,11 +192,11 @@ class GameEngine {
         preOverdriveStats = baseStats
         when (type) {
             OverdriveType.ASSAULT -> {
-                stats = stats.copy(damage = stats.damage * 1.5, attackSpeed = stats.attackSpeed * 2.0)
+                applyStats(stats.copy(damage = stats.damage * 1.5, attackSpeed = stats.attackSpeed * 2.0))
                 ziggurat?.let { it.overdriveColor = 0xFFE53935.toInt() }
             }
             OverdriveType.FORTRESS -> {
-                stats = stats.copy(healthRegen = stats.healthRegen * 2.0, defensePercent = min(stats.defensePercent + 0.50, 0.75))
+                applyStats(stats.copy(healthRegen = stats.healthRegen * 2.0, defensePercent = min(stats.defensePercent + 0.50, 0.75)))
                 ziggurat?.let { it.overdriveColor = 0xFF2196F3.toInt() }
             }
             OverdriveType.FORTUNE -> {
@@ -218,7 +218,7 @@ class GameEngine {
     }
 
     private fun expireOverdrive() {
-        preOverdriveStats?.let { stats = it }
+        preOverdriveStats?.let { applyStats(it) }
         preOverdriveStats = null
         fortuneMultiplier = 1.0
         activeOverdrive = null
@@ -227,14 +227,36 @@ class GameEngine {
         overdriveAuraEffect = null
     }
 
-    fun updateZigguratStats(newStats: ResolvedStats) {
-        val oldOrbCount = stats.orbCount
+    fun updateZigguratStats(newStats: ResolvedStats) { applyStats(newStats) }
+
+    /**
+     * Single mutation point for [stats]. Replaces any direct `stats = …` assignment so
+     * the same write is mirrored onto the [ZigguratEntity] (`zig.updateStats`) and the
+     * derived per-frame state (orb spawn, max-HP rebalance) stays in lock-step (RO-08).
+     *
+     * Pre-RO-08 the engine kept its own `stats` field and the ziggurat held a separate
+     * reference captured at construction; Overdrive ASSAULT's 2× attack speed and FORTRESS's
+     * 2× health regen were silently dropped because the entity's reference never updated.
+     * Centralising the mutation here is the cheapest possible fix and keeps every future
+     * stat-modifying mechanic correctly propagated by default.
+     *
+     * Side effects:
+     * - Updates engine `stats` to [newStats].
+     * - Pushes `newStats` onto the ziggurat entity so per-tick reads see the new values.
+     * - Rebalances `zig.currentHp` proportionally if `maxHealth` changed (preserves HP %).
+     * - Re-spawns orbs if `orbCount` changed (entity-level reconciliation).
+     */
+    private fun applyStats(newStats: ResolvedStats) {
+        val oldStats = stats
         stats = newStats
         val zig = ziggurat ?: return
-        val hpRatio = if (zig.maxHp > 0) zig.currentHp / zig.maxHp else 1.0
-        zig.maxHp = newStats.maxHealth
-        zig.currentHp = newStats.maxHealth * hpRatio
-        if (newStats.orbCount != oldOrbCount) {
+        zig.updateStats(newStats)
+        if (newStats.maxHealth != oldStats.maxHealth) {
+            val hpRatio = if (zig.maxHp > 0) zig.currentHp / zig.maxHp else 1.0
+            zig.maxHp = newStats.maxHealth
+            zig.currentHp = newStats.maxHealth * hpRatio
+        }
+        if (newStats.orbCount != oldStats.orbCount) {
             entities.removeAll { it is OrbEntity }
             spawnOrbs()
         }
@@ -371,7 +393,7 @@ class GameEngine {
             UltimateWeaponType.GOLDEN_ZIGGURAT -> {
                 goldenZigActive = true; preGoldenStats = stats
                 fortuneMultiplier = fortuneMultiplier.coerceAtLeast(5.0)
-                stats = stats.copy(damage = stats.damage * 1.5)
+                applyStats(stats.copy(damage = stats.damage * 1.5))
                 zig.overdriveColor = 0xFFFFD700.toInt(); zig.overdriveProgress = 1f
             }
         }
@@ -388,7 +410,7 @@ class GameEngine {
                     when (uw.type) {
                         UltimateWeaponType.CHRONO_FIELD -> chronoActive = false
                         UltimateWeaponType.GOLDEN_ZIGGURAT -> {
-                            goldenZigActive = false; preGoldenStats?.let { stats = it }; preGoldenStats = null
+                            goldenZigActive = false; preGoldenStats?.let { applyStats(it) }; preGoldenStats = null
                             if (activeOverdrive == null) fortuneMultiplier = 1.0
                             if (activeOverdrive == null) { zig.overdriveColor = 0; zig.overdriveProgress = 0f }
                         }

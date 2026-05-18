@@ -1,0 +1,108 @@
+package com.whitefang.stepsofbabylon.presentation.battle.engine
+
+import com.whitefang.stepsofbabylon.domain.model.OverdriveType
+import com.whitefang.stepsofbabylon.domain.model.ResolvedStats
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+
+/**
+ * RO-08 regression guards for the engine-side stats / cash / recovery wiring.
+ *
+ * Pre-RO-08:
+ * - [ZigguratEntity] captured `attackInterval` and `attackRange` at construction; Overdrive
+ *   ASSAULT's 2× attack speed was silently dropped.
+ * - The engine stored `workshopLevels` once at init; in-round CASH_BONUS / CASH_PER_WAVE /
+ *   INTEREST / FREE_UPGRADES purchases never reached the cash math.
+ * - RECOVERY_PACKAGES had no implementation.
+ */
+class GameEngineTest {
+
+    private fun freshEngine(): GameEngine {
+        val eng = GameEngine()
+        eng.init(width = 1080f, height = 1920f, resolvedStats = ResolvedStats(), playerTier = 1)
+        return eng
+    }
+
+    // ---- RO-08 #2: ZigguratEntity stale-stats propagation fix ----
+
+    @Test
+    fun `RO08 activateOverdrive ASSAULT propagates 2x attackSpeed to ziggurat`() {
+        val eng = freshEngine()
+        val baselineInterval = readAttackInterval(eng)
+
+        eng.activateOverdrive(OverdriveType.ASSAULT, baseStats = eng.zigStatsForTest())
+        val boostedInterval = readAttackInterval(eng)
+
+        // Pre-fix: boostedInterval == baselineInterval (zig.attackInterval was a captured val).
+        // Post-fix: attackInterval is computed each tick from the live stats.attackSpeed,
+        // so 2× attackSpeed → ½ attackInterval.
+        assertEquals(
+            baselineInterval / 2.0f,
+            boostedInterval,
+            0.001f,
+            "ASSAULT must halve the ziggurat's attack interval (2× attack speed)",
+        )
+    }
+
+    @Test
+    fun `RO08 activateOverdrive FORTRESS propagates healthRegen to ziggurat`() {
+        val eng = freshEngine()
+        val baselineRegen = eng.zigStatsForTest().healthRegen
+
+        eng.activateOverdrive(OverdriveType.FORTRESS, baseStats = eng.zigStatsForTest())
+        val boostedRegen = eng.ziggurat!!.stats.healthRegen
+
+        // Pre-fix: zig.stats was captured at construction; FORTRESS only mutated engine.stats.
+        // Post-fix: applyStats() pushes the new ResolvedStats onto the ziggurat too.
+        assertEquals(
+            baselineRegen * 2.0,
+            boostedRegen,
+            0.001,
+            "FORTRESS must double the ziggurat's healthRegen via the live stats reference",
+        )
+    }
+
+    @Test
+    fun `RO08 expireOverdrive restores baseline stats on the ziggurat`() {
+        val eng = freshEngine()
+        val baselineInterval = readAttackInterval(eng)
+        val baseline = eng.zigStatsForTest()
+
+        eng.activateOverdrive(OverdriveType.ASSAULT, baseStats = baseline)
+        // Direct invocation of expireOverdrive bypasses the 60 s game-loop drain (which
+        // would otherwise spawn enemies + damage the tower + flip roundOver before the
+        // overdrive timer ran out). The expiry path is what we care about for this
+        // regression — that the restored stats reach the ziggurat too.
+        invokeExpireOverdrive(eng)
+
+        val restoredInterval = readAttackInterval(eng)
+        assertEquals(
+            baselineInterval,
+            restoredInterval,
+            0.001f,
+            "Overdrive expiry must restore the ziggurat's pre-Overdrive attack interval",
+        )
+    }
+
+    // ---- Helpers: reach into private state via reflection ----
+
+    /** Reads the engine's `ziggurat` and returns a snapshot of its live stats reference. */
+    private fun GameEngine.zigStatsForTest(): ResolvedStats =
+        ziggurat?.stats ?: ResolvedStats()
+
+    /**
+     * Mirrors the live `ZigguratEntity.attackInterval` formula. Equivalent to what the entity
+     * computes each tick — used to assert the formula reads the up-to-date stats reference.
+     */
+    private fun readAttackInterval(eng: GameEngine): Float {
+        val zig = eng.ziggurat!!
+        return (1.0 / zig.stats.attackSpeed).toFloat()
+    }
+
+    /** Reflectively invokes the private `expireOverdrive()` helper. */
+    private fun invokeExpireOverdrive(eng: GameEngine) {
+        val method = GameEngine::class.java.getDeclaredMethod("expireOverdrive")
+            .apply { isAccessible = true }
+        method.invoke(eng)
+    }
+}

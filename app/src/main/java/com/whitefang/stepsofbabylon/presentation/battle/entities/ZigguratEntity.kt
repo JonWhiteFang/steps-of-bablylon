@@ -9,20 +9,44 @@ import kotlin.math.min
 class ZigguratEntity(
     private val screenWidth: Float,
     private val screenHeight: Float,
-    val stats: ResolvedStats,
+    initialStats: ResolvedStats,
     private val findNearestEnemies: (Int) -> List<EnemyEntity>,
     layerColors: List<Int> = DEFAULT_COLORS,
     private val onFireProjectile: (startX: Float, startY: Float, targetX: Float, targetY: Float) -> Unit,
 ) : Entity() {
 
+    /**
+     * Live combat stats. Mutable so the engine can propagate Overdrive / in-round upgrade /
+     * UW changes mid-round (RO-08). Pre-RO-08 this was a `val` captured at construction,
+     * which silently dropped Overdrive ASSAULT's 2× attack speed, FORTRESS's 2× health
+     * regen, and any in-round ATTACK_SPEED purchase. Updated via [updateStats], called by
+     * `GameEngine.applyStats`.
+     */
+    var stats: ResolvedStats = initialStats
+        private set
+
     var currentHp: Double = stats.maxHealth
     var maxHp: Double = stats.maxHealth
-    val attackRange: Float = stats.range
+
+    /**
+     * Computed property — reads the current `stats.range` so in-round RANGE upgrades and
+     * future range-affecting effects propagate without the engine having to poke a cached
+     * field. Pre-RO-08 this was `val attackRange = stats.range` (frozen at construction).
+     */
+    val attackRange: Float get() = stats.range
     var overdriveColor: Int = 0
     var overdriveProgress: Float = 0f
 
     private var attackCooldown: Float = 0f
-    private val attackInterval: Float = (1.0 / stats.attackSpeed).toFloat()
+
+    /**
+     * Computed each shot from the current `stats.attackSpeed`. Pre-RO-08 this was a captured
+     * `val` so attack-speed updates (Overdrive ASSAULT, in-round ATTACK_SPEED purchases) were
+     * silently dropped — the cooldown reset in `update` always used the construction-time
+     * value. Recomputing per-tick is cheap (one float divide) and matches how every other
+     * stat (damage, defense, knockback, lifesteal, …) is read live from `stats`.
+     */
+    private val attackInterval: Float get() = (1.0 / stats.attackSpeed).toFloat()
 
     private val layerCount = 5
     private val totalHeight: Float = screenHeight * 0.25f
@@ -44,6 +68,16 @@ class ZigguratEntity(
     val originX: Float get() = x
     val originY: Float get() = y - totalHeight
     val centerY: Float get() = y - totalHeight / 2f
+
+    /**
+     * Replaces the live stats reference. Called by `GameEngine.applyStats` whenever any
+     * Overdrive, in-round upgrade, or Ultimate Weapon mutates the engine's resolved stats
+     * (RO-08). The engine separately reconciles `maxHp` / `currentHp` / orb count to keep
+     * those side effects centralised; this entry point exists purely to redirect every
+     * subsequent stat read on the entity (attack speed, range, health regen, multishot
+     * targets, knockback, lifesteal, …) at the new instance.
+     */
+    fun updateStats(newStats: ResolvedStats) { stats = newStats }
 
     override fun update(deltaTime: Float) {
         currentHp = min(currentHp + stats.healthRegen * deltaTime, maxHp)
