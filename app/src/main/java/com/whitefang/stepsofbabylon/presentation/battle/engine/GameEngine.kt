@@ -244,7 +244,10 @@ class GameEngine {
                 ziggurat?.let { it.overdriveColor = 0xFF2196F3.toInt() }
             }
             OverdriveType.FORTUNE -> {
-                fortuneMultiplier = 3.0
+                // RO-09 #2: coerceAtLeast(3.0) preserves a higher GOLDEN_ZIGGURAT (5.0×)
+                // multiplier when FORTUNE is activated *during* GOLDEN. Pre-fix this branch
+                // unconditionally wrote 3.0, downgrading the player's active 5.0× buff.
+                fortuneMultiplier = fortuneMultiplier.coerceAtLeast(3.0)
                 ziggurat?.let { it.overdriveColor = 0xFFFFD700.toInt() }
             }
             OverdriveType.SURGE -> {
@@ -264,7 +267,11 @@ class GameEngine {
     private fun expireOverdrive() {
         preOverdriveStats?.let { applyStats(it) }
         preOverdriveStats = null
-        fortuneMultiplier = 1.0
+        // RO-09 #2: don't clobber GOLDEN_ZIGGURAT's 5.0× multiplier when an unrelated
+        // overdrive (ASSAULT / FORTRESS / SURGE) expires while GOLDEN is still running.
+        // Pre-fix this was unconditionally `1.0`, which silently downgraded the player's
+        // active 5.0× buff for the remainder of GOLDEN's effect window.
+        fortuneMultiplier = if (goldenZigActive) 5.0 else 1.0
         activeOverdrive = null
         overdriveTimeRemaining = 0f
         ziggurat?.let { it.overdriveColor = 0; it.overdriveProgress = 0f }
@@ -464,7 +471,13 @@ class GameEngine {
                         UltimateWeaponType.CHRONO_FIELD -> chronoActive = false
                         UltimateWeaponType.GOLDEN_ZIGGURAT -> {
                             goldenZigActive = false; preGoldenStats?.let { applyStats(it) }; preGoldenStats = null
-                            if (activeOverdrive == null) fortuneMultiplier = 1.0
+                            // RO-09 #2: condition on `activeOverdrive == FORTUNE` (not just
+                            // `!= null`). Pre-fix the if-null check kept fortuneMultiplier at
+                            // 5.0× across ASSAULT / FORTRESS / SURGE expiries — a leaked buff
+                            // that persisted up to ~50 s after GOLDEN expired. FORTUNE is the
+                            // only overdrive that owns a fortuneMultiplier value (3.0×); for
+                            // every other overdrive, GOLDEN's expiry must reset to 1.0.
+                            fortuneMultiplier = if (activeOverdrive == OverdriveType.FORTUNE) 3.0 else 1.0
                             if (activeOverdrive == null) { zig.overdriveColor = 0; zig.overdriveProgress = 0f }
                         }
                         else -> {}
