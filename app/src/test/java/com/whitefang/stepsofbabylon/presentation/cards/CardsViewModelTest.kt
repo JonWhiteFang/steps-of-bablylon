@@ -141,6 +141,11 @@ class CardsViewModelTest {
             "day-stamp must remain empty on Cancelled",
         )
         assertNull(vm.uiState.value.lastPackResult, "no pack result on Cancelled")
+        assertEquals(
+            "Ad cancelled. Try again.",
+            vm.uiState.value.userMessage,
+            "user-visible snackbar message on Cancelled (PR A: ad-error UX)",
+        )
     }
 
     @Test
@@ -159,5 +164,27 @@ class CardsViewModelTest {
             "day-stamp must remain empty on Error",
         )
         assertNull(vm.uiState.value.lastPackResult, "no pack result on Error")
+        assertEquals(
+            "load failed",
+            vm.uiState.value.userMessage,
+            "AdResult.Error.message surfaces verbatim when non-blank (PR A: ad-error UX)",
+        )
+    }
+
+    @Test
+    fun `watchFreePackAd Error with blank message falls back to a generic snackbar`() = runTest(dispatcher) {
+        adManager.nextResult = com.whitefang.stepsofbabylon.domain.model.AdResult.Error("")
+        val vm = createVm()
+        backgroundScope.launch { vm.uiState.collect {} }
+        advanceUntilIdle()
+
+        vm.watchFreePackAd()
+        advanceUntilIdle()
+
+        assertEquals(
+            "Ad failed to load. Try again later.",
+            vm.uiState.value.userMessage,
+            "blank Error.message must not surface as an empty snackbar (PR A: ad-error UX)",
+        )
     }
 }

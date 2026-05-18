@@ -49,4 +49,12 @@ data class BattleUiState(
     val showOverdriveMenu: Boolean = false,
     val uwSlots: List<UWSlotInfo> = emptyList(),
     val adRemoved: Boolean = false,
+    /**
+     * Snackbar message surfaced by ad-related actions (`watchGemAd`, `watchPsAd`).
+     * Set on `AdResult.Cancelled` and `AdResult.Error`; cleared by
+     * [com.whitefang.stepsofbabylon.presentation.battle.BattleViewModel.clearMessage]
+     * after the snackbar shows. Mirrors the `userMessage` pattern used by
+     * `MissionsViewModel` / `CardsViewModel` / `WorkshopViewModel` / `LabsViewModel`.
+     */
+    val userMessage: String? = null,
 )

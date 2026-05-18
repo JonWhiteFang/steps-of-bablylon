@@ -154,6 +154,112 @@ class BattleViewModelTest {
         assertEquals(initialGems + 1, playerRepo.profile.value.gems)
     }
 
+    // -------- PR A: ad-error UX (snackbar wiring on Cancelled / Error) --------
+
+    @Test
+    fun `watchGemAd Cancelled surfaces snackbar message and does not credit gem`() = runTest(dispatcher) {
+        adManager.nextResult = AdResult.Cancelled
+        val vm = createVm()
+        backgroundScope.launch { vm.uiState.collect {} }
+        advanceUntilIdle()
+        val initialGems = playerRepo.profile.value.gems
+
+        vm.watchGemAd()
+        advanceUntilIdle()
+
+        assertEquals(initialGems, playerRepo.profile.value.gems, "no credit on Cancelled")
+        assertEquals(
+            "Ad cancelled. Try again.",
+            vm.uiState.value.userMessage,
+            "user-visible snackbar message on Cancelled (PR A: ad-error UX)",
+        )
+    }
+
+    @Test
+    fun `watchGemAd Error surfaces the adapter message verbatim and does not credit gem`() = runTest(dispatcher) {
+        adManager.nextResult = AdResult.Error("No ad available")
+        val vm = createVm()
+        backgroundScope.launch { vm.uiState.collect {} }
+        advanceUntilIdle()
+        val initialGems = playerRepo.profile.value.gems
+
+        vm.watchGemAd()
+        advanceUntilIdle()
+
+        assertEquals(initialGems, playerRepo.profile.value.gems, "no credit on Error")
+        assertEquals(
+            "No ad available",
+            vm.uiState.value.userMessage,
+            "AdResult.Error.message surfaces verbatim when non-blank (PR A: ad-error UX)",
+        )
+    }
+
+    @Test
+    fun `watchPsAd Cancelled surfaces snackbar message and does not credit power stones`() = runTest(dispatcher) {
+        // Need a roundEndState for watchPsAd to enter its body. Use the existing endRound
+        // plumbing to land one with powerStonesAwarded == 0 (no actual reward to skip on the
+        // Cancelled branch — the snackbar should still appear).
+        val vm = createVm()
+        backgroundScope.launch { vm.uiState.collect {} }
+        advanceUntilIdle()
+        installEngineForEndRound(vm)
+        vm.quitRound()
+        advanceUntilIdle()
+
+        adManager.nextResult = AdResult.Cancelled
+        val initialPs = playerRepo.profile.value.powerStones
+
+        vm.watchPsAd()
+        advanceUntilIdle()
+
+        assertEquals(initialPs, playerRepo.profile.value.powerStones, "no credit on Cancelled")
+        assertEquals(
+            "Ad cancelled. Try again.",
+            vm.uiState.value.userMessage,
+            "user-visible snackbar message on Cancelled (PR A: ad-error UX)",
+        )
+    }
+
+    @Test
+    fun `watchPsAd Error with blank message falls back to a generic snackbar`() = runTest(dispatcher) {
+        val vm = createVm()
+        backgroundScope.launch { vm.uiState.collect {} }
+        advanceUntilIdle()
+        installEngineForEndRound(vm)
+        vm.quitRound()
+        advanceUntilIdle()
+
+        adManager.nextResult = AdResult.Error("")
+        vm.watchPsAd()
+        advanceUntilIdle()
+
+        assertEquals(
+            "Ad failed to load. Try again later.",
+            vm.uiState.value.userMessage,
+            "blank Error.message must not surface as an empty snackbar (PR A: ad-error UX)",
+        )
+    }
+
+    @Test
+    fun `clearMessage nulls userMessage`() = runTest(dispatcher) {
+        adManager.nextResult = AdResult.Cancelled
+        val vm = createVm()
+        backgroundScope.launch { vm.uiState.collect {} }
+        advanceUntilIdle()
+
+        vm.watchGemAd()
+        advanceUntilIdle()
+        assertNotNull(vm.uiState.value.userMessage)
+
+        vm.clearMessage()
+        advanceUntilIdle()
+
+        assertNull(
+            vm.uiState.value.userMessage,
+            "clearMessage must null the field so the snackbar shows once per event (PR A)",
+        )
+    }
+
     @Test
     fun `step balance shown in state`() = runTest(dispatcher) {
         val vm = createVm()

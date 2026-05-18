@@ -4,6 +4,19 @@ All notable changes to Steps of Babylon are documented here.
 
 ## [Unreleased]
 
+### PR A — Surface ad-error feedback as snackbar in Battle + Cards screens (2026-05-18)
+
+Pre-closed-testing UX polish. Three call sites (`CardsViewModel.watchFreePackAd`, `BattleViewModel.watchGemAd`, `BattleViewModel.watchPsAd`) previously swallowed `AdResult.Cancelled` and `AdResult.Error` silently, so a tester tapping "Watch ad for Gems" on a device that returned `NO_FILL` got no feedback at all. Now they get a clear snackbar message — mirrors the `userMessage: StateFlow<String?>` pattern already used by `MissionsViewModel` / `WorkshopViewModel` / `LabsViewModel` / `CardsViewModel.upgradeCard`.
+
+- **`CardsViewModel.watchFreePackAd`** — `if (result is AdResult.Rewarded)` opened up to a `when` over all three variants. `Cancelled` → "Ad cancelled. Try again."; `Error` → the adapter's `result.message` verbatim (or a generic fallback when blank, since `RewardAdManagerImpl` can return blank for some Mobile Ads SDK error codes).
+- **`BattleViewModel.watchGemAd` + `watchPsAd`** — same pattern. Added `userMessage: String?` field to `BattleUiState`, `clearMessage()` method to the VM. The `watchPsAd` Rewarded branch correctly keeps its `state.powerStonesAwarded > 0` guard inside the `Rewarded` arm so the user does not get the "reward credited" feedback for a 0-stones round.
+- **`BattleScreen`** wraps a `SnackbarHost` aligned to bottom-center, drawn last in the outer `Box` so it stacks on top of every other overlay (including `PostRoundOverlay`, where the watchGemAd / watchPsAd buttons live). `LaunchedEffect(state.userMessage)` calls `showSnackbar` then `viewModel.clearMessage()` so each event surfaces exactly once.
+- **6 new tests, +6 total — 524 → 530.**
+  - `CardsViewModelTest`: extended 2 existing `Cancelled` / `Error` cases to assert `userMessage` is set; added 1 new test for the blank-message fallback (`AdResult.Error("")` → "Ad failed to load. Try again later.").
+  - `BattleViewModelTest`: 5 new tests — `watchGemAd Cancelled` + `watchGemAd Error`, `watchPsAd Cancelled` (uses `installEngineForEndRound + quitRound` to set up a `roundEndState`) + `watchPsAd Error` (blank-message fallback), and `clearMessage nulls userMessage`.
+
+No behaviour change on the happy `Rewarded` paths. No new dependencies. No DB schema change.
+
 ### C.5 PR 3 — Delete `StubBillingManager`, collapse `BillingModule` to `@Binds BillingManagerImpl` (2026-05-18)
 
 Mechanical follow-up to the Phase G internal-track on-device smoke-test PASS earlier the same day. With real Play Billing v8 verified end-to-end on a real device, the second `BillingManager` implementation has no remaining purpose.

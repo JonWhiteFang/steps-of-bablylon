@@ -14,6 +14,8 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -53,6 +55,14 @@ fun BattleScreen(
     val surfaceView = remember { GameSurfaceView(context) }
     val lifecycleOwner = LocalLifecycleOwner.current
     val roundActive = state.roundEndState == null
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Surface watchGemAd / watchPsAd ad-failure messages as a snackbar so testers see
+    // why nothing happened when they tap "Watch ad" and AdMob returns NO_FILL or the
+    // user dismisses the ad. Mirrors CardsScreen + LabsScreen + WorkshopScreen.
+    LaunchedEffect(state.userMessage) {
+        state.userMessage?.let { snackbarHostState.showSnackbar(it); viewModel.clearMessage() }
+    }
 
     LaunchedEffect(surfaceView) { viewModel.startPollingEngine(surfaceView.engine, surfaceView) }
     LaunchedEffect(state.speedMultiplier) { surfaceView.setSpeedMultiplier(state.speedMultiplier) }
@@ -168,5 +178,12 @@ fun BattleScreen(
 
         state.roundEndState?.let { PostRoundOverlay(state = it, onPlayAgain = { viewModel.playAgain() }, onExitBattle = onExitBattle, onWatchGemAd = { viewModel.watchGemAd() }, onWatchPsAd = { viewModel.watchPsAd() }) }
         state.biomeTransition?.let { BiomeTransitionOverlay(info = it, onContinue = { viewModel.dismissBiomeTransition() }) }
+
+        // Snackbar last — stacks on top of every overlay, including PostRoundOverlay
+        // where the ad-failure messages originate.
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
+        )
     }
 }

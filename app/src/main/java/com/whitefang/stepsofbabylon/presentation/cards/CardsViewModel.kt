@@ -131,10 +131,15 @@ class CardsViewModel @Inject constructor(
             _processing.value = true
             try {
                 val result = rewardAdManager.showRewardAd(AdPlacement.DAILY_FREE_CARD_PACK)
-                if (result is AdResult.Rewarded) {
-                    val packResult = openCardPack(PackTier.COMMON, uiState.value.gems, allCards, isFree = true)
-                    if (packResult is OpenCardPack.Result.Opened) _lastPackResult.value = packResult.cards
-                    playerRepository.updateFreeCardPackAdUsed(LocalDate.now().toString())
+                when (result) {
+                    is AdResult.Rewarded -> {
+                        val packResult = openCardPack(PackTier.COMMON, uiState.value.gems, allCards, isFree = true)
+                        if (packResult is OpenCardPack.Result.Opened) _lastPackResult.value = packResult.cards
+                        playerRepository.updateFreeCardPackAdUsed(LocalDate.now().toString())
+                    }
+                    is AdResult.Cancelled -> _userMessage.value = "Ad cancelled. Try again."
+                    is AdResult.Error ->
+                        _userMessage.value = result.message.ifBlank { "Ad failed to load. Try again later." }
                 }
             } finally {
                 _processing.value = false

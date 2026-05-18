@@ -442,9 +442,17 @@ class BattleViewModel @Inject constructor(
         if (_uiState.value.roundEndState?.gemAdWatched == true) return
         viewModelScope.launch {
             val result = rewardAdManager.showRewardAd(AdPlacement.POST_ROUND_GEM)
-            if (result is AdResult.Rewarded) {
-                playerRepository.addGems(1)
-                _uiState.update { it.copy(roundEndState = it.roundEndState?.copy(gemAdWatched = true)) }
+            when (result) {
+                is AdResult.Rewarded -> {
+                    playerRepository.addGems(1)
+                    _uiState.update { it.copy(roundEndState = it.roundEndState?.copy(gemAdWatched = true)) }
+                }
+                is AdResult.Cancelled ->
+                    _uiState.update { it.copy(userMessage = "Ad cancelled. Try again.") }
+                is AdResult.Error -> {
+                    val msg = result.message.ifBlank { "Ad failed to load. Try again later." }
+                    _uiState.update { it.copy(userMessage = msg) }
+                }
             }
         }
     }
@@ -454,12 +462,25 @@ class BattleViewModel @Inject constructor(
         viewModelScope.launch {
             val state = _uiState.value.roundEndState ?: return@launch
             val result = rewardAdManager.showRewardAd(AdPlacement.POST_ROUND_DOUBLE_PS)
-            if (result is AdResult.Rewarded && state.powerStonesAwarded > 0) {
-                playerRepository.addPowerStones(state.powerStonesAwarded.toLong())
-                _uiState.update { it.copy(roundEndState = it.roundEndState?.copy(psAdWatched = true)) }
+            when (result) {
+                is AdResult.Rewarded -> {
+                    if (state.powerStonesAwarded > 0) {
+                        playerRepository.addPowerStones(state.powerStonesAwarded.toLong())
+                        _uiState.update { it.copy(roundEndState = it.roundEndState?.copy(psAdWatched = true)) }
+                    }
+                }
+                is AdResult.Cancelled ->
+                    _uiState.update { it.copy(userMessage = "Ad cancelled. Try again.") }
+                is AdResult.Error -> {
+                    val msg = result.message.ifBlank { "Ad failed to load. Try again later." }
+                    _uiState.update { it.copy(userMessage = msg) }
+                }
             }
         }
     }
+
+    /** Clear the snackbar message after it has been shown. */
+    fun clearMessage() { _uiState.update { it.copy(userMessage = null) } }
     fun setSpeed(multiplier: Float) { _uiState.update { it.copy(speedMultiplier = multiplier) } }
     fun togglePause() { _uiState.update { it.copy(isPaused = !it.isPaused) } }
     fun pause() { _uiState.update { it.copy(isPaused = true) } }
