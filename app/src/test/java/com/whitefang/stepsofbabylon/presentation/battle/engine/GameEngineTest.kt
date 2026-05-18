@@ -115,6 +115,58 @@ class GameEngineTest {
         )
     }
 
+    // ---- RO-11 #A.2: lab research multipliers reach the engine ----
+    // The CASH_RESEARCH and UW_COOLDOWN enums were dead pre-RO-11. BattleViewModel now reads
+    // their levels from LabRepository and pushes per-round multipliers onto the engine; these
+    // tests guard the engine-side application points are wired correctly.
+
+    @Test
+    fun `RO11 cashResearchMultiplier scales kill cash`() {
+        val eng = freshEngine()
+        // Spawn a basic enemy and kill it twice via the private handleEnemyDeath helper:
+        // once at the default 1.0× multiplier (baseline) and once at 2.0× (max-research-level
+        // simulation). Cash deltas are deterministic because TierConfig.tier(1).cashMultiplier
+        // and EnemyScaler.cashReward(BASIC) are constants and no FORTUNE/GOLDEN buff is active.
+        val cashBaseline = simulateBasicKillCash(eng)
+
+        // Reset engine, push the +100 % multiplier, kill the same enemy.
+        val eng2 = freshEngine()
+        eng2.cashResearchMultiplier = 2.0
+        val cashBoosted = simulateBasicKillCash(eng2)
+
+        // 2.0× multiplier doubles the cash. Allow ±1 long for any flooring rounding.
+        org.junit.jupiter.api.Assertions.assertTrue(
+            cashBoosted >= cashBaseline * 2 - 1L,
+            "cashResearchMultiplier 2.0× must approximately double kill cash " +
+                "(baseline=$cashBaseline, boosted=$cashBoosted)",
+        )
+    }
+
+    @Test
+    fun `RO11 uwCooldownMultiplier shortens the active cooldown on activation`() {
+        // Equip a single CHAIN_LIGHTNING UW (75 PS unlock; 30 s baseline cooldown at L1).
+        // Activate at default 1f multiplier and read the cooldown; reset; activate at 0.55f
+        // (max-research-level simulation: 1 - 15 × 0.03 = 0.55) and read again. Should be
+        // ~55 % of baseline.
+        val eng1 = freshEngine()
+        eng1.initUWs(listOf(OwnedWeapon(UltimateWeaponType.CHAIN_LIGHTNING, 1, isEquipped = true)))
+        eng1.activateUW(0)
+        val cooldownBaseline = eng1.uwStates[0].cooldownRemaining
+
+        val eng2 = freshEngine()
+        eng2.uwCooldownMultiplier = 0.55f
+        eng2.initUWs(listOf(OwnedWeapon(UltimateWeaponType.CHAIN_LIGHTNING, 1, isEquipped = true)))
+        eng2.activateUW(0)
+        val cooldownBoosted = eng2.uwStates[0].cooldownRemaining
+
+        assertEquals(
+            cooldownBaseline * 0.55f,
+            cooldownBoosted,
+            0.01f,
+            "uwCooldownMultiplier 0.55× must shorten activated cooldown to 55 % of baseline",
+        )
+    }
+
     // ---- RO-08 #1b: RECOVERY_PACKAGES periodic heal ----
 
     @Test
@@ -470,5 +522,33 @@ class GameEngineTest {
             .getDeclaredMethod("updateUWs", Float::class.javaPrimitiveType)
             .apply { isAccessible = true }
         method.invoke(eng, deltaTime)
+    }
+
+    /**
+     * Reflectively invokes the private `handleEnemyDeath(EnemyEntity)` helper on a freshly
+     * constructed BASIC enemy and returns the resulting kill-cash delta. Used by the RO-11
+     * cash-research test to assert the engine-side multiplier is applied without going
+     * through the full collision system. Engine-tier defaults to 1 (`freshEngine()`), and
+     * no FORTUNE/GOLDEN/CASH_BONUS_GAIN buff is active so the only multiplier in the
+     * formula that varies is the one under test.
+     */
+    private fun simulateBasicKillCash(eng: GameEngine): Long {
+        val zig = eng.ziggurat!!
+        val enemy = EnemyEntity(
+            enemyType = EnemyType.BASIC,
+            currentHp = 1.0,
+            maxHp = 1.0,
+            speed = 0f,
+            damage = 0.0,
+            targetX = zig.originX,
+            targetY = zig.originY,
+            onDeath = { },
+        ).apply { x = zig.originX; y = zig.originY + 200f }
+        val cashBefore = eng.cash
+        val method = GameEngine::class.java
+            .getDeclaredMethod("handleEnemyDeath", EnemyEntity::class.java)
+            .apply { isAccessible = true }
+        method.invoke(eng, enemy)
+        return eng.cash - cashBefore
     }
 }

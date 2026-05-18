@@ -87,6 +87,29 @@ class GameEngine {
     @Volatile var secondWindHpPercent: Double = 0.0
     @Volatile var secondWindUsed: Boolean = false
     @Volatile var cashBonusPercent: Double = 0.0
+
+    /**
+     * CASH_RESEARCH lab multiplier (RO-11 #A.2). Applied to every kill-cash and wave-end-cash
+     * computation as the outermost multiplier. Default `1.0` means "no CASH_RESEARCH".
+     * Computed by [com.whitefang.stepsofbabylon.presentation.battle.BattleViewModel] as
+     * `1.0 + level × 0.05` (max L20 → 2.0×) and pushed onto the engine in
+     * `init` and `playAgain`. Pre-RO-11 the CASH_RESEARCH enum was dead.
+     */
+    @Volatile var cashResearchMultiplier: Double = 1.0
+
+    /**
+     * UW_COOLDOWN lab multiplier (RO-11 #A.2). Applied at the [activateUW] cooldown-set
+     * site so the active cooldown reflects the player's research level. Default `1f` means
+     * "no UW_COOLDOWN research". Computed by [com.whitefang.stepsofbabylon.presentation.battle.BattleViewModel]
+     * as `(1f - level × 0.03f).coerceAtLeast(0.10f)` (max L15 → 0.55×; defensive floor at
+     * 0.10× future-proofs any future level cap extension). Pre-RO-11 the UW_COOLDOWN enum
+     * was dead.
+     *
+     * The UI's cooldown-ring fill in [com.whitefang.stepsofbabylon.presentation.battle.BattleUiState.UWSlotInfo]
+     * is recomputed from `cooldownAtLevel × uwCooldownMultiplier` so the visual progress
+     * stays in sync with the actual cooldown duration.
+     */
+    @Volatile var uwCooldownMultiplier: Float = 1f
     private var preOverdriveStats: ResolvedStats? = null
     private var fortuneMultiplier: Double = 1.0
 
@@ -412,7 +435,9 @@ class GameEngine {
     fun activateUW(index: Int) {
         val uw = uwStates.getOrNull(index) ?: return
         if (uw.cooldownRemaining > 0f) return
-        uw.cooldownRemaining = uw.type.cooldownAtLevel(uw.level)
+        // RO-11 #A.2: outer multiplier reduces every cooldown set on activation. Reset to
+        // 1f means "no UW_COOLDOWN research"; values below 1f shorten the cooldown.
+        uw.cooldownRemaining = uw.type.cooldownAtLevel(uw.level) * uwCooldownMultiplier
         val zig = ziggurat ?: return
         val duration = uw.type.effectDurationSeconds.toFloat()
         if (duration > 0f) uw.effectTimeRemaining = duration
@@ -620,7 +645,9 @@ class GameEngine {
     }
 
     private fun handleWaveComplete(wave: Int) {
-        val waveCash = ((BASE_CASH_PER_WAVE + wsLevel(UpgradeType.CASH_PER_WAVE) * FLAT_BONUS_PER_WAVE_LEVEL) * fortuneMultiplier).toLong()
+        // RO-11 #A.2: CASH_RESEARCH multiplies the wave-end cash payout.
+        val waveCash = ((BASE_CASH_PER_WAVE + wsLevel(UpgradeType.CASH_PER_WAVE) * FLAT_BONUS_PER_WAVE_LEVEL) *
+            fortuneMultiplier * cashResearchMultiplier).toLong()
         cash += waveCash
         totalCashEarned += waveCash
         val interestLevel = wsLevel(UpgradeType.INTEREST)
@@ -715,7 +742,11 @@ class GameEngine {
         val baseCash = EnemyScaler.cashReward(enemy.enemyType)
         val tierMult = TierConfig.forTier(tier).cashMultiplier
         val cashBonus = 1.0 + wsLevel(UpgradeType.CASH_BONUS) * 0.03
-        val killCash = (baseCash * tierMult * cashBonus * fortuneMultiplier * (1.0 + cashBonusPercent / 100.0)).toLong()
+        // RO-11 #A.2: CASH_RESEARCH multiplies the per-kill cash. Stacks multiplicatively
+        // with workshop CASH_BONUS, tier cash multiplier, FORTUNE/GOLDEN buffs, and the
+        // CASH_BONUS_GAIN card. Default 1.0× means "no CASH_RESEARCH research".
+        val killCash = (baseCash * tierMult * cashBonus * fortuneMultiplier *
+            (1.0 + cashBonusPercent / 100.0) * cashResearchMultiplier).toLong()
         cash += killCash
         totalCashEarned += killCash
         waveSpawner?.onEnemyKilled()

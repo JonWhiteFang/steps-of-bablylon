@@ -19,12 +19,14 @@ import com.whitefang.stepsofbabylon.data.BiomePreferences
 import com.whitefang.stepsofbabylon.domain.model.OwnedCard
 import com.whitefang.stepsofbabylon.domain.model.OwnedWeapon
 import com.whitefang.stepsofbabylon.domain.model.OverdriveType
+import com.whitefang.stepsofbabylon.domain.model.ResearchType
 import com.whitefang.stepsofbabylon.domain.model.ResolvedStats
 import com.whitefang.stepsofbabylon.domain.model.UpgradeType
 import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
 import com.whitefang.stepsofbabylon.domain.repository.RewardAdManager
 import com.whitefang.stepsofbabylon.domain.repository.CardRepository
 import com.whitefang.stepsofbabylon.domain.repository.CosmeticRepository
+import com.whitefang.stepsofbabylon.domain.repository.LabRepository
 import com.whitefang.stepsofbabylon.domain.repository.UltimateWeaponRepository
 import com.whitefang.stepsofbabylon.domain.repository.WorkshopRepository
 import com.whitefang.stepsofbabylon.domain.time.TimeProvider
@@ -63,6 +65,7 @@ class BattleViewModel @Inject constructor(
     private val uwRepository: UltimateWeaponRepository,
     private val cardRepository: CardRepository,
     private val cosmeticRepository: CosmeticRepository,
+    private val labRepository: LabRepository,
     private val dailyMissionDao: DailyMissionDao,
     private val dailyStepDao: DailyStepDao,
     private val playerProfileDao: PlayerProfileDao,
@@ -101,6 +104,16 @@ class BattleViewModel @Inject constructor(
 
     var resolvedStats: ResolvedStats = ResolvedStats(); private set
     var workshopLevels: Map<UpgradeType, Int> = emptyMap(); private set
+    /**
+     * Lab research level snapshot at round start (RO-11). Populated in [init] and
+     * [playAgain] from [LabRepository.observeAllResearch]; consumed by [resolveStats]
+     * (DAMAGE / HEALTH / CRITICAL / REGEN research → outer multiplier on `ResolvedStats`)
+     * and by [GameEngine] (CASH_RESEARCH → [GameEngine.cashResearchMultiplier]; UW_COOLDOWN
+     * → [GameEngine.uwCooldownMultiplier]). Lab research can't change mid-round (it takes
+     * real-world hours), so a snapshot at round start is sufficient — no need to refresh
+     * during [startPollingEngine].
+     */
+    var labLevels: Map<ResearchType, Int> = emptyMap(); private set
     private val inRoundLevels = mutableMapOf<UpgradeType, Int>()
     private var engine: GameEngine? = null
     private var surfaceView: GameSurfaceView? = null
@@ -123,9 +136,10 @@ class BattleViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             workshopLevels = workshopRepository.observeAllUpgrades().first()
+            labLevels = labRepository.observeAllResearch().first()
             val profile = playerRepository.observeProfile().first()
             tier = profile.currentTier
-            resolvedStats = resolveStats(workshopLevels)
+            resolvedStats = resolveStats(workshopLevels, emptyMap(), labLevels)
             equippedWeapons = uwRepository.observeEquippedWeapons().first()
 
             equippedCards = cardRepository.observeEquippedCards().first()
@@ -163,6 +177,11 @@ class BattleViewModel @Inject constructor(
         this.engine = engine; this.surfaceView = surfaceView
         engine.setStats(resolvedStats); engine.initUWs(equippedWeapons)
         engine.secondWindHpPercent = cardSecondWind; engine.cashBonusPercent = cardCashBonus
+        // RO-11 #A.2: push lab-research multipliers onto the engine. CASH_RESEARCH applies
+        // to every kill-cash + wave-end-cash; UW_COOLDOWN applies at the activateUW set
+        // site. Defaults of 1.0 / 1f when level is 0 preserve the pre-RO-11 behaviour.
+        engine.cashResearchMultiplier = cashResearchMultiplier()
+        engine.uwCooldownMultiplier = uwCooldownMultiplier()
         // RO-07 C.2 PR 1: propagate the cosmetic override map. May be empty if the VM init
         // launch hasn't completed yet; the init path re-pushes on completion so the subsequent
         // `engine.init()` (fired by the surfaceView when isLoading becomes false) reads the
@@ -183,7 +202,15 @@ class BattleViewModel @Inject constructor(
                         cash = eng.cash, enemyCount = spawner?.enemiesAlive ?: 0,
                         wavePhase = spawner?.phase?.name ?: "",
                         uwSlots = eng.uwStates.map { uw ->
-                            UWSlotInfo(uw.type.name, uw.cooldownRemaining, uw.type.cooldownAtLevel(uw.level), uw.cooldownRemaining <= 0f)
+                            // RO-11 #A.2: cooldownTotal mirrors the engine-side multiplier so the
+                            // ring-fill UI tracks the actual cooldown duration. `eng.uwCooldownMultiplier`
+                            // defaults to 1f when no UW_COOLDOWN research is owned.
+                            UWSlotInfo(
+                                uw.type.name,
+                                uw.cooldownRemaining,
+                                uw.type.cooldownAtLevel(uw.level) * eng.uwCooldownMultiplier,
+                                uw.cooldownRemaining <= 0f,
+                            )
                         },
                         activeOverdriveType = eng.activeOverdrive,
                         overdriveTimeRemaining = eng.overdriveTimeRemaining,
@@ -382,7 +409,7 @@ class BattleViewModel @Inject constructor(
 
     fun playAgain() {
         roundEnded = false; inRoundLevels.clear()
-        resolvedStats = resolveStats(workshopLevels)
+        resolvedStats = resolveStats(workshopLevels, emptyMap(), labLevels)
         val cardResult = applyCardEffects(resolvedStats, equippedCards)
         resolvedStats = cardResult.stats
         cardCashBonus = cardResult.cashBonusPercent
@@ -393,6 +420,11 @@ class BattleViewModel @Inject constructor(
         surfaceView?.configure(resolvedStats, tier, workshopLevels)
         engine?.initUWs(equippedWeapons)
         engine?.secondWindHpPercent = cardSecondWind; engine?.cashBonusPercent = cardCashBonus
+        // RO-11 #A.2: refresh lab-research multipliers on every replay. Lab levels are
+        // re-read from disk in [init] only; here we re-derive the engine-side multipliers
+        // from the current `labLevels` snapshot in case the engine was reset between rounds.
+        engine?.cashResearchMultiplier = cashResearchMultiplier()
+        engine?.uwCooldownMultiplier = uwCooldownMultiplier()
         val eng = engine ?: return; val sv = surfaceView ?: return
         startPollingEngine(eng, sv)
     }
@@ -467,6 +499,30 @@ class BattleViewModel @Inject constructor(
             combined[type] = (combined[type] ?: 0) + level
         }
         return combined
+    }
+
+    /**
+     * Computes the engine-side CASH_RESEARCH multiplier from the current [labLevels]
+     * snapshot (RO-11 #A.2). Each level grants +5 % cash on top of every other cash source
+     * (workshop CASH_BONUS, tier multiplier, FORTUNE/GOLDEN buffs, CASH_BONUS_GAIN card).
+     * Max research level is 20 → cap of 2.0×. Default 1.0× when level is 0 (no
+     * CASH_RESEARCH owned) preserves the pre-RO-11 behaviour.
+     */
+    private fun cashResearchMultiplier(): Double {
+        val level = labLevels[ResearchType.CASH_RESEARCH] ?: 0
+        return 1.0 + level * 0.05
+    }
+
+    /**
+     * Computes the engine-side UW_COOLDOWN multiplier from the current [labLevels] snapshot
+     * (RO-11 #A.2). Each level reduces UW cooldowns by 3 %; max research level is 15 →
+     * floor at 0.55× baseline. The defensive 0.10× hard floor protects against any future
+     * level cap extension producing zero/negative cooldowns. Default 1f when level is 0
+     * (no UW_COOLDOWN owned) preserves the pre-RO-11 behaviour.
+     */
+    private fun uwCooldownMultiplier(): Float {
+        val level = labLevels[ResearchType.UW_COOLDOWN] ?: 0
+        return (1f - level * 0.03f).coerceAtLeast(0.10f)
     }
 
     fun toggleUpgradeMenu() { _uiState.update { it.copy(showUpgradeMenu = !it.showUpgradeMenu, showOverdriveMenu = false) } }

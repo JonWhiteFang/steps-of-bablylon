@@ -31,6 +31,7 @@ class BattleViewModelTest {
     private lateinit var playerRepo: FakePlayerRepository
     private lateinit var uwRepo: FakeUltimateWeaponRepository
     private lateinit var cardRepo: FakeCardRepository
+    private lateinit var labRepo: FakeLabRepository
     private lateinit var adManager: FakeRewardAdManager
     private lateinit var dailyStepDao: FakeDailyStepDao
     private lateinit var applicationScope: CoroutineScope
@@ -51,6 +52,7 @@ class BattleViewModelTest {
         cardRepo = FakeCardRepository()
         adManager = FakeRewardAdManager()
         cosmeticRepo = FakeCosmeticRepository()
+        labRepo = FakeLabRepository()
         // Link the DAO to playerRepo so the VM's internal AwardBattleSteps (post-B.2 PR 2 goes
         // through DailyStepDao.creditBattleStepsAtomic) still surfaces wallet changes via the
         // existing FakePlayerRepository.profile flow.
@@ -67,7 +69,7 @@ class BattleViewModelTest {
     fun tearDown() { Dispatchers.resetMain() }
 
     private fun createVm(timeProvider: com.whitefang.stepsofbabylon.domain.time.TimeProvider = com.whitefang.stepsofbabylon.data.time.SystemTimeProvider()) = BattleViewModel(
-        workshopRepo, playerRepo, biomePreferences, uwRepo, cardRepo, cosmeticRepo,
+        workshopRepo, playerRepo, biomePreferences, uwRepo, cardRepo, cosmeticRepo, labRepo,
         dailyMissionDao, dailyStepDao, playerProfileDao, appDatabase, applicationScope, milestoneNotificationManager, adManager,
         timeProvider,
     ).apply {
@@ -514,7 +516,7 @@ class BattleViewModelTest {
             }
         }
         val vm = BattleViewModel(
-            workshopRepo, throwingPlayer, biomePreferences, uwRepo, cardRepo, cosmeticRepo,
+            workshopRepo, throwingPlayer, biomePreferences, uwRepo, cardRepo, cosmeticRepo, labRepo,
             dailyMissionDao, dailyStepDao, playerProfileDao, appDatabase, applicationScope, milestoneNotificationManager, adManager,
         ).apply { runInTransaction = { block -> block() } }
         backgroundScope.launch { vm.uiState.collect {} }
@@ -552,7 +554,7 @@ class BattleViewModelTest {
             }
         }
         val vm = BattleViewModel(
-            workshopRepo, brokenPlayer, biomePreferences, uwRepo, cardRepo, cosmeticRepo,
+            workshopRepo, brokenPlayer, biomePreferences, uwRepo, cardRepo, cosmeticRepo, labRepo,
             dailyMissionDao, dailyStepDao, playerProfileDao, appDatabase, applicationScope, milestoneNotificationManager, adManager,
         ).apply { runInTransaction = { block -> block() } }
         backgroundScope.launch { vm.uiState.collect {} }
