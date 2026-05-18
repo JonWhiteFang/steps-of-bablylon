@@ -1,6 +1,53 @@
 # Run Log
 
-## 2026-05-18 (latest, post-RO-08 commit) — RO-09 pre-closed-test self-audit
+## 2026-05-18 (latest, post-RO-09 commits) — RO-09 fix bundle landed
+
+- **Goal:** implement the 3 fix-before-closed-test findings catalogued in the prior RO-09 audit-findings entry (immediately below). Single PR, 4 commits per `docs/plans/plan-RO-09-pre-closed-test-fixes.md`.
+- **Outcome:** all 3 fixes landed and pushed. Test count 565 → 572. Build clean.
+
+### Commits
+
+- **`fcb282e` — `fix(battle): wire CHRONO_FIELD UW to actually slow enemies (RO-09 #1)`.**
+  - `GameEngine.kt`: new `CHRONO_SLOW_FACTOR = 0.10f` companion constant; `entities.forEach` rewritten to scale `deltaTime` per-entity when `chronoActive && e is EnemyEntity`. Projectiles, orbs, and the ziggurat keep the unscaled `deltaTime` so player-side timing (shoot cooldowns, projectile travel) is unaffected.
+  - `GameEngineTest.kt`: +3 tests (chrono active slows enemies to 10 % of baseline with 0.08..0.12 tolerance; chrono inactive deterministic baseline; projectiles unaffected ~200 px movement). +`setChronoActive` reflection helper + `simulateEnemyMovement` fresh-engine baseline-vs-chrono comparator.
+  - 2 files changed, 134 insertions(+), 2 deletions(-).
+
+- **`f4d5997` — `fix(battle): GOLDEN_ZIGGURAT × overdrive fortuneMultiplier stacking (RO-09 #2)`.**
+  - `GameEngine.kt`: 3 symmetric edits closing the 5.0×-leak-across-overdrive-expiry exploit:
+    - `activateOverdrive(FORTUNE)`: `fortuneMultiplier = fortuneMultiplier.coerceAtLeast(3.0)` (was unconditional `= 3.0`, downgraded GOLDEN's higher 5.0×).
+    - `expireOverdrive`: `fortuneMultiplier = if (goldenZigActive) 5.0 else 1.0` (was unconditional `= 1.0`, collapsed GOLDEN's 5.0× when ASSAULT/FORTRESS/SURGE expired).
+    - GOLDEN expire branch in `updateUWs`: `fortuneMultiplier = if (activeOverdrive == OverdriveType.FORTUNE) 3.0 else 1.0` (was `if (activeOverdrive == null) fortuneMultiplier = 1.0`, leaked 5.0× across ASSAULT/FORTRESS/SURGE for up to ~50 s).
+  - Invariant preserved: *"the higher of the two buffs always wins; the lower restores cleanly when one ends"*.
+  - `GameEngineTest.kt`: +4 tests (one per stacking path) + 3 new helpers (`readFortuneMultiplier` reflection on private field, `activateGoldenZigForTest` uses public `initUWs`+`activateUW`, `invokeUpdateUWs` reflectively expires UWs without ticking overdrive timer or wave spawner).
+  - 2 files changed, 150 insertions(+), 4 deletions(-).
+
+- **`fdc34d3` — `chore(labs): remove dead total expression (RO-09 #7)`.**
+  - `LabsScreen.kt:106`: deleted `val total = info.remainingMs + (System.currentTimeMillis() - (System.currentTimeMillis() - info.remainingMs))` — algebraically `2 × info.remainingMs`, never read. Refactor leftover. Zero behaviour change.
+  - 1 file changed, 1 deletion(-).
+
+### Verification
+
+- `./run-gradle.sh test` — BUILD SUCCESSFUL, 572 tests pass (was 565, +7). All 7 new RO-09 tests visible in the JUnit XML output.
+- `./run-gradle.sh bundleRelease` — pending (will run as part of the next session before v4 internal-track upload).
+- Working tree clean post-doc-sync commit.
+
+### Out of scope — deferred to v1.x patch backlog
+
+Same 4 findings as catalogued in the prior audit-findings entry (#3 STEP_MULTIPLIER × CV unit mismatch, #4 currency lifetime counter desync, #5 TOCTOU on gem/PS spend, #6 per-kill battle-step credit on `viewModelScope`). All bounded-impact, no closed-test exposure. Documented in CHANGELOG and `docs/plans/plan-RO-09-pre-closed-test-fixes.md`.
+
+### Next session
+
+1. **(Build + upload, immediate)** Bump `versionCode 3 → 4` in `app/build.gradle.kts`, run `./run-gradle.sh bundleRelease`, upload to internal track. On-device smoke-test for RO-09 #1 + #2 visible effects (equip CHRONO_FIELD UW; activate ASSAULT then GOLDEN_ZIGGURAT and confirm cash multiplier resets cleanly when GOLDEN expires).
+2. **(External)** Promote internal v4 → closed testing in Play Console.
+3. **(External)** Recruit ≥12 testers; wait ≥14 calendar days; apply for production access.
+
+### Side effect
+
+Cleaned up `STATE.md`'s mixed encoding (literal `\u2014` escapes vs one stray real `→` unicode) — file now uses consistent UTF-8 throughout. Markdown renders identically; the literal-escape style was a relic of an earlier failed edit.
+
+---
+
+## 2026-05-18 (post-RO-08 commit) — RO-09 pre-closed-test self-audit
 
 - **Goal:** user asked for a deep code scan for any other bugs after RO-08 landed. Goal: maximise quality of the v1.0 closed-test build before the 14-day clock starts.
 - **Approach:** systematic sweep using the same patterns RO-08 surfaced — dead enum branches, computed-but-never-read fields, stale captured references — extended to include round-end persistence, currency atomicity, anti-cheat, ViewModel cleanup, and Flow combiners. Cross-checked every CardType / OverdriveType / UltimateWeaponType / UpgradeType / DailyMissionType for end-to-end wiring.

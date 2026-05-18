@@ -4,6 +4,62 @@ All notable changes to Steps of Babylon are documented here.
 
 ## [Unreleased]
 
+### RO-09 — Pre-closed-test fixes (2026-05-18)
+
+A self-audit run after RO-08 surfaced 7 latent issues; this PR lands the 3 that were flagged for **fix-before-closed-test**. The other 4 are bounded-impact lifetime-stat / atomicity / unit-mismatch issues with effectively zero exposure during the 14-day closed-test window — they're documented in `docs/plans/plan-RO-09-pre-closed-test-fixes.md` § "Deferred findings (v1.x)" for follow-up. Audit motivation: maximise the quality of the v1.0 closed-test build before the 14-day clock starts.
+
+**Fix #1 — CHRONO_FIELD UW now actually slows enemies (commit `fcb282e`).**
+
+Pre-fix: the description claimed *"Slows all enemies to 10 % speed for duration"* (8 s, 75 Power-Stone unlock cost). The activate path set `chronoActive = true` and the expire path reset it, but the **only** consumer of `chronoActive` anywhere in the codebase was the rendering overlay (purple full-screen tint). `EnemyEntity.update` read raw `speed`; `GameEngine.update` passed raw `deltaTime` to every entity. Net: a player who unlocked CHRONO_FIELD spent 75 Power Stones and saw an 8-second purple-tinted screen with zero gameplay effect. Same shape as the RO-08 dead-enum findings — feature wired into UI / cooldown / cost path but disconnected from gameplay.
+
+- New companion constant `CHRONO_SLOW_FACTOR = 0.10f`.
+- `GameEngine.update` entity loop now scales `deltaTime` per-entity: `if (chronoActive && e is EnemyEntity) deltaTime * CHRONO_SLOW_FACTOR else deltaTime`. The gate on `EnemyEntity` keeps projectiles, orbs, and the ziggurat at full speed, so player-side timing (shoot cooldowns, projectile travel, orb orbit) is unaffected.
+
+**Fix #2 — GOLDEN_ZIGGURAT × overdrive `fortuneMultiplier` stacking (commit `f4d5997`).**
+
+`fortuneMultiplier` is a single shared field used by **both** Step Overdrive FORTUNE (3.0×) and Ultimate Weapon GOLDEN_ZIGGURAT (5.0×). The lifecycle paths leaked the buff in three ways:
+
+| Pre-fix scenario | Pre-fix value | Correct value |
+|---|---|---|
+| GOLDEN expires, FORTUNE active | 5.0× (preserved) | **3.0×** (FORTUNE owns it) |
+| GOLDEN expires, ASSAULT active | 5.0× (leaked) | **1.0×** |
+| GOLDEN expires, FORTRESS active | 5.0× (leaked) | **1.0×** |
+| GOLDEN expires, SURGE active | 5.0× (leaked) | **1.0×** |
+| FORTUNE activates while GOLDEN active | 3.0× (downgrade) | **5.0×** (GOLDEN's higher value wins) |
+| ASSAULT/FORTRESS/SURGE expires, GOLDEN still active | 1.0× (collapsed) | **5.0×** (GOLDEN still owns it) |
+
+The most exploitable case: activate ASSAULT (1.0× cash), then GOLDEN_ZIGGURAT (5.0× cash). When GOLDEN expired while ASSAULT was still active, the 5.0× multiplier persisted for the remainder of ASSAULT's window — up to ~50 s of unintended 5× cash uptime per round.
+
+Three production edits in `GameEngine.kt`, each preserving the invariant *"the higher of the two buffs always wins; the lower restores cleanly when one ends"*:
+
+- `activateOverdrive(FORTUNE)`: `fortuneMultiplier = fortuneMultiplier.coerceAtLeast(3.0)` — symmetrical to the existing GOLDEN activate which uses `coerceAtLeast(5.0)`.
+- `expireOverdrive`: `fortuneMultiplier = if (goldenZigActive) 5.0 else 1.0`.
+- GOLDEN expire branch in `updateUWs`: `fortuneMultiplier = if (activeOverdrive == OverdriveType.FORTUNE) 3.0 else 1.0`.
+
+**Fix #7 — Dead `total` expression in `LabsScreen.kt:106` (commit `fdc34d3`).**
+
+`val total = info.remainingMs + (System.currentTimeMillis() - (System.currentTimeMillis() - info.remainingMs))` — algebraically `2 × info.remainingMs`, never read. Refactor leftover; the next line recomputes `totalMs` correctly via `info.timeToCompleteHours * 3_600_000`. One-line delete, zero behaviour change.
+
+**Test coverage: 565 → 572 (+7 new tests).**
+
+- `GameEngineTest` +3 RO-09 #1: chrono active slows enemies to 10 % of baseline (ratio in 0.08..0.12 tolerance band); chrono inactive is deterministic across fresh engines; chrono active does **not** slow `ProjectileEntity` (regression guard for the `EnemyEntity`-only gate).
+- `GameEngineTest` +4 RO-09 #2: GOLDEN expiry preserves FORTUNE's 3.0× when FORTUNE active; GOLDEN expiry resets to 1.0 when ASSAULT active (regression guard for the leak); FORTUNE activation does not downgrade GOLDEN's 5.0×; `expireOverdrive` preserves GOLDEN's 5.0× when GOLDEN still active.
+
+New test helpers: `setChronoActive(eng, Boolean)` (reflection on private `chronoActive` field), `simulateEnemyMovement(activateChrono)` (fresh-engine baseline-vs-chrono comparator), `readFortuneMultiplier(eng)` (reflection on private `fortuneMultiplier`), `activateGoldenZigForTest(eng, level)` (uses public `initUWs` + `activateUW` path), `invokeUpdateUWs(eng, deltaTime)` (reflection on private `updateUWs(Float)` to deterministically expire UWs without ticking the overdrive timer / wave spawner / collisions).
+
+**Out of scope / deferred to v1.x:**
+
+- **Finding #3 — STEP_MULTIPLIER × cross-validator unit mismatch.** Post-RO-08, `record.creditedSteps` includes the multiplier bonus but the cross-validator compares it raw against `hcSteps`. Edge case affecting players with prior CV offenses **and** STEP_MULTIPLIER ≥ 1. Fix requires a `multiplierBonusApplied` column on `daily_step_record` + migration v9 → v10. Closed-test cohort almost certainly has clean step history and zero exposure during the 14-day window.
+- **Finding #4 — Currency lifetime counter desync.** `addGems` / `spendGems` / `addPowerStones` / `spendPowerStones` fire two `@Query` UPDATEs back-to-back, not in `@Transaction`. Lifetime counters can drift on crash. Display-only impact (Stats screen).
+- **Finding #5 — TOCTOU race on gem / PS spend.** `MAX(0, balance + delta)` clamps the wallet but `incrementSpent` records the full requested amount. Wallet stays correct; lifetime drifts.
+- **Finding #6 — Per-kill battle-step credit on `viewModelScope`.** End-of-round persistence migrated to `applicationScope` in RO-03 B.3 PR 2, but per-kill credits still launch on `viewModelScope`. Mid-round nav-away cancels in-flight credits; loss bounded to ≤ 1 step per pending callback.
+
+**Verification:**
+
+- `./run-gradle.sh test` — BUILD SUCCESSFUL, 572 tests pass (was 565, +7).
+- `./run-gradle.sh bundleRelease` — BUILD SUCCESSFUL, clean R8 minify + lint vital + signing.
+- After this PR lands: bump `versionCode 3 → 4` and re-upload to the internal track for one final smoke check, then promote internal v4 → closed track.
+
 ### RO-08 — Bundle of 4 upgrade-wiring fixes (2026-05-18)
 
 External code review highlighted that several Workshop / Card upgrades were declared but not actually applied to the tower during play. This PR closes all four gaps in a single change. No SKU / billing / ad-SDK touchpoints — purely engine, ResolveStats, and DailyStepManager.
