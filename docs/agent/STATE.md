@@ -5,7 +5,12 @@
   - **PR A** \u2014 Surface ad-error feedback as snackbar in Battle + Cards. `CardsViewModel.watchFreePackAd` and `BattleViewModel.watchGemAd` / `watchPsAd` now show a snackbar on `AdResult.Cancelled` and `AdResult.Error` instead of silently swallowing the result. Mirrors the `userMessage` pattern used by other VMs. +6 tests.
   - **PR B** \u2014 Live formatted price from Play Billing. New `BillingManager.getPriceDisplay(product): String?` interface method; `BillingManagerImpl` queries `ProductDetails.priceDisplay`; `StoreViewModel.refreshPriceDisplays()` populates `StoreUiState.priceDisplays` on Store entry; `StoreScreen` reads `state.priceDisplays[X] ?: BillingProduct.X.priceDisplay`. Removes the in-app/Play-Console price drift footgun. +5 tests.
   - **PR C** \u2014 Plan 31 walkthrough doc revision. Updated preamble + 4 lessons-learned (ADV mandatory, lowercase SKUs, mandatory closed testing, native-debug-symbol unfixability) + 3 minor footguns inline. Pure docs.
-- **Test count 524 \u2192 535** (no regressions; only additions).
+  - **RO-08** \u2014 Bundle of 4 upgrade-wiring fixes from external code review (later evening, 2026-05-18):
+    - Fix #1: STEP_MULTIPLIER + RECOVERY_PACKAGES wired in (previously declared but unimplemented). STEP_MULTIPLIER multiplies sensor-walking step credit by `(1 + level * 0.01)` capped at +100 %; activity minutes excluded. RECOVERY_PACKAGES heals `level * 1 %` of max HP every 30 s during SPAWNING phase, capped at 50 % per pulse.
+    - Fix #2: `ZigguratEntity` stale-stats propagation. `stats` is now a `var` with private setter; `attackInterval` / `attackRange` are computed each tick from the live stats reference; `GameEngine.applyStats(newStats)` is the single mutation point. Closes Overdrive ASSAULT's 2x attack-speed + FORTRESS's 2x health-regen silently no-op'ing pre-fix.
+    - Fix #3: in-round upgrade coverage matches GDD \u00a75. ResolveStats applies `ir(...)` to all 14 stat-bearing upgrades; STEP_MULTIPLIER + RECOVERY_PACKAGES hidden from in-round menu; `GameEngine.updateEffectiveLevels(combined)` pushes additive workshop+inround levels for cash-utility math (CASH_BONUS / CASH_PER_WAVE / INTEREST / FREE_UPGRADES).
+    - Fix #4: STEP_SURGE card multiplies the watch-ad gem reward via `cardGemMultiplier` (was computed by `ApplyCardEffects` but never read by `BattleViewModel` pre-fix).
+- **Test count 524 \u2192 565** (+11 in PRs A+B, +30 in RO-08; no regressions).
 - **Next external step:** Promote internal v3 \u2192 closed testing in Play Console. Recruit \u226512 testers. Wait \u226514 calendar days. Then apply for production access.
 
 ## What works

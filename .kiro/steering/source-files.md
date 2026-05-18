@@ -71,7 +71,7 @@ data/sensor/StepSensorDataSource.kt  # TYPE_STEP_COUNTER wrapper, emits deltas v
 data/sensor/StepRateLimiter.kt       # Rolling 1-min window rate limiter (200/min, 250 burst)
 data/sensor/StepVelocityAnalyzer.kt  # Unnatural step pattern detection (shaker/spoof), penalty multiplier
 data/sensor/StepIngestionPreferences.kt # Service heartbeat + day-start counter for worker/service coordination
-data/sensor/DailyStepManager.kt      # Orchestrates: rate limit → velocity analysis → 50k ceiling → Room persist + activity minutes
+data/sensor/DailyStepManager.kt      # Orchestrates: rate limit → velocity analysis → STEP_MULTIPLIER bonus (sensor walking only, RO-08) → 50k ceiling → Room persist + activity minutes
 ```
 
 ## Data Layer — Billing & Ads
@@ -177,7 +177,7 @@ domain/usecase/CalculateUpgradeCost.kt          # Cost formula: baseCost * scali
 domain/usecase/CanAffordUpgrade.kt              # Affordability check against wallet
 domain/usecase/PurchaseUpgrade.kt               # Delegates to WorkshopRepository.purchaseUpgradeAtomic — atomic deduct + level-set (B.2 PR 1)
 domain/usecase/QuickInvest.kt                   # Recommends cheapest affordable upgrade
-domain/usecase/ResolveStats.kt                  # Workshop + in-round levels → ResolvedStats
+domain/usecase/ResolveStats.kt                  # Workshop + in-round levels → ResolvedStats. RO-08: in-round multiplier `ir(...)` extended to all 14 stat-bearing upgrade types (was previously only DAMAGE/ATTACK_SPEED/HEALTH); multiplicative stats follow `(1+ws*x)*(1+ir*x)`, additive stats sum levels before per-level effect and any cap. Range now multiplicative + clamped to BASE × 3.
 domain/usecase/CalculateDamage.kt               # Raw damage + crit roll + damage/meter bonus → DamageResult
 domain/usecase/CalculateDefense.kt              # Damage reduction (cap 75%) + flat block
 domain/usecase/UpdateBestWave.kt                # Compares wave to stored best, persists if new record
@@ -227,12 +227,12 @@ presentation/battle/BattleViewModel.kt             # @HiltViewModel: 14-param co
 presentation/battle/BattleUiState.kt               # UI state: wave, HP, cash, speed, pause, RoundEndState
 presentation/battle/GameSurfaceView.kt             # SurfaceView + SurfaceHolder.Callback, manages game loop thread
 presentation/battle/GameLoopThread.kt              # Dedicated thread: fixed timestep (60 UPS), accumulator, speed multiplier
-presentation/battle/engine/GameEngine.kt           # Central coordinator: entity list, update/render dispatch, wave/collision integration; +hasWaveProgress() (B.3 PR 2); +@Volatile cosmeticOverrides: Map<CosmeticCategory, CosmeticItem> consulted in init() to select ziggurat layer colors (C.2 PR 1)
+presentation/battle/engine/GameEngine.kt           # Central coordinator: entity list, update/render dispatch, wave/collision integration; +hasWaveProgress() (B.3 PR 2); +@Volatile cosmeticOverrides: Map<CosmeticCategory, CosmeticItem> consulted in init() to select ziggurat layer colors (C.2 PR 1); +applyStats() single-mutation point that propagates ResolvedStats updates to engine + ziggurat in lock-step (RO-08); +updateEffectiveLevels() public setter for in-round cash-utility levels (RO-08); +tickRecoveryPackages() periodic-heal pulse (RO-08, RECOVERY_PACKAGES — 30s interval, 1% per level capped at 50%, SPAWNING-phase only)
 presentation/battle/engine/Entity.kt               # Abstract base: x, y, width, height, isAlive, update(), render()
 presentation/battle/engine/WaveSpawner.kt          # Wave lifecycle: 26s spawn + 9s cooldown, enemy composition by wave
 presentation/battle/engine/EnemyScaler.kt          # Wave-based stat scaling (1.05^wave), cash rewards per type
 presentation/battle/engine/CollisionSystem.kt      # Projectile↔enemy and enemy projectile↔ziggurat collision
-presentation/battle/entities/ZigguratEntity.kt     # 5-layer ziggurat, nearest-enemy targeting, HP tracking
+presentation/battle/entities/ZigguratEntity.kt     # 5-layer ziggurat, nearest-enemy targeting, HP tracking. RO-08: stats is `var` with private setter + updateStats() called by GameEngine.applyStats; attackInterval / attackRange are computed properties reading the live stats so Overdrive ASSAULT/FORTRESS + in-round upgrades propagate correctly mid-round.
 presentation/battle/entities/ProjectileEntity.kt   # Moves toward target, self-destructs on arrival
 presentation/battle/entities/EnemyEntity.kt        # 6 enemy types, movement, melee/ranged attack, mini HP bar
 presentation/battle/entities/EnemyProjectileEntity.kt # Ranged enemy projectiles targeting ziggurat
@@ -389,6 +389,7 @@ domain/model/UpgradeTypeTest.kt                   # 23 entries, category counts,
 domain/model/EnemyTypeTest.kt                     # 6 entries, multiplier correctness
 domain/model/BattleConditionEffectsTest.kt        # All tier condition modifiers verified
 presentation/battle/engine/EnemyScalerTest.kt     # Wave scaling, speed, cash rewards
+presentation/battle/engine/GameEngineTest.kt      # RO-08 regression guards: Overdrive ASSAULT propagates 2× attackSpeed to ziggurat (post-fix the entity holds a `var stats` reference instead of a captured one); FORTRESS propagates 2× healthRegen; expireOverdrive restores baseline interval; updateEffectiveLevels seeds the engine's effective-level lookup; RECOVERY_PACKAGES heal pulse fires at 30s in SPAWNING phase, level 0 / full HP / cap-50% all guarded. Uses reflection to invoke private tickRecoveryPackages(Float) and expireOverdrive() helpers — bypasses full game-loop side effects (enemy spawn, melee hits) for deterministic assertions.
 presentation/battle/biome/BiomeThemeTest.kt       # All 5 biome palettes, ziggurat colors, particles
 data/sensor/StepRateLimiterTest.kt                # Normal/burst caps, window expiry, edge cases
 data/sensor/StepVelocityAnalyzerTest.kt           # Natural/constant/jump patterns, window eviction

@@ -1,5 +1,58 @@
 # Run Log
 
+## 2026-05-18 (later evening) — RO-08 upgrade-wiring fixes (4-fix bundle)
+
+- **Goal:** User asked me to audit upgrade wiring during play. Found four real gaps: (1) STEP_MULTIPLIER + RECOVERY_PACKAGES never referenced outside their enum; (2) ZigguratEntity captured `attackInterval` / `attackRange` at construction with a stale `val stats` reference, so Overdrive ASSAULT's 2x attack speed + FORTRESS's 2x health regen + in-round ATTACK_SPEED purchases all silently no-op'd; (3) ResolveStats only applied `ir(...)` to DAMAGE / ATTACK_SPEED / HEALTH so 20 of 23 in-round purchases were dead cash; (4) STEP_SURGE card's `gemMultiplier` was computed by `ApplyCardEffects` but never read by `BattleViewModel`. User asked to bundle them. Single PR.
+- **Preflight:** read STATE.md (Plan 31 Phase G2 closed-testing window, do-not-touch zones include `domain/usecase/`). `git status` clean on `main`, last commit (after pushing PRs A+B+C earlier this evening).
+
+### Implementation
+
+**Fix #4 — STEP_SURGE gem multiplier (smallest, low-risk first).** Added `cardGemMultiplier: Double = 1.0` field to `BattleViewModel`; populated in `init` and `playAgain` from `cardResult.gemMultiplier`; applied in `watchGemAd` via `(1.0 * cardGemMultiplier).toLong().coerceAtLeast(1L)`. Default 1.0 keeps existing 1-gem reward unchanged when no STEP_SURGE equipped. Lv1 → 2, Lv5 → 4. +2 BVM tests (Lv1 doubles, Lv5 quadruples).
+
+**Fix #2 — `ZigguratEntity` stale-stats propagation.** Made `stats` a `var` with `private set`; added `fun updateStats(newStats)`. `attackInterval` becomes a private computed property `get() = (1.0 / stats.attackSpeed).toFloat()`; `attackRange` becomes `val attackRange: Float get() = stats.range`. Centralised the engine-side mutation as a private `applyStats(newStats)` helper that updates engine.stats + zig.stats + reconciles maxHp/orbCount. Routed all 5 mutation sites through `applyStats`: `setStats`, `activateOverdrive` (ASSAULT and FORTRESS arms), `expireOverdrive`, GOLDEN_ZIGGURAT UW activate + expire, and `updateZigguratStats`. Init still does a direct assignment because the ziggurat is constructed right after with the same reference (no de-sync window).
+
+**Fix #3a + #3b + #3c — In-round upgrade coverage.** Extended `ResolveStats.invoke` with `ir(...)` for all 14 stat-bearing upgrades. Multiplicative stats (DAMAGE, ATTACK_SPEED, HEALTH already had ir(); added HEALTH_REGEN, RANGE, KNOCKBACK) follow `(1 + ws*x) * (1 + ir*x)`. Additive stats (CRITICAL_CHANCE, CRITICAL_FACTOR, DEFENSE_PERCENT, DEFENSE_ABSOLUTE, THORN_DAMAGE, LIFESTEAL, DAMAGE_PER_METER, DEATH_DEFY, MULTISHOT, BOUNCE_SHOT, ORBS) sum levels via a `total(type)` helper before applying per-level effect and any cap. Range now uses the multiplicative form coerced to ≤ BASE × 3 (matches the prior cap; previously the cap clamped only the workshop term). Hidden STEP_MULTIPLIER + RECOVERY_PACKAGES from `InRoundUpgradeMenu` (mirror of `WorkshopViewModel`'s hidden-set).
+
+For the 4 cash utilities (CASH_BONUS, CASH_PER_WAVE, INTEREST, FREE_UPGRADES) renamed `GameEngine.workshopLevels` → `effectiveLevels` and added public `fun updateEffectiveLevels(combined: Map<UpgradeType, Int>)`. `BattleViewModel.purchaseInRoundUpgrade` builds `combinedLevelsForCash()` (additive merge of workshop + inRound levels) and pushes it to the engine on every purchase. The FREE_UPGRADES free-roll chance is now read from the same combined map so a mid-round FREE_UPGRADES level contributes to its own subsequent free-roll chances.
+
+**Fix #1a — STEP_MULTIPLIER walking-credit multiplier.** Added `WorkshopRepository` constructor parameter to `DailyStepManager` (Hilt resolves automatically; tests need a `FakeWorkshopRepository`). Added `applyStepMultiplier(baseCredit)` helper that fresh-reads the STEP_MULTIPLIER level from the workshop flow on every credit. Multiplier `(1 + level × 0.01)` capped at +100 % (`STEP_MULTIPLIER_CAP = 1.0`). Applied in `recordSteps` AFTER anti-cheat (rate limiter + velocity analyzer) and BEFORE the 50 k daily ceiling so the cap remains absolute. Activity minutes intentionally excluded — GDD wording says "earned from walking" and including them would have required changing the existing `dailyActivityMinuteTotal += credited` source-tracking semantics (a multiplier > 1 would inflate the source counter and under-credit subsequent HC deltas). Documented the trade-off inline.
+
+**Fix #1b — RECOVERY_PACKAGES periodic heal.** Added `recoveryTimer: Float` field and three constants (`RECOVERY_INTERVAL_SECONDS = 30f`, `RECOVERY_PERCENT_PER_LEVEL = 0.01`, `RECOVERY_PERCENT_PER_PULSE_CAP = 0.50`). New private `tickRecoveryPackages(deltaTime)` helper invoked from `update()`. Pulses fire only during `WavePhase.SPAWNING`; timer resets between waves so the first pulse of a new wave waits a full 30s. At full HP the pulse is suppressed (timer also resets so freshly-damaged towers wait one full interval). Heal floors at 1 HP for visible feedback; spawns a green `FloatingText` indicator above the ziggurat. No `SoundEffect` (automatic effect, audio could be noisy). Reset on init.
+
+### Tests +30 (535 → 565)
+
+- `ResolveStatsTest` +20: in-round multiplier coverage for every stat-bearing type with caps.
+- `BattleViewModelTest` +2: STEP_SURGE Lv1 doubles ad reward; Lv5 quadruples.
+- `GameEngineTest` (new file) +5: ASSAULT propagates 2x attackSpeed; FORTRESS propagates 2x healthRegen; expireOverdrive restores baseline; updateEffectiveLevels stores the level map; RECOVERY_PACKAGES heals at 30s in SPAWNING / no heal at full HP / level 0 no heal / cap at 50% maxHp per pulse.
+- `DailyStepManagerTest` +5: STEP_MULTIPLIER level 0 unchanged / level 50 grants +50% / cap at +100% / 50k ceiling clamps multiplied credit / activity minutes excluded.
+
+`GameEngineTest` uses reflection to invoke private `tickRecoveryPackages(Float)` and `expireOverdrive()` helpers — bypasses full game-loop side effects (enemy spawn, melee hits, projectile collisions) so the heal-only and stats-only assertions stay deterministic. Two initial test failures (RECOVERY_PACKAGES heal + does-not-heal-at-full) traced to the full update loop spawning enemies that damaged the tower, contaminating HP deltas. Switched to direct invocation of the private helper.
+
+### Verification
+
+- `./run-gradle.sh test` — BUILD SUCCESSFUL, 565 tests pass exactly. Test count 535 → +20 (ResolveStats) → +2 (BVM STEP_SURGE) → +5 (GameEngine) → +5 (DailyStepManager) = 565.
+
+### Doc sync
+
+- `AGENTS.md` — coverage line updated 535 → 565; mention of RO-08 STEP_MULTIPLIER coverage in the DailyStepManager section.
+- `CHANGELOG.md` — new "RO-08 — Bundle of 4 upgrade-wiring fixes" section under [Unreleased] above the prior PR C entry.
+- `.kiro/steering/source-files.md` — `DailyStepManager.kt`, `GameEngine.kt`, `ZigguratEntity.kt`, `ResolveStats.kt` lines updated; new `GameEngineTest.kt` line added.
+- `STATE.md` — current-objective and test count updated.
+- `RUN_LOG.md` — this entry.
+
+### What's left for next session
+
+The bottleneck remains Google's mandatory 14-day closed-testing clock. Code-side, Plan 31 critical path stays unblocked through Production. Optional follow-ups during the closed-track window:
+
+- Extend STEP_MULTIPLIER to activity minutes (requires changing `dailyActivityMinuteTotal += credited` to track HC raw progress separately).
+- Add a subtle SoundEffect for RECOVERY_PACKAGES pulses (left out to avoid noise).
+- B.4 FollowOnPipeline extraction + B.5 UpdateMissionProgress use case (Phase B leftover debt, ~1 week).
+
+### Decision footprint
+
+- **No new ADR.** RO-08 is a wiring fix bundle; each sub-fix is the obvious shape (data class with `var`, computed property, additive map merge, fresh-read DB). The activity-minute STEP_MULTIPLIER deferral is documented inline.
+- **Did NOT bump versionCode.** v3 is live in internal track, smoke test passed. RO-08 is uncovered by the smoke test but it ships as part of the next legitimate upload.
+
 ## 2026-05-18 (evening) — Pre-closed-testing PRs A+B+C: ad-error snackbar, live price, walkthrough doc revision
 
 - **Goal:** User: "Please do all improvements before we go to closed testing". I scoped the four optional improvements I'd flagged earlier, flagged that B.4/B.5 was a multi-day refactor with zero user-visible benefit, recommended A+B+C only. User confirmed "A, B, C only". Three PRs delivered in a single session, each independently committable, each fully tested.

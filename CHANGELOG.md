@@ -4,6 +4,51 @@ All notable changes to Steps of Babylon are documented here.
 
 ## [Unreleased]
 
+### RO-08 — Bundle of 4 upgrade-wiring fixes (2026-05-18)
+
+External code review highlighted that several Workshop / Card upgrades were declared but not actually applied to the tower during play. This PR closes all four gaps in a single change. No SKU / billing / ad-SDK touchpoints — purely engine, ResolveStats, and DailyStepManager.
+
+**Fix #1 — STEP_MULTIPLIER + RECOVERY_PACKAGES wired in (previously dead enums).**
+
+- `STEP_MULTIPLIER`: `DailyStepManager` gained a `WorkshopRepository` constructor parameter and an `applyStepMultiplier(baseCredit)` helper. The bonus applies on the sensor (walking) credit path only — not on activity minutes (cycling / swimming / treadmill from Health Connect) — matching the GDD §4.3 wording "+1 % bonus steps earned from walking" and avoiding a churn to the existing `dailyActivityMinuteTotal += credited` source-tracking semantics. The bonus applies *after* anti-cheat (rate limit + velocity analysis) and *before* the 50 k absolute daily ceiling, so the cap stays an absolute ceiling. Cap on the multiplier itself is +100 % per GDD. Fresh DB read on each credit so level-ups take effect immediately.
+- `RECOVERY_PACKAGES`: `GameEngine` now ticks a private `tickRecoveryPackages(deltaTime)` helper inside the main `update()` loop. Pulses fire only during `WavePhase.SPAWNING` (not during between-wave cooldowns — the upgrade's framing is "during waves"); the timer resets between waves so the first pulse of a new wave waits a full 30 s. Constants `RECOVERY_INTERVAL_SECONDS=30f`, `RECOVERY_PERCENT_PER_LEVEL=0.01`, `RECOVERY_PERCENT_PER_PULSE_CAP=0.50`. At full HP the pulse is suppressed but the timer still resets so a freshly-damaged tower waits one full interval. Heal floors at 1 HP for visible feedback. Spawns a green floating-text indicator above the tower; no sound (automatic effect, audio could be noisy).
+
+**Fix #2 — `ZigguratEntity` stale-stats propagation.**
+
+The entity captured `attackInterval` (`val`) and `attackRange` (`val`) at construction and held a `val stats: ResolvedStats` reference. After construction, any `engine.stats = stats.copy(...)` (Overdrive ASSAULT/FORTRESS, in-round upgrades, GOLDEN_ZIGGURAT UW) created a new `ResolvedStats` instance the engine saw but the entity didn't. Concrete bug: ASSAULT's "2× attack speed" and FORTRESS's "2× health regen" silently no-op'd; in-round ATTACK_SPEED purchases never made the tower fire faster.
+
+- `ZigguratEntity.stats` is now a `var` with a `private set` and a `fun updateStats(newStats)` setter.
+- `attackInterval` is a private computed property `get() = (1.0 / stats.attackSpeed).toFloat()` recomputed each tick from the live `stats`.
+- `attackRange` becomes `val attackRange: Float get() = stats.range` — same idea.
+- `GameEngine.applyStats(newStats)` is the single mutation point: replaces `engine.stats`, calls `zig.updateStats(newStats)`, rebalances `currentHp` proportionally if `maxHealth` changed, and re-spawns orbs if `orbCount` changed. All five stat-mutation sites (`setStats`, `activateOverdrive` ASSAULT/FORTRESS arms, `expireOverdrive`, GOLDEN_ZIGGURAT UW activate + expire, `updateZigguratStats`) route through `applyStats`.
+
+**Fix #3 — In-round upgrade coverage matches GDD §5.**
+
+Battle-formulas.md §Stats Resolution and GDD §5 both state "All Workshop stats have corresponding in-round upgrades that stack multiplicatively." Pre-RO-08 only DAMAGE / ATTACK_SPEED / HEALTH had an `ir(...)` term in `ResolveStats`; the other 14 stat-bearing upgrades silently produced no in-round effect even though the in-round upgrade menu deducted cash for them.
+
+- `ResolveStats` now applies `ir(...)` to all 14 stat-bearing types. Multiplicative stats (`damage`, `attackSpeed`, `maxHealth`, `healthRegen`, `range`, `knockbackForce`) follow the documented `(1 + ws*x) × (1 + ir*x)` formula. Additive stats (`critChance`, `critMultiplier`, `defensePercent`, `defenseAbsolute`, `thornPercent`, `lifestealPercent`, `damagePerMeterBonus`, `deathDefyChance`, `multishotTargets`, `bounceCount`, `orbCount`) sum the two level sources before applying the per-level effect and any cap. Range now uses the multiplicative form coerced to `≤ BASE × 3` (matches the prior cap; previously the cap clamped only the workshop term).
+- `InRoundUpgradeMenu` mirrors the WorkshopViewModel hidden-set: `STEP_MULTIPLIER` and `RECOVERY_PACKAGES` are filtered out of the in-round menu (passive walking-bonus and periodic-heal effects don't fit the cash-fed in-round mechanic).
+- `GameEngine` renamed `workshopLevels` → `effectiveLevels` (private) and added `fun updateEffectiveLevels(combined)`. `BattleViewModel.purchaseInRoundUpgrade` builds a `combinedLevelsForCash()` map (additive merge of `workshopLevels + inRoundLevels`) and pushes it to the engine on every purchase. The `FREE_UPGRADES` free-roll chance is now read from the same combined map, so a mid-round FREE_UPGRADES level contributes to its own subsequent free-roll chances. Result: in-round purchases of `CASH_BONUS` / `CASH_PER_WAVE` / `INTEREST` / `FREE_UPGRADES` now actually take effect for subsequent kill rewards / wave-end bonuses / interest payouts / free-upgrade rolls.
+
+**Fix #4 — STEP_SURGE card multiplies the watch-ad gem reward.**
+
+`ApplyCardEffects` already computed `gemMultiplier` from STEP_SURGE; `BattleViewModel` was discarding the field. Now stored as `cardGemMultiplier`, refreshed in `init` and `playAgain`, applied in `watchGemAd` via `(1.0 * cardGemMultiplier).toLong().coerceAtLeast(1L)`. Default `1.0` keeps the existing 1-gem reward unchanged when no STEP_SURGE is equipped; Lv1 → 2 gems, Lv5 → 4 gems. The post-round reward-ad path is currently the only in-game gem source in the round, so this lights up the card's full design.
+
+**Test coverage: 535 → 565 (+30 new tests).**
+
+- `ResolveStatsTest` +20: in-round multiplier coverage for every stat-bearing type (multiplicative attackSpeed / healthRegen / range / knockback; additive crit chance/factor, defense %/abs, thorn, lifesteal, damage/meter, death-defy, multishot, bounce, orbs); each cap (range × 3, crit 80 %, defense 75 %, lifesteal 15 %, death-defy 50 %, multishot 5 targets, orbs 6) verified under combined ws+ir.
+- `BattleViewModelTest` +2: STEP_SURGE Lv1 doubles ad reward (1 → 2 gems); Lv5 quadruples (1 → 4).
+- `GameEngineTest` (new file) +5: ASSAULT propagates 2× attackSpeed to ziggurat; FORTRESS propagates 2× healthRegen; expireOverdrive restores baseline interval; `updateEffectiveLevels` updates the engine's level map; RECOVERY_PACKAGES heal pulse fires at 30 s in SPAWNING phase; level 0 produces no heal; full HP suppresses pulse; pulse caps at 50 % maxHp.
+- `DailyStepManagerTest` +5: STEP_MULTIPLIER level 0 is a no-op; level 50 grants +50 % bonus; cap at +100 % regardless of level; 50 k daily ceiling clamps multiplied credit; multiplier does NOT apply to activity minutes.
+
+GameEngineTest uses reflection to invoke the private `tickRecoveryPackages(Float)` and `expireOverdrive()` helpers — bypasses the full game-loop side effects (enemy spawning, melee hits, projectile collisions) so the heal-only and stats-only assertions stay deterministic.
+
+**Out of scope / future work:**
+
+- The `STEP_MULTIPLIER` lookup runs a Room flow `.first()` on every credit — fine for the typical sensor cadence (1 credit per ~30 sensor ticks max via the rate limiter) but could be cached if profiling reveals contention.
+- Activity-minute deltas don't get the multiplier (intentional — see the "Fix #1" notes above on the `dailyActivityMinuteTotal += credited` source-tracking semantics). A future v1.x could extend the multiplier to activity minutes by changing that to `+= delta` and tracking HC raw progress separately.
+- RECOVERY_PACKAGES uses no sound effect to avoid noise during automatic firing. A subtle blip could be added in v1.x.
+
 ### PR C — Plan 31 walkthrough doc revision: 4 lessons-learned + minor footguns (2026-05-18)
 
 Pure-docs PR. The walkthrough at `docs/release/plan-31-walkthrough.md` was written before the first end-to-end Plan 31 run; the live walk-through with the user surfaced four things the doc didn't anticipate, plus three smaller footguns. All fixed inline + summarised in a new "Updated 2026-05-18" preamble at the top.
