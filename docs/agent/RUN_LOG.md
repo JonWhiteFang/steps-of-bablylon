@@ -1,5 +1,79 @@
 # Run Log
 
+## 2026-05-18 (evening) — Pre-closed-testing PRs A+B+C: ad-error snackbar, live price, walkthrough doc revision
+
+- **Goal:** User: "Please do all improvements before we go to closed testing". I scoped the four optional improvements I'd flagged earlier, flagged that B.4/B.5 was a multi-day refactor with zero user-visible benefit, recommended A+B+C only. User confirmed "A, B, C only". Three PRs delivered in a single session, each independently committable, each fully tested.
+- **Preflight:** read STATE.md (Plan 31 Phase G post-smoke-test PASS; ad-error UX gap was a known issue from Phase G smoke-test debrief). `git status` clean on `main`, last commit `79fb381 feat(billing): C.5 PR 3 - delete StubBillingManager`.
+
+### PR A — `feat(ux): surface ad-error feedback as snackbar in Battle + Cards` (`a3dbcaf`)
+
+The user-facing problem: testers tapping "Watch ad for Gems" or "Watch ad for double Power Stones" or "Free daily card pack" on a device that returned `AdResult.Cancelled` (user dismissed) or `AdResult.Error` (NO_FILL, etc.) got no feedback. The button just did nothing. PostRoundOverlay made this especially confusing because the buttons stay visible after a failed tap.
+
+- `CardsViewModel.watchFreePackAd`: replaced `if (result is AdResult.Rewarded)` with a `when` over all 3 variants. `Cancelled` → "Ad cancelled. Try again."; `Error` → `result.message` verbatim, falling back to "Ad failed to load. Try again later." for blank messages (`RewardAdManagerImpl` returns blank for some Mobile Ads SDK error codes).
+- `BattleViewModel.watchGemAd` + `watchPsAd`: same pattern. Added `userMessage: String?` to `BattleUiState`; added `clearMessage()` to the VM. Took care to keep the `state.powerStonesAwarded > 0` guard inside the `Rewarded` arm of `watchPsAd` (not at the top-level `if`) so that 0-stones rounds don't show fake "you got something" feedback.
+- `BattleScreen`: added a `SnackbarHost` aligned to bottom-center, drawn last in the outer `Box` so it stacks on top of every overlay including `PostRoundOverlay` (where the watch-ad buttons live). `LaunchedEffect(state.userMessage)` calls `showSnackbar` then `viewModel.clearMessage()` so each event surfaces exactly once. Imported `SnackbarHost` + `SnackbarHostState` from material3.
+- Tests +6 (524 → 530):
+  - `CardsViewModelTest`: extended 2 existing `Cancelled`/`Error` cases with `userMessage` assertions; +1 new test for the blank-message fallback.
+  - `BattleViewModelTest`: 5 new tests — `watchGemAd Cancelled`, `watchGemAd Error`, `watchPsAd Cancelled` (uses `installEngineForEndRound + quitRound` to set up a `roundEndState`), `watchPsAd Error` (blank-message fallback), `clearMessage nulls userMessage`.
+
+### PR B — `feat(billing): live formatted price from Play Billing ProductDetails` (`792395e`)
+
+The footgun: earlier in this Plan 31 cycle the user briefly set `ad_removal` to $9.99 in Play Console while the in-app `BillingProduct.AD_REMOVAL.priceDisplay` constant still said $3.99. We caught it before the user uploaded, but it surfaced a real risk: anyone editing prices in Play Console without remembering to also bump the static constant in code creates a bait-and-switch. Long-term proper fix: read prices from Play Billing's `ProductDetails.priceDisplay` so Play Console becomes the source of truth.
+
+- `BillingManager.getPriceDisplay(product): String?` — new interface method with default `null` no-op so `FakeBillingManager` inherits a do-nothing contract. KDoc cites locale examples and explicitly tells callers to handle the `null` case by falling back to `BillingProduct.priceDisplay`.
+- `BillingManagerImpl` override: `sessionMutex.withLock { ensureConnected() → queryProductDetails(listOf(skuId), productType) → firstOrNull()?.priceDisplay }`. Failure paths return `null` with `Log.w` for diagnosability. Mutex shared with `purchase()` and `reconcilePendingPurchases()` so a price refresh can't race a purchase-in-progress.
+- `StoreViewModel.refreshPriceDisplays()` — launched once on init alongside the existing `reconcilePendingPurchases` hook. Iterates `BillingProduct.entries`, populating `_priceDisplays: MutableStateFlow<Map<BillingProduct, String>>` progressively as each query completes. Failures (null) are skipped. `@VisibleForTesting internal` so unit tests can drive a deterministic refresh.
+- `StoreUiState.priceDisplays: Map<BillingProduct, String>` — new field combining the 5th flow argument into the existing `combine` chain. Default empty map.
+- `StoreScreen` — every price label changed from `BillingProduct.X.priceDisplay` to `state.priceDisplays[X] ?: BillingProduct.X.priceDisplay`. 3 sites: Gem packs, Ad Removal, Season Pass.
+- `FakeBillingManager.priceDisplayOverrides: MutableMap<BillingProduct, String?>` — test knob. Empty default → `getPriceDisplay` returns null for every product, matching the production behaviour when Play Billing is unavailable.
+- Tests +5 (530 → 535):
+  - `BillingManagerImplTest` +3: success returns `priceDisplay` verbatim (`"£0.79"` locale-formatted); query failure returns null; connect failure returns null. Hit a JUnit 4 vs 5 gotcha — the existing test class uses JUnit 4 where `assertEquals(message, expected, actual)` puts the message FIRST, not last. Initial test failures showed the message string being compared as the actual value. Fixed.
+  - `StoreViewModelTest` +2: empty overrides → empty map (UI fallback); 3-of-5 overrides populates only the 3 successful entries (asserts missing keys remain absent rather than landing as empty strings).
+- Out-of-scope (intentional v1.x deferrals): no refresh on app resume / locale change; no retry on transient network failure. Static fallback covers both.
+- `source-files.md` updated: `BillingManager.kt` row mentions `getPriceDisplay`; `StoreUiState.kt` row mentions the new `priceDisplays` field; `FakeBillingManager.kt` row mentions the new `priceDisplayOverrides` knob.
+
+### PR C — `docs(release): Plan 31 walkthrough doc revision` (pending commit)
+
+Pure docs. The walkthrough at `docs/release/plan-31-walkthrough.md` was written before the first end-to-end Plan 31 run; the live walk-through with the user surfaced four things the doc didn't anticipate, plus three smaller footguns. All fixed inline + summarised in a new `📝 Updated 2026-05-18` preamble at the top.
+
+Lessons fixed:
+
+1. **Android Developer Verification (mandatory since late 2025).** New "E1 detour" subsection with the debug-keystore registration flow. Cites ADR-0007.
+2. **Lowercase SKU IDs.** Phase F's product-ID table now uses `gem_pack_small` etc. Phase F also documents the `Purchase option ID` field's `[a-z0-9-]` format (hyphens, not underscores) with recommended values.
+3. **Closed testing is mandatory — ≥12 testers, ≥14 days.** Phase I1 retitled from "(optional)" to "(mandatory)" with explicit recruitment + opt-in URL guidance + the 14-day calendar clock.
+4. **The native debug symbols warning is unfixable for v1.** New callout in Phase G2 explains SQLCipher + androidx.graphics.path are pre-stripped.
+
+Minor footguns documented:
+- `versionCode` forward-only (smoke tests consume the counter permanently);
+- Phase E6 is no-op in modern Play Console (country/region selection moved into Phase G);
+- Phase F now mentions PR B's live-price wiring;
+- Contact email updated from the placeholder to actual.
+
+### Verification
+
+- `./run-gradle.sh test` — BUILD SUCCESSFUL, 535 tests pass exactly. Test count delta: 524 → +6 PR A → 530 → +5 PR B → 535. PR C adds zero tests.
+- `./run-gradle.sh bundleRelease` — BUILD SUCCESSFUL between PR A+B and after. Lint vital + R8 minify + signing all clean. Same one pre-existing Kotlin warning about `@ApplicationContext` parameter target carries over (KT-73255).
+
+### Decision footprint
+
+- **No new ADR.** All three PRs are routine improvements:
+  - PR A is a UX gap fill, mirroring an established pattern.
+  - PR B is a footgun fix; the design (interface method + null fallback + UI ?: pattern) is the obvious shape.
+  - PR C is doc maintenance.
+- **B.4 + B.5 explicitly deferred to post-launch** per ADR-0004's 4-PR / ~1-week effort estimate. Shifts no critical-path dependencies.
+- **Did not bump versionCode.** PR A + B do change shipped behaviour, but v3 is the live internal-track AAB and we're not re-uploading mid-session. Closed-track promotion will happen from v3 (with Internal track promotion) or from a future v4 if any pre-promotion bug fixes need to ship.
+
+### What's left for next session (or for the closed-track 14-day window)
+
+The bottleneck is now Google's mandatory closed-testing 14-day clock. Code-side, Plan 31 is fully unblocked through Production. Optional / opportunistic agent work that can land any time during the window:
+
+- B.4 FollowOnPipeline extraction + B.5 UpdateMissionProgress use case (~4 PRs, ~1 week effort, zero user-visible impact).
+- Live-price retry-on-failure (v1.x).
+- ADR-0008 documenting the live-price design if we want to crystallise the "v1.x deferral" choices.
+- Live-price refresh on app resume (sliver of v1.x).
+
+User's plan from here: promote internal → closed, recruit ≥12 testers, wait ≥14 days, apply for production access, staged rollout, tag v1.0.0.
+
 ## 2026-05-18 — Phase G internal-track smoke test PASS + C.5 PR 3 (delete `StubBillingManager`)
 
 - **Goal:** User: "All internal tests run successfully". That message closed the device-verification gate for C.5 PR 2 (real Play Billing v8 + receipt-table idempotency works end-to-end on a real device with the rolled-out v3 internal-track AAB) and unblocked C.5 PR 3. I drove the C.5 PR 3 deletion + collapse + doc sync in a single PR.

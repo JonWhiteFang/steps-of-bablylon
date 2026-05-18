@@ -4,6 +4,27 @@ All notable changes to Steps of Babylon are documented here.
 
 ## [Unreleased]
 
+### PR C — Plan 31 walkthrough doc revision: 4 lessons-learned + minor footguns (2026-05-18)
+
+Pure-docs PR. The walkthrough at `docs/release/plan-31-walkthrough.md` was written before the first end-to-end Plan 31 run; the live walk-through with the user surfaced four things the doc didn't anticipate, plus three smaller footguns. All fixed inline + summarised in a new "Updated 2026-05-18" preamble at the top.
+
+Lessons fixed:
+
+1. **Android Developer Verification (mandatory since late 2025).** New "E1 detour" subsection walks through the debug-keystore registration path: confirm the offered SHA-256 matches `~/.android/debug.keystore`, drop a one-line `assets/adi-registration.properties` snippet, build a debug APK, verify, upload, delete the snippet. Cites ADR-0007.
+2. **Lowercase SKU IDs.** Phase F's product-ID table now uses `gem_pack_small` / `ad_removal` / `season_pass` etc. (matches `BillingProduct.skuId()`). Phase F also documents the `Purchase option ID` field's `[a-z0-9-]` format requirement (hyphens, not underscores) with recommended values mirroring the product IDs.
+3. **Closed testing is mandatory — ≥12 testers, ≥14 days.** Phase I1 retitled from "(optional)" to "(mandatory)" with explicit recruitment + opt-in URL guidance + the 14-day calendar clock that gates the Production-access form.
+4. **The native debug symbols warning is unfixable for v1.** New callout in Phase G2 explains SQLCipher + androidx.graphics.path ship pre-stripped; `ndk { debugSymbolLevel = "FULL" }` is correct config but bundles zero symbols. The warning is informational, not a blocker.
+
+Minor footguns also documented:
+
+- `versionCode` is forward-only — a `bundleRelease` smoke test consumes the counter permanently in Play Console even without rollout.
+- Phase E6 (pricing & distribution) is a no-op in modern Play Console; country/region selection moved into the Phase G release flow.
+- Phase F now mentions Plan 31 PR B's live-price wiring, so a future doc reader knows in-app prices auto-track Play Console.
+- Contact email updated from the `support@whitefanggames.com` placeholder to the actual `jonwhitefang@gmail.com`.
+- `versionCode` table cell now points at `app/build.gradle.kts` as the live source instead of saying "`1`".
+
+No source / test impact.
+
 ### PR B — Live formatted price from Play Billing's `ProductDetails.priceDisplay` (2026-05-18)
 
 Pre-closed-testing UX/footgun fix. The Store screen previously read

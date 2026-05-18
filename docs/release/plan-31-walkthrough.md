@@ -6,15 +6,50 @@ you exactly what to do, in what order, with which values from this codebase.
 Ordered by dependency. Phases A and B can run in parallel — start them first
 because they have external delays (account verification, hosting setup).
 
+> **📝 Updated 2026-05-18 after the first end-to-end run.** Four things this doc
+> didn't anticipate when first written, all surfaced during the live walk-through
+> with the user. Each is fixed inline; this list links them up so a future reader
+> doesn't trip on the same rakes.
+>
+> 1. **Android Developer Verification** is now mandatory on first package
+>    registration (new Google policy, ~late 2025). The fix: register your
+>    debug-keystore SHA-256 with the package via the ADV proof-of-ownership APK
+>    upload. See the new "Phase E1 detour: Android Developer Verification"
+>    section below + ADR-0007.
+> 2. **Play Console product IDs must match `[a-z0-9._]`** — lowercase only. The
+>    `BillingProduct.skuId()` method now returns `name.lowercase()` so the wire
+>    format is `gem_pack_small` / `ad_removal` / `season_pass` etc., not the
+>    UPPER_SNAKE_CASE enum names. Phase F's SKU table is updated to match.
+> 3. **Closed testing is now MANDATORY before applying for production access**
+>    — minimum 12 opted-in testers, minimum 14 days of closed testing. Phase I1
+>    is no longer optional; it's a 14-day clock you must run before you can
+>    even apply for production. See updated Phase I1 below.
+> 4. **The "native debug symbols" warning at AAB upload is unfixable for any
+>    AAB containing SQLCipher's pre-stripped `.so` files.** AGP's
+>    `ndk { debugSymbolLevel = "FULL" }` is correct config but bundles zero
+>    symbols because the prebuilts have no debug info. The warning is
+>    informational only — not a release blocker. See Phase G note.
+>
+> Other minor footguns surfaced:
+>
+> - **`versionCode` is a forward-only counter that Play Console retains for
+>   every uploaded AAB, even withdrawn drafts.** A `bundleRelease` smoke test
+>   during Phase C will permanently consume `versionCode = 1`; the first real
+>   upload will need `versionCode = 2` or higher. Always bump on rejection.
+> - **Phase E6 (pricing & distribution) is a no-op in the modern Play Console**
+>   layout. Country/region selection moved into the Phase G release flow itself.
+> - **AAB upload to internal track sets `versionCode` permanently** — see
+>   `CHANGELOG.md` `## [Unreleased]` for live versionCode tracking.
+
 Project constants you will paste repeatedly:
 
 | Field | Value |
 |---|---|
 | Application ID | `com.whitefang.stepsofbabylon` |
-| Version | `1.0.0` (versionCode `1`) |
+| Version | `1.0.0` (versionCode — see `app/build.gradle.kts`; was `1` originally, now `4` after smoke-test bumps) |
 | Min SDK / Target SDK | 34 / 36 |
 | Category | Games → Strategy |
-| Contact email | `support@whitefanggames.com` (placeholder — change in `play-store-listing.md` if different) |
+| Contact email | `jonwhitefang@gmail.com` (per `play-store-listing.md`) |
 
 ---
 
@@ -166,6 +201,49 @@ Play Console → **Create app**.
 - Free or paid: **Free**
 - Declarations: confirm developer program policies + US export laws apply.
 
+#### E1 detour: Android Developer Verification (mandatory since late 2025)
+
+When you go to register the package name `com.whitefang.stepsofbabylon`, Play
+Console now demands ADV proof-of-ownership before it will accept the package.
+The flow shows a list of "eligible" SHA-256 fingerprints already known to
+Google's package registry; in practice the fingerprint offered will be your
+local **debug keystore** (`~/.android/debug.keystore`), not the production
+upload keystore you generated in Phase C — because every prior debug install on
+a Google-account-signed-in device pre-registers the (package, debug-fingerprint)
+pair with Google.
+
+**Path of least resistance: register with the debug keystore.** Don't fight it.
+
+1. Confirm the offered fingerprint matches your debug keystore:
+   ```bash
+   keytool -list -v -keystore ~/.android/debug.keystore \
+     -alias androiddebugkey -storepass android -keypass android | grep SHA256
+   ```
+2. Play Console hands you a snippet like `CHE2JNVSSL3U4AAAAAAAAAAAAA`. Create:
+   ```
+   app/src/main/assets/adi-registration.properties
+   ```
+   with the snippet on a single line (no quotes, no key name).
+3. Build a **debug** APK so it's signed with the debug keystore Play Console is
+   expecting:
+   ```bash
+   ./run-gradle.sh assembleDebug
+   ```
+4. Verify the APK signature SHA-256 matches the registered fingerprint and that
+   `assets/adi-registration.properties` is at the expected path:
+   ```bash
+   apksigner verify --print-certs app/build/outputs/apk/debug/app-debug.apk
+   unzip -l app/build/outputs/apk/debug/app-debug.apk | grep adi-registration
+   ```
+5. Upload the debug APK (~70 MB) to Play Console's ADV verification page.
+6. After Play Console accepts the upload, **delete `adi-registration.properties`**
+   — it's a one-time-use snippet and is gitignored anyway.
+
+ADR-0007 documents the rationale + the future migration path to add the
+release keystore as an additional ADV key. Until then, both keystores are
+functionally fine for Plan 31; the debug keystore handles ADV, the release
+keystore signs uploads.
+
 ### E2. Store listing
 
 **Main store listing** in the left nav. Paste copy from
@@ -232,24 +310,49 @@ Expected outcome: **Everyone (E) / PEGI 3**.
 
 ## Phase F — In-app products (after E1)
 
-Five SKUs, IDs match `BillingProduct` enum names byte-for-byte.
+Five SKUs. Product IDs are the **lowercase** value of `BillingProduct.skuId()`,
+because Play Console rejects uppercase / `_` mixed-case combos with the message
+*"Product ID must start with a number or lowercase letter. Can contain numbers,
+lowercase letters, underscores, and periods."* See `BillingProduct.skuId()` for
+the canonical mapping.
 
-**Monetization → Products → In-app products → Create product**. Then for the
-subscription, **Monetization → Products → Subscriptions → Create subscription**.
+**Monetize with Play → Products → In-app products → Create product**. Then for the
+subscription, **Monetize with Play → Products → Subscriptions → Create subscription**.
 
 | Product ID | Type | Price | Name (shown to user) | Description |
 |---|---|---|---|---|
-| `GEM_PACK_SMALL` | Managed (consumable) | $0.99 | Small Gem Pack | 50 Gems |
-| `GEM_PACK_MEDIUM` | Managed (consumable) | $4.99 | Medium Gem Pack | 300 Gems |
-| `GEM_PACK_LARGE` | Managed (consumable) | $9.99 | Large Gem Pack | 700 Gems |
-| `AD_REMOVAL` | Managed (non-consumable) | $3.99 | Remove Ads | One-time purchase. Removes all reward ads from the game. |
-| `SEASON_PASS` | Subscription | $4.99 / month | Season Pass | +10 Gems per day, exclusive cosmetics, 30-day billing period. |
+| `gem_pack_small` | Managed (consumable) | $0.99 | Small Gem Pack | 50 Gems |
+| `gem_pack_medium` | Managed (consumable) | $4.99 | Medium Gem Pack | 300 Gems |
+| `gem_pack_large` | Managed (consumable) | $9.99 | Large Gem Pack | 700 Gems |
+| `ad_removal` | Managed (non-consumable) | $3.99 | Remove Ads | One-time purchase. Removes all reward ads from the game. |
+| `season_pass` | Subscription | $4.99 / month | Season Pass | +10 Gems per day, exclusive cosmetics, 30-day billing period. |
 
 For the consumables: leave **Auto-fill in Play Console pricing** OFF unless you
 want regional pricing variants. Activate each product after creation.
 
-For `SEASON_PASS`: pick "Monthly" billing period (30 days). Grace period: 3
-days. Account hold: 30 days. No free trial for v1.
+For `season_pass`: pick **Monthly** billing period (30 days). Grace period:
+3 days. Account hold: 30 days. No free trial for v1. **Base plan ID:** `monthly`.
+
+**Purchase option IDs.** Modern Play Console requires a per-product/per-base-plan
+`Purchase option ID` field with format `[a-z0-9-]` (note: hyphens, not
+underscores). The values never appear in our app code (`BillingManagerImpl`
+queries by productId only; the SDK auto-resolves the offer/option). Recommended
+values mirror the product IDs but with hyphens:
+
+| Product | Purchase option ID |
+|---|---|
+| `gem_pack_small` | `gem-pack-small` |
+| `gem_pack_medium` | `gem-pack-medium` |
+| `gem_pack_large` | `gem-pack-large` |
+| `ad_removal` | `ad-removal` |
+| `season_pass` (base plan) | `monthly` |
+
+**Beware in-app/Play-Console price drift.** v1 reads live prices from
+`ProductDetails.priceDisplay` via `BillingManager.getPriceDisplay` (Plan 31 PR B)
+so the Store screen shows whatever Play Console is currently charging. The
+static `BillingProduct.priceDisplay` constants in code are a build-time fallback
+for offline / pre-query. If you change a price in Play Console, the in-app
+display will pick it up automatically on next Store entry; no code change needed.
 
 ---
 
@@ -270,7 +373,7 @@ ls -la app/build/outputs/bundle/release/app-release.aab
 
 ### G2. Upload to internal testing
 
-Play Console → **Testing → Internal testing → Create new release → Upload AAB**.
+Play Console → **Test and release → Internal testing → Create new release → Upload AAB**.
 
 First upload also enrolls the app in **Play App Signing** (recommended) — Google
 manages the signing key, your `upload-keystore.jks` becomes only the upload key.
@@ -279,6 +382,22 @@ Accept the Play App Signing terms.
 Release notes for v1.0.0: keep it short, e.g.
 > Initial release of Steps of Babylon. Walk to power your ziggurat in
 > wave-based tower defense battles.
+
+**Expect the "native debug symbols" warning.** Play Console will flag every AAB
+upload with *"This App Bundle contains native code, and you've not uploaded
+debug symbols."* This is **unfixable** for v1 because the native code in our
+AAB is from SQLCipher (`libsqlcipher.so`, ~6 MB per ABI) and `androidx.graphics.path`,
+both of which ship as pre-stripped prebuilt `.so` files — there's no debug info
+for AGP to extract. The `ndk { debugSymbolLevel = "FULL" }` setting in
+`app/build.gradle.kts` is correct config (will pick up symbols if/when SQLCipher
+ever starts shipping `.dbg` files), but bundles zero symbols today. **The
+warning is informational only and does not block rollout.** Click through it.
+
+**Expect a versionCode rejection on first upload.** If you ran a `bundleRelease`
+smoke test during Phase C, the AAB you produced consumed `versionCode = 1`
+permanently in Play Console's history — even though it was never rolled out.
+Fix by bumping `versionCode` in `app/build.gradle.kts` and re-running
+`./run-gradle.sh bundleRelease`. The counter is forward-only; never decrease.
 
 ### G3. Add license testers
 
@@ -347,10 +466,34 @@ If anything critical surfaces, fix → bump `versionCode` in
 
 After internal track is stable:
 
-### I1. Promote to closed testing (optional)
+### I1. Promote to closed testing (mandatory — ≥12 testers, ≥14 days)
 
-Useful if you want a wider tester group (50–100 people) before public launch.
-Skip for a small rollout.
+**This is no longer optional.** As of late 2025 Google requires a closed-testing
+period before granting production access on a brand-new app:
+
+- **Minimum 12 opted-in testers** (your tester list must show 12+ accounts that
+  accepted the closed-track opt-in URL, not just 12 license-tester emails added).
+- **Minimum 14 calendar days** of closed testing.
+- The **Apply for production access** button stays grey until both are met.
+
+Flow:
+
+1. Promote internal v3 → closed: **Test and release → Closed testing → Create
+   new release → Promote release → Internal testing**. Pick the v3 internal
+   release as the source.
+2. Open closed-track release → **Testers** tab → add an email list (or paste
+   Gmail addresses one per line). Recruit ≥12 real testers.
+3. Distribute the **closed-track opt-in URL** (separate from the internal one)
+   to your testers. Each tester must click → Become a tester → install. Track
+   opt-ins via Play Console.
+4. Wait 14 days while collecting feedback / Pre-launch report findings / crash
+   reports. Address anything critical — bump `versionCode` → `bundleRelease` →
+   re-upload to closed track.
+5. After day 14 with ≥12 opted-in testers, the Production access form unlocks.
+
+Recruitment ideas: personal channels, walking-app communities, X/Reddit (small
+game dev / fitness app subs), TestFlight-style beta swap groups. The 12 don't
+have to be highly-engaged — just opted-in installs.
 
 ### I2. Promote to production
 
