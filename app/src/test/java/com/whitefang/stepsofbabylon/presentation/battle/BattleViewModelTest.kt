@@ -154,6 +154,46 @@ class BattleViewModelTest {
         assertEquals(initialGems + 1, playerRepo.profile.value.gems)
     }
 
+    // -------- RO-08 #4: STEP_SURGE card multiplies the post-round watch-ad gem reward --------
+
+    @Test
+    fun `RO08 STEP_SURGE level 1 doubles the watchGemAd reward`() = runTest(dispatcher) {
+        // STEP_SURGE level 1 → effectAtLevel(1) = 2.0 → gemMultiplier 2.0×.
+        cardRepo.cards.value = listOf(OwnedCard(1, CardType.STEP_SURGE, 1, true))
+        val vm = createVm()
+        backgroundScope.launch { vm.uiState.collect {} }
+        advanceUntilIdle()
+        val initialGems = playerRepo.profile.value.gems
+
+        vm.watchGemAd()
+        advanceUntilIdle()
+
+        assertEquals(
+            initialGems + 2L,
+            playerRepo.profile.value.gems,
+            "STEP_SURGE Lv1 (2× gemMultiplier) must double the 1-gem ad reward to 2",
+        )
+    }
+
+    @Test
+    fun `RO08 STEP_SURGE level 5 quadruples the watchGemAd reward`() = runTest(dispatcher) {
+        // STEP_SURGE level 5 → effectAtLevel(5) = 4.0 → gemMultiplier 4.0×.
+        cardRepo.cards.value = listOf(OwnedCard(1, CardType.STEP_SURGE, 5, true))
+        val vm = createVm()
+        backgroundScope.launch { vm.uiState.collect {} }
+        advanceUntilIdle()
+        val initialGems = playerRepo.profile.value.gems
+
+        vm.watchGemAd()
+        advanceUntilIdle()
+
+        assertEquals(
+            initialGems + 4L,
+            playerRepo.profile.value.gems,
+            "STEP_SURGE Lv5 (4× gemMultiplier) must quadruple the 1-gem ad reward to 4",
+        )
+    }
+
     // -------- PR A: ad-error UX (snackbar wiring on Cancelled / Error) --------
 
     @Test

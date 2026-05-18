@@ -110,6 +110,14 @@ class BattleViewModel @Inject constructor(
     private var equippedCosmetics: Map<CosmeticCategory, CosmeticItem> = emptyMap()
     private var cardCashBonus: Double = 0.0
     private var cardSecondWind: Double = 0.0
+    /**
+     * Gem-reward multiplier from the equipped STEP_SURGE card (RO-08). Default `1.0` means
+     * no STEP_SURGE equipped. Applied to the post-round watch-ad gem reward in [watchGemAd]
+     * so the only in-game gem source benefits from the card. Computed by [ApplyCardEffects]
+     * via `CardEffectResult.gemMultiplier`; refreshed in [init] and [playAgain]. Pre-RO-08
+     * the field was computed but never read — STEP_SURGE was a no-op.
+     */
+    private var cardGemMultiplier: Double = 1.0
     private var roundEnded = false
 
     init {
@@ -125,6 +133,7 @@ class BattleViewModel @Inject constructor(
             resolvedStats = cardResult.stats
             cardCashBonus = cardResult.cashBonusPercent
             cardSecondWind = cardResult.secondWindHpPercent
+            cardGemMultiplier = cardResult.gemMultiplier
 
             // RO-07 C.2 PR 1: hydrate the equipped-cosmetic override map. Stored on the VM so
             // `startPollingEngine` (which may fire before or after this launch completes) can
@@ -378,6 +387,7 @@ class BattleViewModel @Inject constructor(
         resolvedStats = cardResult.stats
         cardCashBonus = cardResult.cashBonusPercent
         cardSecondWind = cardResult.secondWindHpPercent
+        cardGemMultiplier = cardResult.gemMultiplier
         _uiState.update { BattleUiState(maxHp = resolvedStats.maxHealth, currentHp = resolvedStats.maxHealth,
             speedMultiplier = it.speedMultiplier, isLoading = false, stepBalance = it.stepBalance, adRemoved = it.adRemoved) }
         surfaceView?.configure(resolvedStats, tier, workshopLevels)
@@ -444,7 +454,12 @@ class BattleViewModel @Inject constructor(
             val result = rewardAdManager.showRewardAd(AdPlacement.POST_ROUND_GEM)
             when (result) {
                 is AdResult.Rewarded -> {
-                    playerRepository.addGems(1)
+                    // RO-08: STEP_SURGE Epic card multiplies the post-round ad gem reward.
+                    // Multiplier defaults to 1.0 when no STEP_SURGE is equipped, so the
+                    // baseline reward stays at 1 gem. Reward floors at 1 even if a future
+                    // multiplier somehow lands below it.
+                    val gems = (1.0 * cardGemMultiplier).toLong().coerceAtLeast(1L)
+                    playerRepository.addGems(gems)
                     _uiState.update { it.copy(roundEndState = it.roundEndState?.copy(gemAdWatched = true)) }
                 }
                 is AdResult.Cancelled ->
