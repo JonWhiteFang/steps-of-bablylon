@@ -1,6 +1,56 @@
 # Run Log
 
-## 2026-05-18 (later evening) — RO-08 upgrade-wiring fixes (4-fix bundle)
+## 2026-05-18 (latest, post-RO-08 commit) — RO-09 pre-closed-test self-audit
+
+- **Goal:** user asked for a deep code scan for any other bugs after RO-08 landed. Goal: maximise quality of the v1.0 closed-test build before the 14-day clock starts.
+- **Approach:** systematic sweep using the same patterns RO-08 surfaced — dead enum branches, computed-but-never-read fields, stale captured references — extended to include round-end persistence, currency atomicity, anti-cheat, ViewModel cleanup, and Flow combiners. Cross-checked every CardType / OverdriveType / UltimateWeaponType / UpgradeType / DailyMissionType for end-to-end wiring.
+
+### Findings (7)
+
+**🔴 CRITICAL — Finding #1: CHRONO_FIELD UW does nothing functional.** Description claims "Slows all enemies to 10 % speed for duration" but `chronoActive`'s only consumer is the rendering overlay (purple tint). `EnemyEntity.update` reads raw `speed`; `GameEngine.update` passes raw `deltaTime`. Players spend 75 Power Stones (same cost as CHAIN_LIGHTNING) for zero gameplay benefit. Same shape as RO-08's dead-enum findings — feature wired into UI/cooldown/cost but disconnected from gameplay.
+
+**🟠 MODERATE — Finding #2: GOLDEN_ZIGGURAT × overdrive `fortuneMultiplier` leak.** Single shared field for FORTUNE (3.0×) and GOLDEN_ZIGGURAT (5.0×). The GOLDEN expire path's `if (activeOverdrive == null) fortune = 1.0` only resets when no overdrive is active. If ASSAULT/FORTRESS/SURGE is active when GOLDEN expires, the 5.0× multiplier persists for the remainder of the active overdrive (up to ~50 s 5× cash exploit). Symmetric leak in the FORTUNE-activate path (downgrades GOLDEN's higher value) and `expireOverdrive` (forces 1.0 even if GOLDEN still active).
+
+**🟢 COSMETIC — Finding #7: Dead `total` expression in `LabsScreen.kt:106`.** Algebraically `2 × info.remainingMs`, never read. Refactor leftover.
+
+**🟡 LOW (deferred to v1.x) — Findings #3 / #4 / #5 / #6:**
+- #3 STEP_MULTIPLIER × cross-validator unit mismatch (post-RO-08): `record.creditedSteps` now includes the multiplier bonus, but cross-validator compares it raw against `hcSteps`. Edge case affecting players with prior CV offenses + STEP_MULTIPLIER ≥ 1. Closed-test cohort almost certainly has clean step history.
+- #4 Currency lifetime counter desync: `addGems` / `spendGems` / `addPowerStones` / `spendPowerStones` fire two `@Query` UPDATEs back-to-back, not in `@Transaction`. Lifetime counters can drift on crash. Display-only impact.
+- #5 TOCTOU race on gem/PS spend: `MAX(0, balance + delta)` clamps wallet, but `incrementSpent` records full requested amount. Lifetime drift only.
+- #6 Per-kill battle-step credit on `viewModelScope`: end-of-round persistence migrated to `applicationScope` in RO-03, but per-kill credits still on viewModelScope. Mid-round nav-away cancels in-flight credits. Bounded to ~1 step per pending callback.
+
+### Verified clean
+
+Full audit checklist documented in `docs/plans/plan-RO-09-pre-closed-test-fixes.md` § "Out of scope — verified clean":
+- All 4 `CardEffectResult` fields read by BVM (RO-08 #4 closed `gemMultiplier`).
+- All 9 `CardType` cases wired in `ApplyCardEffects`. (Minor cosmetic: `IRON_SKIN` description says "%" but adds raw flat — string-only mismatch, not a wiring bug.)
+- All 4 `OverdriveType` variants propagate (RO-08 #2 fixed ASSAULT + FORTRESS).
+- All 6 UWs wire correctly *after* RO-09 #1 + #2 land.
+- All 23 `UpgradeType` enums have downstream consumers (RO-08 closed STEP_MULTIPLIER + RECOVERY_PACKAGES).
+- All 6 `DailyMissionType` cases handled (BATTLE in BVM, UPGRADE in WorkshopVM/LabsVM, WALKING in DailyStepManager).
+- `secondWindUsed` reset between rounds via `engine.init`; `secondWindHpPercent` re-pushed in `playAgain`.
+- Round-end persistence atomicity (RO-02) + resilience (RO-03) preserved.
+- Atomic SQL guards for purchase, claim-milestone, credit-battle-steps.
+
+### Decision: which to fix before closed test
+
+Three fixes selected: **#1 (critical UW)**, **#2 (cash exploit)**, **#7 (drive-by cleanup)**. Closed-test feedback would surface #1 immediately as "broken on arrival"; #2 is a real cash exploit during overlapping-buff play. #7 is a 1-line cleanup costless to ship now.
+
+Four deferrals (#3 – #6) documented with rationale: bounded impact, near-zero closed-test exposure (new players, no CV offenses, no extreme mid-round nav-away). All four have v1.x fix sketches in the plan doc.
+
+### Plan documented + STATE/RUN_LOG sync (this commit)
+
+- Created `docs/plans/plan-RO-09-pre-closed-test-fixes.md` (307 lines) with priority table, decision rationale, per-finding details (severity / files / root cause / fix sketch / test plan), acceptance criteria, implementation plan (4 commits), and v1.x fix sketches for the deferred items.
+- Updated `docs/agent/STATE.md`: current-objective points at RO-09; top-priorities reordered (RO-09 implementation now #1, closed-track promotion now #2); next-actions explicit ordering; references list now includes the RO-09 plan path; critical-path appended.
+- Appended this RUN_LOG entry above the prior RO-08 entry.
+
+### Result
+
+No code changed in this session. Pure planning + documentation pass. Ready to implement RO-09 next session: ~3 commits + doc-sync commit, target +7 tests (565 → ~572), versionCode bump 3 → 4, re-upload to internal track, then promote internal v4 → closed.
+
+---
+
+
 
 - **Goal:** User asked me to audit upgrade wiring during play. Found four real gaps: (1) STEP_MULTIPLIER + RECOVERY_PACKAGES never referenced outside their enum; (2) ZigguratEntity captured `attackInterval` / `attackRange` at construction with a stale `val stats` reference, so Overdrive ASSAULT's 2x attack speed + FORTRESS's 2x health regen + in-round ATTACK_SPEED purchases all silently no-op'd; (3) ResolveStats only applied `ir(...)` to DAMAGE / ATTACK_SPEED / HEALTH so 20 of 23 in-round purchases were dead cash; (4) STEP_SURGE card's `gemMultiplier` was computed by `ApplyCardEffects` but never read by `BattleViewModel`. User asked to bundle them. Single PR.
 - **Preflight:** read STATE.md (Plan 31 Phase G2 closed-testing window, do-not-touch zones include `domain/usecase/`). `git status` clean on `main`, last commit (after pushing PRs A+B+C earlier this evening).

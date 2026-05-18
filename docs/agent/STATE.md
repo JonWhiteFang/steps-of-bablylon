@@ -1,17 +1,15 @@
 # Project State
 
 ## Current objective
-- **All pre-closed-testing improvements landed (2026-05-18 evening).** Three PRs in this session:
-  - **PR A** \u2014 Surface ad-error feedback as snackbar in Battle + Cards. `CardsViewModel.watchFreePackAd` and `BattleViewModel.watchGemAd` / `watchPsAd` now show a snackbar on `AdResult.Cancelled` and `AdResult.Error` instead of silently swallowing the result. Mirrors the `userMessage` pattern used by other VMs. +6 tests.
-  - **PR B** \u2014 Live formatted price from Play Billing. New `BillingManager.getPriceDisplay(product): String?` interface method; `BillingManagerImpl` queries `ProductDetails.priceDisplay`; `StoreViewModel.refreshPriceDisplays()` populates `StoreUiState.priceDisplays` on Store entry; `StoreScreen` reads `state.priceDisplays[X] ?: BillingProduct.X.priceDisplay`. Removes the in-app/Play-Console price drift footgun. +5 tests.
-  - **PR C** \u2014 Plan 31 walkthrough doc revision. Updated preamble + 4 lessons-learned (ADV mandatory, lowercase SKUs, mandatory closed testing, native-debug-symbol unfixability) + 3 minor footguns inline. Pure docs.
-  - **RO-08** \u2014 Bundle of 4 upgrade-wiring fixes from external code review (later evening, 2026-05-18):
-    - Fix #1: STEP_MULTIPLIER + RECOVERY_PACKAGES wired in (previously declared but unimplemented). STEP_MULTIPLIER multiplies sensor-walking step credit by `(1 + level * 0.01)` capped at +100 %; activity minutes excluded. RECOVERY_PACKAGES heals `level * 1 %` of max HP every 30 s during SPAWNING phase, capped at 50 % per pulse.
-    - Fix #2: `ZigguratEntity` stale-stats propagation. `stats` is now a `var` with private setter; `attackInterval` / `attackRange` are computed each tick from the live stats reference; `GameEngine.applyStats(newStats)` is the single mutation point. Closes Overdrive ASSAULT's 2x attack-speed + FORTRESS's 2x health-regen silently no-op'ing pre-fix.
-    - Fix #3: in-round upgrade coverage matches GDD \u00a75. ResolveStats applies `ir(...)` to all 14 stat-bearing upgrades; STEP_MULTIPLIER + RECOVERY_PACKAGES hidden from in-round menu; `GameEngine.updateEffectiveLevels(combined)` pushes additive workshop+inround levels for cash-utility math (CASH_BONUS / CASH_PER_WAVE / INTEREST / FREE_UPGRADES).
-    - Fix #4: STEP_SURGE card multiplies the watch-ad gem reward via `cardGemMultiplier` (was computed by `ApplyCardEffects` but never read by `BattleViewModel` pre-fix).
-- **Test count 524 \u2192 565** (+11 in PRs A+B, +30 in RO-08; no regressions).
-- **Next external step:** Promote internal v3 \u2192 closed testing in Play Console. Recruit \u226512 testers. Wait \u226514 calendar days. Then apply for production access.
+- **RO-09 \u2014 pre-closed-test audit findings (2026-05-18 evening, post-RO-08).** Self-audit found 7 issues, plan documented at `docs/plans/plan-RO-09-pre-closed-test-fixes.md`. Three to fix before closed test, four deferred to v1.x:
+  - **#1 CRITICAL \u2014 CHRONO_FIELD UW does nothing functional.** Description says "Slows all enemies to 10 % speed for duration" but the only consumer of `chronoActive` is the rendering overlay; `EnemyEntity.update` reads raw `speed` and `GameEngine.update` passes raw `deltaTime`. 75 Power-Stone unlock → purple tint, zero gameplay benefit. Fix shape: scale `deltaTime` for `EnemyEntity` instances when `chronoActive` true.
+  - **#2 MODERATE \u2014 GOLDEN_ZIGGURAT \u00d7 overdrive `fortuneMultiplier` leak.** Single shared field used by FORTUNE (3.0\u00d7) and GOLDEN_ZIGGURAT (5.0\u00d7). GOLDEN expire path's `if (activeOverdrive == null) fortune = 1.0` only resets when no overdrive active; if ASSAULT/FORTRESS/SURGE is active, the 5.0\u00d7 multiplier leaks for the remainder of that overdrive (up to ~50 s 5\u00d7 cash exploit). Fix: `fortuneMultiplier = if (FORTUNE active) 3.0 else 1.0` symmetrical fix in 3 sites.
+  - **#7 COSMETIC \u2014 dead `total` expression in `LabsScreen.kt:106`.** Algebraically `2 \u00d7 info.remainingMs`, never read. Drive-by delete.
+  - **Deferred to v1.x:** #3 STEP_MULTIPLIER \u00d7 cross-validator unit mismatch, #4 currency lifetime counter desync, #5 TOCTOU race on gem/PS spend, #6 per-kill battle-step credit on `viewModelScope`. All bounded-impact, no closed-test exposure.
+- **Tests target post-RO-09:** 565 \u2192 ~572 (+7: 3 chrono, 4 fortune-stacking).
+- **Acceptance:** all three fix-before-CT findings landed; tests green; bundleRelease green; versionCode 3 \u2192 4; re-upload internal track; promote internal v4 \u2192 closed.
+- **Previous objective (RO-08, complete):** 4-fix bundle for upgrade wiring (STEP_MULTIPLIER + RECOVERY_PACKAGES + ZigguratEntity stale stats + ResolveStats coverage + STEP_SURGE gem multiplier). Commits `5c2baca` \u2026 `b7b8824` on `main`. Test count 535 \u2192 565.
+- **Next external step:** Promote internal v4 (after RO-09 lands) \u2192 closed testing in Play Console. Recruit \u226512 testers. Wait \u226514 calendar days. Then apply for production access.
 
 ## What works
 - Plans 01\u201330 + 10b + R (R01\u2013R12) + R2 (R2-01\u2013R2-12) complete.
@@ -23,7 +21,7 @@
 - Play Console: developer account verified, app `com.whitefang.stepsofbabylon` created in Draft, package registered via ADV (debug-keystore path). Listing populated end-to-end. Internal track v3 (versionCode 3) live, on-device-verified. 5 SKUs created and active.
 - Real Play Billing v8 + AdMob v25 + UMP v4 wired end-to-end and verified on a real device.
 - **Pre-closed-testing UX polish (PRs A + B):** Ad-failure modes surface as snackbars in Battle + Cards; Store screen displays live Play-Console prices via `ProductDetails.priceDisplay` with static-constant fallback. Walkthrough doc reflects the lessons learned during the live walk-through.
-- **535 JVM tests** green.
+- **565 JVM tests** green (535 pre-RO-08 \u2192 565 post-RO-08; +30 new tests for upgrade wiring, ResolveStats coverage, GameEngine overdrive/recovery, STEP_SURGE gem multiplier, STEP_MULTIPLIER walking credit).
 
 ## Known issues / debt
 - **Closed-testing prerequisite for production launch (new Google policy).** Dashboard mandates \u226512 testers opted-in, \u226514 days of closed testing, before production access can be applied for. Adds \u226514 days to launch timeline.
@@ -35,19 +33,20 @@
 - The Play Console "no debug symbols" warning will persist on every upload (SQLCipher + androidx.graphics.path .so files ship pre-stripped). Informational, not a release blocker. Documented in walkthrough.
 
 ## Top priorities (next 5)
-1. **Plan 31 Phase G2 \u2014 closed testing track.** Promote internal v3 \u2192 closed. Recruit \u226512 testers. Wait \u226514 calendar days while collecting feedback.
-2. **Plan 31 Phase H \u2014 Pre-launch report review.** Auto-runs Firebase Test Lab on every internal-track AAB upload. Review + fix anything critical (bump versionCode \u2192 bundleRelease \u2192 re-upload to closed track).
-3. **Plan 31 Phase I \u2014 production access application + rollout.** After \u226514 days closed testing with \u226512 testers, apply for production access. Google review 1\u20133 days. Then promote closed \u2192 production with staged rollout (5\u201310 % \u2192 100 %).
-4. **Tag v1.0.0 in git** post-production rollout. Update STATE + RUN_LOG.
-5. **Post-launch debt:** B.4 + B.5 refactor (FollowOnPipeline extraction, UpdateMissionProgress use case). Add release upload keystore as additional ADV key.
+1. **Implement RO-09 fix bundle (#1 + #2 + #7)** per `docs/plans/plan-RO-09-pre-closed-test-fixes.md`. Single PR, 4 commits (chrono fix, fortune-stacking fix, dead-code cleanup, doc sync). Bump versionCode 3 \u2192 4. ~1\u20132 hour task.
+2. **Plan 31 Phase G2 \u2014 closed testing track.** After RO-09 lands and v4 is uploaded to internal, promote internal v4 \u2192 closed. Recruit \u226512 testers. Wait \u226514 calendar days while collecting feedback.
+3. **Plan 31 Phase H \u2014 Pre-launch report review.** Auto-runs Firebase Test Lab on every internal-track AAB upload. Review + fix anything critical (bump versionCode \u2192 bundleRelease \u2192 re-upload to closed track).
+4. **Plan 31 Phase I \u2014 production access application + rollout.** After \u226514 days closed testing with \u226512 testers, apply for production access. Google review 1\u20133 days. Then promote closed \u2192 production with staged rollout (5\u201310 % \u2192 100 %).
+5. **Tag v1.0.0 in git** post-production rollout. Update STATE + RUN_LOG. Then start v1.x patch backlog: deferred RO-09 findings #3 \u2013 #6, B.4 + B.5 refactor.
 
 ## Next actions (explicit order)
-1. **(Commit, immediate)** Push the 3 PRs landed today (PR A `feat(ux): ad-error snackbar`; PR B `feat(billing): live formatted price`; PR C `docs(release): Plan 31 walkthrough revision`).
-2. **(External)** Promote internal v3 \u2192 closed testing in Play Console. Recruit \u226512 testers (Gmail addresses), distribute opt-in URL, monitor for \u226514 days.
-3. **(External)** Review Pre-launch report on the v3 internal-track AAB. Address any critical findings.
-4. **(External)** After \u226514 days closed testing, apply for production access. Google review 1\u20133 days.
-5. **(External)** Promote closed \u2192 production with staged rollout. Tag v1.0.0 in git.
-6. **(Optional, opportunistic)** B.4/B.5 refactor; live-price retry-on-failure.
+1. **(Implement, immediate)** RO-09 fix bundle per `docs/plans/plan-RO-09-pre-closed-test-fixes.md`. Single PR with 4 commits. Tests 565 \u2192 ~572.
+2. **(Build + upload)** Bump `versionCode 3 \u2192 4`, run `./run-gradle.sh bundleRelease`, upload to internal track. On-device smoke-test.
+3. **(External)** Promote internal v4 \u2192 closed testing in Play Console. Recruit \u226512 testers (Gmail addresses), distribute opt-in URL, monitor for \u226514 days.
+4. **(External)** Review Pre-launch report on the v4 internal-track AAB. Address any critical findings.
+5. **(External)** After \u226514 days closed testing, apply for production access. Google review 1\u20133 days.
+6. **(External)** Promote closed \u2192 production with staged rollout. Tag v1.0.0 in git.
+7. **(v1.x patch backlog)** Deferred RO-09 findings #3\u2013#6 (cross-validator unit fix, currency lifetime atomicity, TOCTOU spend race, per-kill credit on applicationScope); B.4/B.5 refactor; live-price retry-on-failure.
 
 ## Do-not-touch / fragile zones
 - `domain/model/` \u2014 stable, all constants validated by balance tests. `BillingProduct.skuId()` is now a public method; treat as a stable public API.
@@ -73,5 +72,6 @@
 - Delete-data URL: https://jonwhitefang.github.io/steps-of-bablylon/#delete-data
 - Play Store listing copy: docs/release/play-store-listing.md
 - Master plan: docs/plans/master-plan.md
-- Critical path: 01\u2192\u202630\u2192R\u2192R2\u2192 Battle Step Rewards \u2192 Phase A done \u2192 B.1 done \u2192 B.2 done (RO-02 complete) \u2192 B.3 done (RO-03 complete) \u2192 B.4\u2013B.5 (deferred post-launch) \u2192 C.2 PRs done \u2192 C.4 done \u2192 C.5 PRs 1+2+3 done \u2192 C.6 PRs 1+2+3 done \u2192 battle-step-credit hotfix done \u2192 Plan 31 (Phases A\u2013G done; smoke test PASSED 2026-05-18; pre-closed-testing PRs A+B+C done 2026-05-18) \u2192 Phase G2 closed track (\u226514 days, \u226512 testers) \u2192 Phases H+I production \u2192 D
-- Last run: 2026-05-18 evening (pre-closed-testing UX/footgun/docs PRs A+B+C: ad-error snackbar, live formatted price, walkthrough doc revision; 535 tests green; AAB rebuilt clean; ready to push and promote internal v3 \u2192 closed testing).
+- **Plan RO-09 (active, pre-closed-test fix bundle): docs/plans/plan-RO-09-pre-closed-test-fixes.md**
+- Critical path: 01\u2192\u202630\u2192R\u2192R2\u2192 Battle Step Rewards \u2192 Phase A done \u2192 B.1 done \u2192 B.2 done (RO-02 complete) \u2192 B.3 done (RO-03 complete) \u2192 B.4\u2013B.5 (deferred post-launch) \u2192 C.2 PRs done \u2192 C.4 done \u2192 C.5 PRs 1+2+3 done \u2192 C.6 PRs 1+2+3 done \u2192 battle-step-credit hotfix done \u2192 RO-08 done (4-fix upgrade-wiring bundle) \u2192 **RO-09 active** (pre-closed-test self-audit bundle: chrono, fortune stacking, drive-by) \u2192 Plan 31 (Phases A\u2013G done; smoke test PASSED 2026-05-18) \u2192 Phase G2 closed track (\u226514 days, \u226512 testers) \u2192 Phases H+I production \u2192 D
+- Last run: 2026-05-18 evening (RO-09 plan documented after deep-scan audit; 7 findings catalogued, 3 selected for fix-before-CT, 4 deferred to v1.x; ready to implement RO-09 fix bundle next session).
