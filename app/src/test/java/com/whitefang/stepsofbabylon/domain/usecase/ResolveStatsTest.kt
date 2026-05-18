@@ -1,5 +1,6 @@
 package com.whitefang.stepsofbabylon.domain.usecase
 
+import com.whitefang.stepsofbabylon.domain.model.ResearchType
 import com.whitefang.stepsofbabylon.domain.model.UpgradeType
 import com.whitefang.stepsofbabylon.domain.model.ZigguratBaseStats
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -264,5 +265,78 @@ class ResolveStatsTest {
             mapOf(UpgradeType.ORBS to 4),
         )
         assertEquals(6, capped.orbCount)
+    }
+
+    // -------- RO-11 #A.1: lab research multiplies the matching base stat --------
+    // Pre-RO-11 all 10 [ResearchType] enums were dead — declared with effect descriptions and
+    // costing Steps + real-time + Gems to complete, but never read by any combat-path consumer.
+    // These tests guard the closed gap for the four research types whose effect lands inside
+    // [ResolvedStats]. The remaining lab research types are wired in their own commits:
+    // CASH_RESEARCH + UW_COOLDOWN engine-side, STEP_EFFICIENCY in walking-credit.
+
+    @Test
+    fun `RO11 DAMAGE_RESEARCH level 10 grants +50 percent base damage`() {
+        // 10 levels × 5 % per level = +50 % outer multiplier on damage.
+        val stats = sut(
+            workshopLevels = emptyMap(),
+            inRoundLevels = emptyMap(),
+            labLevels = mapOf(ResearchType.DAMAGE_RESEARCH to 10),
+        )
+        assertEquals(
+            ZigguratBaseStats.BASE_DAMAGE * 1.50,
+            stats.damage,
+            eps,
+            "DAMAGE_RESEARCH L10 must multiply base damage by 1.50×",
+        )
+    }
+
+    @Test
+    fun `RO11 HEALTH_RESEARCH level 20 grants +100 percent max health`() {
+        // 20 levels × 5 % per level = +100 % outer multiplier on max health.
+        val stats = sut(
+            workshopLevels = emptyMap(),
+            inRoundLevels = emptyMap(),
+            labLevels = mapOf(ResearchType.HEALTH_RESEARCH to 20),
+        )
+        assertEquals(
+            ZigguratBaseStats.BASE_HEALTH * 2.00,
+            stats.maxHealth,
+            eps,
+            "HEALTH_RESEARCH L20 must double max health (max-level cap)",
+        )
+    }
+
+    @Test
+    fun `RO11 CRITICAL_RESEARCH level 15 grants +45 percent crit damage on top of the workshop crit factor`() {
+        // Workshop CRITICAL_FACTOR L5 → base crit multiplier 2.0 + 5 × 0.1 = 2.5×
+        // CRITICAL_RESEARCH L15 → outer multiplier (1 + 15 × 0.03) = 1.45×
+        // Combined: 2.5 × 1.45 = 3.625×
+        val stats = sut(
+            workshopLevels = mapOf(UpgradeType.CRITICAL_FACTOR to 5),
+            inRoundLevels = emptyMap(),
+            labLevels = mapOf(ResearchType.CRITICAL_RESEARCH to 15),
+        )
+        assertEquals(
+            3.625,
+            stats.critMultiplier,
+            eps,
+            "CRITICAL_RESEARCH L15 must multiply the workshop-derived crit factor by 1.45×",
+        )
+    }
+
+    @Test
+    fun `RO11 REGEN_RESEARCH level 15 grants +60 percent health regen`() {
+        // 15 levels × 4 % per level = +60 % outer multiplier on healthRegen.
+        val stats = sut(
+            workshopLevels = emptyMap(),
+            inRoundLevels = emptyMap(),
+            labLevels = mapOf(ResearchType.REGEN_RESEARCH to 15),
+        )
+        assertEquals(
+            ZigguratBaseStats.BASE_REGEN * 1.60,
+            stats.healthRegen,
+            eps,
+            "REGEN_RESEARCH L15 must scale health regen by 1.60× (max-level cap)",
+        )
     }
 }
