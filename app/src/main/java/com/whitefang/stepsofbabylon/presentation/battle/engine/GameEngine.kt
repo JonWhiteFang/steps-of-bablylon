@@ -34,6 +34,7 @@ import com.whitefang.stepsofbabylon.presentation.battle.entities.ProjectileEntit
 import com.whitefang.stepsofbabylon.presentation.battle.entities.ZigguratEntity
 import com.whitefang.stepsofbabylon.presentation.battle.ui.HealthBarRenderer
 import kotlin.math.PI
+import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.math.min
 import kotlin.random.Random
@@ -120,6 +121,18 @@ class GameEngine {
      * crosses [RECOVERY_INTERVAL_SECONDS]; reset to zero on each fire and on round init.
      */
     private var recoveryTimer: Float = 0f
+
+    /**
+     * LIFESTEAL fractional-heal accumulator (R3-02 / GitHub issue #4). Each projectile-hit
+     * and orb-hit applies the mathematically-correct heal directly to `zig.currentHp` (a
+     * `Double`, so sub-1-HP heals are conserved); this counter accumulates the same
+     * fractional amount in parallel and emits a `+X HP` floating-text indicator each time
+     * the accumulated amount crosses an integer HP threshold. Pre-R3-02 LIFESTEAL was
+     * mathematically correct but visually invisible at low levels (Lv 1 = 0.2 % lifesteal
+     * × base damage 10 → 0.02 HP per shot — a sub-pixel HP-bar nudge users could not
+     * perceive). Reset to 0.0 in [init] so accumulator state never leaks across rounds.
+     */
+    private var lifestealAccumulator: Double = 0.0
 
     /**
      * Invoked on the game-loop thread every time a kill grants a non-zero
@@ -220,6 +233,7 @@ class GameEngine {
         secondWindUsed = false
         uwStates.clear(); chronoActive = false; goldenZigActive = false; preGoldenStats = null
         recoveryTimer = 0f
+        lifestealAccumulator = 0.0
         stats = resolvedStats; tier = playerTier; effectiveLevels = wsLevels
         reducedMotion = isReducedMotion
         conditions = BattleConditionEffects.fromTier(tier)
@@ -249,7 +263,10 @@ class GameEngine {
             onSpawnEnemy = { pendingAdd.add(it) },
             zigguratX = zig.originX, zigguratY = zig.originY,
             onEnemyDeath = ::handleEnemyDeath,
-            onMeleeHit = { dmg -> applyDamageToZiggurat(dmg, null) },
+            // R3-02: forward the attacker reference so applyThorn can reflect damage back
+            // to the melee enemy. Pre-R3-02 this was `{ dmg -> ... null }` and THORN_DAMAGE
+            // never fired on melee hits despite being plumbed through ResolvedStats.
+            onMeleeHit = { atk, dmg -> applyDamageToZiggurat(dmg, atk) },
             onEnemyFireProjectile = { sx, sy, tx, ty, dmg ->
                 pendingAdd.add(EnemyProjectileEntity(sx, sy, tx, ty, damage = dmg))
             },
@@ -596,7 +613,7 @@ class GameEngine {
             enemy.applyKnockback(dx / d * kb, dy / d * kb)
         }
         if (stats.lifestealPercent > 0) {
-            zig.currentHp = min(zig.currentHp + damage * stats.lifestealPercent, zig.maxHp)
+            applyLifesteal(damage * stats.lifestealPercent)
         }
     }
 
@@ -688,7 +705,7 @@ class GameEngine {
             enemy.applyKnockback(dx / d * kb, dy / d * kb)
         }
         if (stats.lifestealPercent > 0) {
-            zig.currentHp = min(zig.currentHp + result.amount * stats.lifestealPercent, zig.maxHp)
+            applyLifesteal(result.amount * stats.lifestealPercent)
         }
 
         // Bounce shot
@@ -735,6 +752,38 @@ class GameEngine {
     private fun applyThorn(rawDamage: Double, attacker: EnemyEntity?) {
         if (attacker != null && attacker.isAlive && stats.thornPercent > 0)
             attacker.takeDamage(rawDamage * stats.thornPercent * conditions.thornMultiplier)
+    }
+
+    /**
+     * Applies a lifesteal heal of [healAmount] HP to the ziggurat (R3-02). The HP delta is
+     * added directly to `zig.currentHp` (a `Double`, so sub-1-HP heals are conserved). The
+     * same fractional amount is accumulated in [lifestealAccumulator]; each time the
+     * accumulator crosses an integer HP threshold a `+X HP` `FloatingText` indicator is
+     * spawned above the ziggurat so the player gets visible feedback on heals that would
+     * otherwise be sub-pixel HP-bar movement.
+     *
+     * The math is identical to the pre-R3-02 in-place heal at `onProjectileHitEnemy` and
+     * `onOrbHitEnemy` — only the visible feedback is new. At cap (15 % lifesteal × base
+     * damage 10 = 1.5 HP / hit) every shot emits a `+1 HP` indicator; at Lv 1 (0.2 % × 10
+     * = 0.02 HP / hit) it takes ~50 hits to accumulate one visible burst, which matches
+     * the expectation that low-level lifesteal is weak but still observable.
+     */
+    private fun applyLifesteal(healAmount: Double) {
+        val zig = ziggurat ?: return
+        zig.currentHp = min(zig.currentHp + healAmount, zig.maxHp)
+        lifestealAccumulator += healAmount
+        if (lifestealAccumulator >= 1.0) {
+            val visibleHp = floor(lifestealAccumulator).toInt()
+            lifestealAccumulator -= visibleHp.toDouble()
+            effectEngine?.addEffect(
+                FloatingText(
+                    x = zig.x,
+                    y = zig.originY - 30f,
+                    text = "+$visibleHp HP",
+                    color = FloatingText.STEP_COLOR,
+                ),
+            )
+        }
     }
 
     // --- Targeting & death ---
@@ -797,7 +846,10 @@ class GameEngine {
                     damage = enemy.damage * 0.5,
                     targetX = zig.originX, targetY = zig.originY,
                     onDeath = ::handleEnemyDeath,
-                    onMeleeHit = { dmg -> applyDamageToZiggurat(dmg, null) },
+                    // R3-02: SCATTER child enemies also forward their attacker reference
+                    // so THORN_DAMAGE reflects against them (same fix as the wave-spawner
+                    // path — these melee-hit lambdas previously dropped the attacker).
+                    onMeleeHit = { atk, dmg -> applyDamageToZiggurat(dmg, atk) },
                 ).apply {
                     x = enemy.x + (i - childCount / 2f) * 15f; y = enemy.y; initDistance()
                 }
