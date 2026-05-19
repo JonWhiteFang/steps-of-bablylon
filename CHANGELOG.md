@@ -4,6 +4,68 @@ All notable changes to Steps of Babylon are documented here.
 
 ## [Unreleased]
 
+### RO-11 — Labs research wiring + in-round upgrade-effect readout (2026-05-19)
+
+Pre-RO-11 all 10 `ResearchType` enums were dead — declared with effect descriptions, costing Steps + real-time + Gems (rush) to complete, displayed correctly on the Labs screen, but never consumed by any combat-path / step-credit / cash-economy / UW-cooldown class. Same shape as RO-08 #1 (`STEP_MULTIPLIER` + `RECOVERY_PACKAGES`) and RO-09 #1 (`CHRONO_FIELD`), wider blast radius (entire Labs system instead of single enum). Closes the dead-enum gap that would have surfaced as "research does nothing" closed-test feedback within the first round of any tester at level 3+ `DAMAGE_RESEARCH`. Discovery context: user reported on top of the Labs gap that the in-round upgrade menu didn't show numerical effect of each purchase (originally tracked as RO-10, absorbed as Phase C of RO-11).
+
+**Phase A — 7 simple multipliers wired (commits `d3dc4d6` / `a4eca72` / `14b0665`, +9 tests).**
+
+- `DAMAGE_RESEARCH` / `HEALTH_RESEARCH` / `CRITICAL_RESEARCH` / `REGEN_RESEARCH` attach as a third multiplicative tier inside `ResolveStats.invoke` (signature gains optional `labLevels: Map<ResearchType, Int> = emptyMap()`). Formula: `base × (1 + ws × per) × (1 + ir × per) × (1 + lab × labPer)`.
+- `CASH_RESEARCH` (per-kill cash + wave-end cash) and `UW_COOLDOWN` (cooldown set in `activateUW`) wire onto `GameEngine` via two new `@Volatile` fields (`cashResearchMultiplier: Double = 1.0`, `uwCooldownMultiplier: Float = 1f`). `BattleViewModel` reads `LabRepository.observeAllResearch()` once per round in `init` / `playAgain` and pushes the multipliers via private helpers; `UWSlotInfo.cooldownTotal` mirrors `eng.uwCooldownMultiplier` so the cooldown ring-fill UI tracks the actual cooldown.
+- `STEP_EFFICIENCY` (per-walking-credit) wires onto `DailyStepManager` (constructor gains `LabRepository` as 16th param). `applyStepMultiplier` now reads BOTH the workshop `STEP_MULTIPLIER` level AND the lab `STEP_EFFICIENCY` level on every credit; combines additively under the existing `STEP_MULTIPLIER_CAP = 1.0` (per plan-RO-11 § 9 open question #3 — shared cap, not separate). New `STEP_EFFICIENCY_PER_LEVEL = 0.02` constant. Activity minutes intentionally still excluded for the same GDD wording rationale that excluded them from `STEP_MULTIPLIER` in RO-08.
+
+**Phase B — `WAVE_SKIP` wired + AUTO_UPGRADE_AI / ENEMY_INTEL gated (commits `28337e5` / `6b754c9`, +3 tests).**
+
+- `WaveSpawner` gains `private val startWave: Int = 1` constructor param; `var currentWave: Int = startWave` replaces the hardcoded `= 1`. `GameEngine.init()` accepts optional `startWave: Int = 1`, coerces to ≥1, threads into both the WaveSpawner constructor AND `triggerWaveAnnouncement(...)` so the HUD slide-in shows the correct opening wave. `GameSurfaceView.configure(...)` extends with `startWave: Int = 1` and threads through all 3 internal `engine.init` call sites (`configure` / `surfaceCreated` / `surfaceChanged`). `BattleViewModel` exposes `var startWave: Int = 1; private set` (mirrors `var labLevels` shape from Phase A) computed via `(1 + WAVE_SKIP_level).coerceAtLeast(1)` — L0 = wave 1 (current behaviour), L10 = wave 11. `BattleScreen` reads `viewModel.startWave` and pushes through `surfaceView.configure(...)` when isLoading flips to false.
+- `ResearchType` gains optional `isComingSoon: Boolean = false` constructor parameter; `AUTO_UPGRADE_AI` and `ENEMY_INTEL` set `isComingSoon = true` and have descriptions updated to *"Reserved for v1.x — research progress preserved"*. `LabsScreen` renders a "COMING SOON" badge in the row header (tertiary color, takes priority over MAX / level chip) and suppresses the entire Start / Rush / Progress UI block for those rows. `LabsViewModel.startResearch` adds a defensive belt-and-braces guard: early-return + snackbar message if a Coming Soon type ever reaches the VM via a future entry point. Research progress preserved on the deferred two so the v1.x real implementations pick up where players left off.
+
+**Phase C — `DescribeUpgradeEffect` use case + in-round readout (commit `93f6ae8`, +25 tests).**
+
+User report (originally RO-10): *"It is hard to see the upgrades and how they affect the tower. Can we have this visible, such as damage in round shown by the upgrade, and the same with all of them?"* — Pre-fix the in-round upgrade menu showed only the description text and cost button. Now every visible row shows a third Text below the description in Gold (#D4A843):
+
+```
+DAMAGE                                                   [$50]
+Lv 3 · +2% base damage per level
+Now: 12.5 dmg → Next: 13.0 dmg                          ← new
+```
+
+- New use case `domain/usecase/DescribeUpgradeEffect.kt`. `UpgradeEffectReadout(current: String, next: String?)` — `next` is `null` when at maxLevel (UI renders "Now: X (MAX)" instead of arrow). Operator-fun signature mirrors `ResolveStats` and shares its instance for drift-free preview. Stat-bearing upgrades call `resolveStats` twice; cash utilities + hidden upgrades compute from `UpgradeConfig.effectPerLevel` directly with cap clamps. Format strings pinned to `Locale.ROOT` so de-DE / fr-FR users don't see "12,5 dmg" diverging from the rest of the English-only v1.0 strings (plan § 9 open question #5 — localization is v2.0 effort).
+- Lab-research outer multipliers (Phase A) flow through the same `format` path so a tester with `DAMAGE_RESEARCH L5` sees the bonus reflected in the readout — closing the visibility loop the user originally asked for.
+- `BattleViewModel.describeEffect(type)` is the public seam; `InRoundUpgradeMenu` accepts an optional `describeEffect: (UpgradeType) -> UpgradeEffectReadout` parameter with no-op fallback. `BattleScreen` passes `viewModel::describeEffect` through.
+
+**Test coverage: 572 → 609 (+37 new tests, vs ~36 plan target).**
+
+- `ResolveStatsTest` +4 (per stat-bearing research type outer multiplier).
+- `GameEngineTest` +2 (`cashResearchMultiplier` 2.0× kill cash + `uwCooldownMultiplier` 0.55× CHAIN_LIGHTNING cooldown).
+- `DailyStepManagerTest` +3 (STEP_EFFICIENCY alone, STEP_MULTIPLIER + STEP_EFFICIENCY combined, shared +100 % cap).
+- `WaveSpawnerTest` +1 new file (currentWave reads from startWave constructor; L11 path).
+- `BattleViewModelTest` +1 (WAVE_SKIP L5 → startWave = 6 propagation).
+- `ResearchTypeTest` +1 new file (set-equality contract: only AUTO_UPGRADE_AI + ENEMY_INTEL are `isComingSoon`).
+- `DescribeUpgradeEffectTest` +25 new file (per-upgrade-type Now → Next readout coverage including caps + lab-research stacking + smoke test).
+
+**Open questions resolved against plan-RO-11 § 9.**
+
+| # | Question | Resolution |
+|---|---|---|
+| 1 | `WAVE_SKIP` semantics | "start at wave 1 + level" — L0 = wave 1 (current), L10 = wave 11 |
+| 2 | Lab × workshop stacking | Multiplicative — matches RO-08 ws × ir × lab pattern |
+| 3 | `STEP_EFFICIENCY` + `STEP_MULTIPLIER` cap | Shared +100 % cap, not separate |
+| 4 | Steps already spent on deferred enums | No refund; research progress preserved for v1.x |
+| 5 | Readout localization | English-only via `Locale.ROOT`; localization is v2.0 effort |
+
+**Verification.**
+
+- `./run-gradle.sh test --rerun-tasks` — BUILD SUCCESSFUL, 609 tests pass (was 572, +37). Zero failures across all suites.
+- `./run-gradle.sh bundleRelease` — BUILD SUCCESSFUL, clean R8 minify + lint vital + signing.
+
+**Out of scope / deferred to v1.x backlog.**
+
+- `AUTO_UPGRADE_AI` real implementation (~2 days; auto-purchase coroutine + optimal-upgrade definition + UI toggle).
+- `ENEMY_INTEL` real implementation (HP-bar gating + wave preview UI + boss telegraph banner).
+- Cross-validator unit fix for combined `STEP_MULTIPLIER` + `STEP_EFFICIENCY` against `hcSteps` (same as RO-09 deferred #3 — schema migration v9 → v10).
+- Workshop-screen surface of the same readout (the use case already supports it via the hidden-but-tested-for-reuse paths).
+- `BattleViewModel` constructor refactor — now at 16 params; ADR + extraction candidate for v1.x.
+
 ### RO-09 — Pre-closed-test fixes (2026-05-18)
 
 A self-audit run after RO-08 surfaced 7 latent issues; this PR lands the 3 that were flagged for **fix-before-closed-test**. The other 4 are bounded-impact lifetime-stat / atomicity / unit-mismatch issues with effectively zero exposure during the 14-day closed-test window — they're documented in `docs/plans/plan-RO-09-pre-closed-test-fixes.md` § "Deferred findings (v1.x)" for follow-up. Audit motivation: maximise the quality of the v1.0 closed-test build before the 14-day clock starts.

@@ -1,6 +1,147 @@
 # Run Log
 
-## 2026-05-18 (latest, post-RO-09 commits) — RO-09 fix bundle landed
+## 2026-05-19 (early hours) — RO-11 Labs wiring + in-round readout landed (Phases A + B + C)
+
+- **Goal:** implement plan-RO-11 in full (3 phases, 6 implementation commits + this doc-sync). Pre-fix all 10 `ResearchType` enums were dead — declared with effect descriptions, costing Steps + real-time + Gems, but never consumed by any combat-path / step-credit / cash-economy / UW-cooldown class. Same shape as RO-08 #1 / RO-09 #1 dead-enum gaps, system-wide. User report on top of that: in-round upgrade menu doesn't show numerical effect of each purchase (originally tracked as RO-10, absorbed as Phase C of RO-11 because the readout is meaningful only once stat resolution is correct).
+- **Outcome:** all 6 implementation commits landed on `main` plus this doc-sync. Test count 572 → 609 (+37 tests, ~36 plan target). `./run-gradle.sh test --rerun-tasks` BUILD SUCCESSFUL with zero failures; `./run-gradle.sh bundleRelease` BUILD SUCCESSFUL.
+
+### Phase A — 7 simple multipliers (commits `d3dc4d6` / `a4eca72` / `14b0665`, +9 tests, 572 → 581)
+
+- **`d3dc4d6` (#A.1, +4 tests):** `ResolveStats` gains optional `labLevels: Map<ResearchType, Int> = emptyMap()` parameter; DAMAGE_RESEARCH (+5 %/lvl), HEALTH_RESEARCH (+5 %/lvl), CRITICAL_RESEARCH (+3 %/lvl), REGEN_RESEARCH (+4 %/lvl) attach as a third multiplicative tier outside ws × ir following the established RO-08 stacking precedent. Default empty map preserves existing call sites.
+- **`a4eca72` (#A.2, +2 tests):** `GameEngine` gains `@Volatile cashResearchMultiplier: Double = 1.0` (applied at 2 cash sites in `handleEnemyDeath` per-kill + `handleWaveComplete` wave-end) and `@Volatile uwCooldownMultiplier: Float = 1f` (applied at the cooldown-set site in `activateUW`). `BattleViewModel` gains `LabRepository` constructor param (15th, before `dailyMissionDao`) + `var labLevels` snapshot field hydrated in `init` and refreshed in `playAgain` + private `cashResearchMultiplier()` and `uwCooldownMultiplier()` helpers. UWSlotInfo cooldownTotal now multiplied by `eng.uwCooldownMultiplier` so the ring-fill UI tracks the actual cooldown.
+- **`14b0665` (#A.3, +3 tests):** `DailyStepManager` gains `LabRepository` (16th constructor param). `applyStepMultiplier` now reads BOTH the workshop STEP_MULTIPLIER level and the lab STEP_EFFICIENCY level on every credit; combines additively under the existing `STEP_MULTIPLIER_CAP = 1.0` (per plan § 9 open question #3). New `STEP_EFFICIENCY_PER_LEVEL = 0.02` constant exposed alongside `STEP_MULTIPLIER_PER_LEVEL`. Activity minutes intentionally still excluded for the same GDD wording rationale that excluded them from STEP_MULTIPLIER in RO-08.
+
+### Phase B — WAVE_SKIP + Coming Soon gate (commits `28337e5` / `6b754c9`, +3 tests, 581 → 584)
+
+- **`28337e5` (#B.1, +2 tests):** `WaveSpawner` gains `private val startWave: Int = 1` constructor param; `var currentWave: Int = startWave` replaces the hardcoded `= 1`. `GameEngine.init()` gains optional `startWave: Int = 1` parameter, coerces to ≥1, threads into the WaveSpawner constructor AND `triggerWaveAnnouncement(...)` so the HUD slide-in shows the correct opening wave. `GameSurfaceView` tracks `currentStartWave` and threads it through all 3 `engine.init` call sites. `BattleViewModel` gains `var startWave: Int = 1; private set` + `waveSkipStartWave()` helper returning `(1 + level).coerceAtLeast(1)`. `BattleScreen` passes `viewModel.startWave` into `surfaceView.configure(...)`. New `WaveSpawnerTest` + 1 BattleViewModelTest entry for WAVE_SKIP L5 → startWave 6.
+- **`6b754c9` (#B.2, +1 test):** `ResearchType` gains optional `isComingSoon: Boolean = false` constructor parameter; AUTO_UPGRADE_AI + ENEMY_INTEL set `isComingSoon = true` and have descriptions updated to "Reserved for v1.x — research progress preserved". `LabsScreen` renders a "COMING SOON" badge in the row header and suppresses the Start / Rush / Progress UI block when `info.type.isComingSoon`. `LabsViewModel.startResearch` gains a defensive belt-and-braces guard: early-return + snackbar if a Coming Soon type ever reaches the VM via a future entry point. New `ResearchTypeTest` with a single set-equality contract that catches regressions in both directions.
+
+### Phase C — `DescribeUpgradeEffect` + in-round readout (commit `93f6ae8`, +25 tests, 584 → 609)
+
+- New use case `domain/usecase/DescribeUpgradeEffect.kt`. `UpgradeEffectReadout(current: String, next: String?)` data class — `next` is `null` when at maxLevel (UI renders "Now: X (MAX)" instead of arrow). Operator-fun signature mirrors `ResolveStats` and shares its instance for drift-free preview. Stat-bearing upgrades call `resolveStats` twice; cash utilities + hidden upgrades compute from `UpgradeConfig.effectPerLevel` directly with cap clamps. Format strings pinned to `Locale.ROOT` so de-DE / fr-FR users don't see "12,5 dmg" diverging from the rest of the English-only v1.0 strings (plan § 9 open question #5).
+- `BattleViewModel` gains `private val describeUpgradeEffect = DescribeUpgradeEffect(resolveStats)` (shared `ResolveStats` instance, no risk of preview-vs-reality drift) and public `fun describeEffect(type)`. `InRoundUpgradeMenu` gains optional `describeEffect: (UpgradeType) -> UpgradeEffectReadout` parameter with a no-op fallback default; renders a third Text in Gold (#D4A843) below the description when readout has non-empty current; line reads "Now: X → Next: Y" or "Now: X (MAX)". `BattleScreen` passes `viewModel::describeEffect` through.
+- `DescribeUpgradeEffectTest` (new): 25 tests — 6 multiplicative, 8 additive percentage cap (incl. LIFESTEAL clamp at 15 %, DEATH_DEFY at 50 %), 3 discrete (MULTISHOT / BOUNCE_SHOT / ORBS), 4 cash utility (CASH_BONUS / CASH_PER_WAVE / INTEREST cap 10 % / FREE_UPGRADES cap 25 %), 2 hidden-but-tested-for-Workshop-reuse (STEP_MULTIPLIER cap 100 % / RECOVERY_PACKAGES cap 50 %), 1 lab-research-stacks (DAMAGE_RESEARCH outer multiplier × DAMAGE), 1 smoke test asserting every UpgradeType produces a non-empty current readout.
+
+### Verification
+
+- `./run-gradle.sh test --rerun-tasks` — BUILD SUCCESSFUL, 609 tests pass (was 572). Zero failures across all suites.
+- `./run-gradle.sh bundleRelease` — BUILD SUCCESSFUL, clean R8 minify + lint vital + signing.
+
+### Open questions resolved against plan-RO-11 § 9
+
+- **#1 WAVE_SKIP semantics:** "start at wave 1 + level" as recommended (L0 = wave 1, L10 = wave 11).
+- **#2 Lab multipliers stack:** multiplicatively as recommended (matches RO-08 ws × ir × lab pattern).
+- **#3 STEP_EFFICIENCY + STEP_MULTIPLIER cap:** shared +100 % cap as recommended.
+- **#4 AUTO_UPGRADE_AI / ENEMY_INTEL Steps already spent:** no refund; research progress preserved for v1.x.
+- **#5 Readout localization:** English-only via `Locale.ROOT` formatters; localization is v2.0 effort.
+
+### Known follow-ups in v1.x backlog (per plan § 10)
+
+- AUTO_UPGRADE_AI real implementation (~2 days; auto-purchase coroutine + optimal-upgrade definition).
+- ENEMY_INTEL real implementation (HP-bar gating + wave preview UI + boss telegraph).
+- Cross-validator unit fix for combined STEP_MULTIPLIER + STEP_EFFICIENCY against `hcSteps` (same as RO-09 deferred #3 — schema migration v9 → v10).
+- Workshop-screen surface of the same readout (the use case already supports it via the hidden-but-tested-for-reuse paths).
+- `BattleViewModel` constructor refactor — now at 16 params; ADR + extraction candidate for v1.x.
+
+### Doc-sync (this commit)
+
+- `docs/agent/STATE.md`: current-objective flipped from "RO-11 implementation" to "smoke-test v5 + promote internal→closed"; previous-objectives ladder updated; "what works" gains 609-test line + RO-11 summary; top-priorities renumbered; next-actions reordered; critical-path appended; last-run line refreshed.
+- `docs/agent/RUN_LOG.md`: this entry prepended above the prior plan-write entry.
+- `AGENTS.md`: test count 572 → 609; coverage summary extended with RO-11 entries (8 wired research types + WAVE_SKIP + Coming Soon gate + DescribeUpgradeEffect + 25 readout tests).
+- `CHANGELOG.md`: new RO-11 section under [Unreleased] with per-phase summary + verification + open-question resolutions.
+- `.kiro/steering/source-files.md`: 5 new file entries (`DescribeUpgradeEffect.kt`, `WaveSpawnerTest.kt`, `DescribeUpgradeEffectTest.kt`, `ResearchTypeTest.kt`); updated entries for `ResearchType.kt` (+isComingSoon), `WaveSpawner.kt` (+startWave), `GameEngine.kt` (+cashResearchMultiplier + uwCooldownMultiplier + startWave), `GameSurfaceView.kt` (+currentStartWave), `BattleViewModel.kt` (+labLevels + startWave + describeEffect), `LabsScreen.kt` (+Coming Soon UI), `LabsViewModel.kt` (+isComingSoon guard), `InRoundUpgradeMenu.kt` (+describeEffect param), `BattleScreen.kt` (+startWave + describeEffect threading), `DailyStepManager.kt` (+LabRepository + STEP_EFFICIENCY), `ResolveStats.kt` (+labLevels), `BattleViewModelTest.kt` + `ResolveStatsTest.kt` + `DailyStepManagerTest.kt` + `GameEngineTest.kt` (test count deltas).
+- Plan file `docs/plans/plan-RO-11-labs-wiring.md` left unmodified (historical at authoring date per the agent protocol).
+
+### Next session
+
+1. **(Build + upload, immediate)** Bump `versionCode 4 → 5`, run `./run-gradle.sh bundleRelease`, upload to Play Console internal track.
+2. **(Smoke test, immediate)** Install v5 on a physical device. Run the 8 acceptance checks per plan-RO-11 § 8.
+3. **(External)** Promote internal v5 → closed testing, recruit ≥12 testers, wait ≥14 calendar days.
+
+---
+
+## 2026-05-18 (latest, late evening) — RO-11 plan written: Labs dead-enum discovery + in-round visibility absorbed
+
+- **Trigger:** user reported *"it is hard to see the upgrades and how they affect the tower; can we have this visible, such as damage in round shown by the upgrade, and the same with all of them?"* (originally tracked as RO-10 in the active task list).
+- **Discovery while scoping RO-10:** user follow-up question "will this also take into account lab levels?" prompted a search for Labs consumers. Found that **all 10 `ResearchType` enums are dead** — declared with effect descriptions, costing Steps + real-time + Gems (rush) to complete, displayed correctly on the Labs screen, but **never consumed by `BattleViewModel`, `GameEngine`, `ResolveStats`, `ApplyCardEffects`, `DailyStepManager`, `WaveSpawner`, `EnemyEntity`, or any other gameplay class**. Same shape as RO-08 #1 (`STEP_MULTIPLIER` + `RECOVERY_PACKAGES`) and RO-09 #1 (`CHRONO_FIELD`), wider blast radius (entire system).
+- **Why missed earlier:** RO-08 dead-enum sweep covered `CardType` / `OverdriveType` / `UltimateWeaponType` / `UpgradeType` / `DailyMissionType` — `ResearchType` was not on the checklist. RO-09 followed up on RO-08 gaps but didn't extend the sweep to Labs.
+
+### Severity per ResearchType
+
+| Enum | Closed-test exposure | Recommended phase |
+|---|---|---|
+| DAMAGE_RESEARCH / HEALTH_RESEARCH / CASH_RESEARCH | High (visible 1-round) | A |
+| CRITICAL_RESEARCH / REGEN_RESEARCH | Medium | A |
+| STEP_EFFICIENCY | High (A/B over 2 days walking) | A |
+| UW_COOLDOWN | Medium (needs unlocked UW) | A |
+| WAVE_SKIP | High (visible at round start) | B (wire) |
+| AUTO_UPGRADE_AI | Medium | B (defer to v1.x + UI gate) |
+| ENEMY_INTEL | Low | B (defer to v1.x + UI gate) |
+
+### Plan written
+
+- **`docs/plans/plan-RO-11-labs-wiring.md`** (406 lines). Comprehensive 3-phase plan absorbing the original RO-10 (in-round visibility) as Phase C since the readout is meaningless without the underlying stat resolution being correct.
+- **Phase A** (7 simple multipliers, closed-test blocker): `ResolveStats` extended with `labLevels: Map<ResearchType, Int>` parameter; outer multipliers for DAMAGE / HEALTH / CRITICAL / REGEN; engine multipliers for CASH (kill cash + wave cash) and UW_COOLDOWN; `DailyStepManager` extended for STEP_EFFICIENCY (combined cap with STEP_MULTIPLIER at +100 %).
+- **Phase B**: `WaveSpawner` constructor gains `startWave: Int = 1` for WAVE_SKIP; `AUTO_UPGRADE_AI` + `ENEMY_INTEL` rows on Labs screen marked "Coming Soon" + descriptions updated to *"Reserved for v1.x — research progress preserved"*.
+- **Phase C**: new `DescribeUpgradeEffect` use case (pure Kotlin) returns `UpgradeEffectReadout(current, next)` per upgrade type; `InRoundUpgradeMenu` renders "Now → Next" line below each row; readout includes Workshop + in-round + Labs contributions.
+- **Single PR**, 7 commits in dependency order, target +36 tests (572 → ~608), versionCode 4 → 5 after merge.
+- **Acceptance criteria**: 8 manual smoke checks on device covering each Phase A wired effect + Phase B WAVE_SKIP + Phase C readout + Phase B "Coming Soon" gating. RO-08 + RO-09 regression checks included.
+
+### Open questions documented (decide before commit 1)
+
+1. WAVE_SKIP semantics: "start at wave 1 + level" recommended (L0 = wave 1, L10 = wave 11).
+2. Lab multipliers stack with workshop **multiplicatively** (recommended) per RO-08 precedent.
+3. STEP_EFFICIENCY + STEP_MULTIPLIER share the +100 % cap (recommended) per GDD ceiling.
+4. AUTO_UPGRADE_AI / ENEMY_INTEL Steps already spent: no refund (recommended).
+5. Readout localisation: English-only v1.0 (recommended).
+
+### Doc-sync (this session, no code change)
+
+- `docs/agent/STATE.md`: current-objective flipped from "smoke-test v4" to "RO-11 implementation"; previous-objective records the v4 upload; top-priority #1 reordered; references updated with the new plan path.
+- `docs/agent/RUN_LOG.md`: this entry prepended.
+- `docs/plans/plan-RO-11-labs-wiring.md`: NEW. 406 lines.
+- `CHANGELOG.md`: not modified — RO-11 will get its own section when implementation lands.
+- `AGENTS.md`: not modified yet — will update as part of the RO-11 implementation PR's doc-sync commit.
+
+### Next session
+
+1. **(Implementation, ~7.5 hours)** Land RO-11 per plan: 7 commits in order. Phase A first (compulsory for closed test), then Phase B, then Phase C.
+2. **(Build + upload)** versionCode 4 → 5, `./run-gradle.sh bundleRelease`, upload to internal track.
+3. **(Smoke test)** 8 acceptance checks per plan § 8 on device, confirming each lab research type's claimed effect now matches reality.
+4. **(External)** Promote internal v5 → closed if smoke test green.
+
+### Result
+
+Pure planning + documentation pass; no code changed. Working tree clean before doc-sync; after doc-sync the new plan file and STATE/RUN_LOG updates form a single commit ready for review (commit not yet made — user has not asked yet). v4 (versionCode 4) sits on the internal track unchanged; will be superseded by v5 once RO-11 lands.
+
+---
+
+## 2026-05-18 (evening) — v4 (versionCode 4) AAB uploaded to internal track
+
+- **Event:** user reported that v4 (versionCode 4) was uploaded to the Play Console internal-testing track. This is the first upload that contains the RO-08 + RO-09 fix bundles. v3 (versionCode 3) had been live on the internal track since 2026-05-15 and on-device-verified earlier today.
+- **Working tree:** clean. No code changes in this session — status sync only. Last commit on `main` is `c366ad6` (`docs(ro-09): sync state, run log, changelog, AGENTS, source-files`).
+- **What's new in v4 vs v3:**
+  - **RO-08** (4-fix upgrade-wiring bundle, 535 → 565 tests): STEP_MULTIPLIER + RECOVERY_PACKAGES wired in (previously dead enums); ZigguratEntity stale-stats propagation fixed (Overdrive ASSAULT/FORTRESS + in-round attack-speed now actually apply); ResolveStats `ir(...)` extended to all 14 stat-bearing upgrades (was 3/14 — 11 in-round purchases were dead cash); STEP_SURGE card's `gemMultiplier` now read by `BattleViewModel.watchGemAd`. Commits `5c2baca` … `b7b8824`.
+  - **RO-09** (3-fix pre-closed-test bundle, 565 → 572 tests): CHRONO_FIELD UW now actually slows enemies (was render-overlay-only — 75 PS for zero gameplay benefit); GOLDEN_ZIGGURAT × overdrive `fortuneMultiplier` stacking fixed (closed the up-to-50s 5×-cash leak across overdrive expiry); LabsScreen dead `total` expression removed. Commits `fcb282e` … `fdc34d3`.
+- **Verification status:** `./run-gradle.sh test` BUILD SUCCESSFUL (572 tests) and `./run-gradle.sh bundleRelease` BUILD SUCCESSFUL when last run (during the RO-09 PR session). Internal-track upload successful per user.
+
+### Doc-sync (this session, no code change)
+
+- `docs/agent/STATE.md`: current-objective flipped from "bump versionCode + upload" to "smoke-test v4 + promote internal→closed"; top-priority #1 reworded; next-actions #1 reworded for the new immediate step (on-device smoke test); last-run line refreshed.
+- `AGENTS.md`: Tech-stack version line now reads "v3 … PASSED 2026-05-18; v4 (RO-08 + RO-09 fix bundles) was uploaded to the internal track 2026-05-18, awaiting on-device smoke test before closed-track promotion". Plan 31 status block extended with the v4-upload milestone and the RO-08 / RO-09 test-count deltas.
+- `CHANGELOG.md`: not modified — the [Unreleased] block already documents RO-08 and RO-09; convention is to flip [Unreleased] → a dated v1.0.0 release block when production rollout actually completes, not when an internal-track AAB ships.
+- `.kiro/steering/source-files.md`, `structure.md`, `tech.md`, `lib-*.md`: not modified — no source-file responsibility shape, structure, or dependency-version churn this session.
+
+### Next session
+
+1. **(On-device smoke test, immediate)** Install v4 from the internal-testing track on a physical device. RO-09 #1 + #2 visible-effect spot-check (equip CHRONO_FIELD UW, confirm enemies actually slow during the 8 s window; activate ASSAULT then GOLDEN_ZIGGURAT, let GOLDEN expire while ASSAULT still active, confirm cash multiplier resets to 1.0× — not 5.0×). RO-08 quick regression sweep (in-round ATTACK_SPEED purchase visibly increases fire rate; STEP_MULTIPLIER level 5 produces ~+5 % steps; RECOVERY_PACKAGES heals during a wave at level ≥1). If anything fails, file follow-up before promoting to closed.
+2. **(External)** Promote internal v4 → closed testing in Play Console. Recruit ≥12 testers (Gmail addresses), distribute opt-in URL.
+3. **(External)** Wait ≥14 calendar days while collecting feedback. Address any critical Pre-launch report findings via versionCode → bundleRelease → re-upload to closed track.
+4. **(External)** After ≥14 days closed testing with ≥12 testers, apply for production access. Google review 1–3 days. Promote closed → production with staged rollout. Tag v1.0.0 in git.
+
+---
+
+## 2026-05-18 (post-RO-09 commits) — RO-09 fix bundle landed
 
 - **Goal:** implement the 3 fix-before-closed-test findings catalogued in the prior RO-09 audit-findings entry (immediately below). Single PR, 4 commits per `docs/plans/plan-RO-09-pre-closed-test-fixes.md`.
 - **Outcome:** all 3 fixes landed and pushed. Test count 565 → 572. Build clean.
