@@ -20,22 +20,27 @@ cost = ceil(baseCost × scaling ^ currentLevel)
 
 ## Stats Resolution
 
-Workshop (permanent) and in-round (temporary) upgrades combine multiplicatively:
+Workshop (permanent), in-round (temporary), and Lab research (permanent outer multiplier) combine multiplicatively:
 
 ```
-effectiveStat = baseStat × (1 + workshopBonus) × (1 + inRoundBonus)
+effectiveStat = baseStat × (1 + workshopBonus) × (1 + inRoundBonus) × (1 + labBonus)
 ```
 
-This applies to all stats: damage, attack speed, health, regen, etc.
+This applies to all stat-bearing upgrades. The Lab tier is a third multiplicative term layered on top of the existing Workshop × In-Round product, populated from the player's completed Lab research levels (`DAMAGE_RESEARCH`, `HEALTH_RESEARCH`, `CRITICAL_RESEARCH`, `REGEN_RESEARCH`). Per-research multipliers are listed under each formula below. RO-11 wired this in 2026-05-19; pre-RO-11 the Lab tier was absent and research did nothing.
 
 ## Damage Calculation
 
 ```
-rawDamage = baseDamage × (1 + damageLevel × 0.02) × (1 + inRoundDamageLevel × 0.02)
+rawDamage = baseDamage
+          × (1 + damageLevel × 0.02)                     // Workshop DAMAGE
+          × (1 + inRoundDamageLevel × 0.02)              // In-round DAMAGE
+          × (1 + damageResearchLevel × 0.05)             // Lab DAMAGE_RESEARCH (RO-11)
 
 isCrit = random() < critChance
-critChance = min(critChanceLevel × 0.005, 0.80)
-critMultiplier = 2.0 + critFactorLevel × 0.1
+critChance = min((critChanceLevel + inRoundCritChanceLevel) × 0.005
+                 + criticalResearchLevel × 0.03,           // Lab CRITICAL_RESEARCH (RO-11)
+                 0.80)
+critMultiplier = 2.0 + (critFactorLevel + inRoundCritFactorLevel) × 0.1
 
 finalDamage = isCrit ? rawDamage × critMultiplier : rawDamage
 ```
@@ -61,8 +66,13 @@ Defense % is diminishing — each point adds 0.3% but the cap is 75%.
 ## Health & Regen
 
 ```
-maxHealth = baseHealth × (1 + healthLevel × 0.03) × (1 + inRoundHealthLevel × 0.03)
-regenPerSecond = baseRegen × (1 + regenLevel × 0.02)
+maxHealth = baseHealth
+          × (1 + healthLevel × 0.03)
+          × (1 + inRoundHealthLevel × 0.03)
+          × (1 + healthResearchLevel × 0.05)             // Lab HEALTH_RESEARCH (RO-11)
+regenPerSecond = baseRegen
+               × (1 + (regenLevel + inRoundRegenLevel) × 0.02)
+               × (1 + regenResearchLevel × 0.04)         // Lab REGEN_RESEARCH (RO-11)
 ```
 
 ## Lifesteal
@@ -120,11 +130,17 @@ Each bounce deals full damage to the next target.
 ## Cash Economy (In-Round)
 
 ```
-cashFromKill = baseKillCash × tierCashMultiplier × (1 + cashBonusLevel × 0.03)
-cashPerWave = baseCashPerWave + cashPerWaveLevel × flatBonusPerLevel
+cashFromKill = baseKillCash
+             × tierCashMultiplier
+             × (1 + cashBonusLevel × 0.03)
+             × cashResearchMultiplier                    // Lab CASH_RESEARCH outer multiplier (RO-11)
+cashPerWave  = (baseCashPerWave + cashPerWaveLevel × flatBonusPerLevel)
+             × cashResearchMultiplier                    // Lab CASH_RESEARCH outer multiplier (RO-11)
 interest = min(heldCash × interestLevel × 0.005, heldCash × 0.10)  // cap 10%
 freeUpgradeChance = min(freeUpgradeLevel × 0.01, 0.25)             // cap 25%
 ```
+
+`cashResearchMultiplier` is `1.0` at level 0; +5%/lvl wires onto `GameEngine.cashResearchMultiplier` from `BattleViewModel` once per round and applies on every kill cash credit + every wave-end cash payout.
 
 ### Tier Cash Multipliers
 
@@ -241,8 +257,12 @@ maxLevel = 10
 ### Cooldown Scaling
 
 ```
-cooldown = baseCooldownSeconds × (1 - 0.05 × (level - 1))
+cooldown = baseCooldownSeconds
+         × (1 - 0.05 × (level - 1))                       // per-UW level scaling
+         × uwCooldownMultiplier                            // Lab UW_COOLDOWN outer multiplier (RO-11)
 ```
+
+`uwCooldownMultiplier` is `1.0` at level 0; -5%/lvl reduces all UW cooldowns and the cooldown ring-fill UI tracks it. Wired onto `GameEngine.uwCooldownMultiplier` from `BattleViewModel` once per round.
 
 ### Base Values
 
@@ -268,11 +288,33 @@ Research effects are additive per level (e.g., Damage Research: +5% per level).
 
 ## Step Multiplier
 
-> **Note:** STEP_MULTIPLIER is currently hidden from the Workshop UI (see Remediation R04). The formula is documented here for future implementation.
+Workshop `STEP_MULTIPLIER` (+1 %/lvl) and Lab `STEP_EFFICIENCY` (+2 %/lvl) both add to walking-credit on the sensor path under a shared cap. Wired in by RO-08 (`STEP_MULTIPLIER`) and RO-11 (`STEP_EFFICIENCY`).
 
 ```
-bonusSteps = rawSteps × min(stepMultiplierLevel × 0.01, 1.00)
+bonusFraction = min(stepMultiplierLevel × 0.01
+                  + stepEfficiencyResearchLevel × 0.02,
+                    1.00)                                  // shared cap +100 %
+bonusSteps = rawSteps × bonusFraction
 totalSteps = rawSteps + bonusSteps
 ```
 
-Cap: 100% bonus (double steps). Early investment compounds over time.
+Applies on the sensor (walking) credit path only — not on Health Connect activity minutes (cycling / swimming / treadmill / etc.). Bonus is added *after* anti-cheat (rate limit + velocity analysis) and *before* the absolute 50,000 steps/day daily ceiling, so the ceiling stays a hard cap. Each credit reads the current Workshop and Lab levels fresh from the DB so level-ups take effect immediately.
+
+## Lab Research — Wave Skip
+
+`WAVE_SKIP` lets the player start every battle round at a higher initial wave (RO-11 #B.1):
+
+```
+startWave = max(1, 1 + waveSkipResearchLevel)               // L0 = wave 1, L10 = wave 11
+```
+
+Enemy scaling at the higher wave is automatic via `EnemyScaler` — a player at L10 starts on tougher wave-11 enemies and harvests proportional kill cash / wave-end cash / battle-step rewards from the start.
+
+## Lab Research — Coming Soon
+
+Two of the ten `ResearchType` enums are explicitly v1.x-deferred via `isComingSoon = true` (RO-11 #B.2):
+
+- `AUTO_UPGRADE_AI` — reserved for v1.x, research progress preserved
+- `ENEMY_INTEL` — reserved for v1.x, research progress preserved
+
+The Labs UI renders a "COMING SOON" badge and suppresses Start / Rush controls for these rows; `LabsViewModel.startResearch` has a defensive guard that early-returns + emits a snackbar if a Coming Soon type ever reaches the VM via a future entry point.

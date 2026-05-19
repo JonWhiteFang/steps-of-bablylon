@@ -27,7 +27,7 @@ Operating rules:
 - **Package:** `com.whitefang.stepsofbabylon`
 - **Min SDK:** 34 (Android 14)
 - **Target/Compile SDK:** 36
-- **Version:** 1.0.0 (versionCode 5 — v3 was uploaded + rolled out to internal track 2026-05-15, on-device smoke test PASSED 2026-05-18; v4 (RO-08 + RO-09 fix bundles) was uploaded to the internal track 2026-05-18, then superseded by v5 before closed-track promotion; v5 (RO-11 Labs wiring + in-round upgrade-effect readout, 572 → 609 tests) uploaded to Play Console internal track 2026-05-19 — v5 on-device smoke test 2026-05-19 morning surfaced an in-round stat-drift bug bundle (RO-12: lab + card multipliers stripped on every in-round upgrade purchase + DescribeUpgradeEffect drift + HEALTH_REGEN precision); fixes landed on `main` 2026-05-19 (609 → 615 tests) — awaiting v6 build + re-upload before closed-track promotion)
+- **Version:** 1.0.0 (versionCode 6 — v3 was uploaded + rolled out to internal track 2026-05-15, on-device smoke test PASSED 2026-05-18; v4 (RO-08 + RO-09 fix bundles) was uploaded to the internal track 2026-05-18 then superseded by v5 before closed-track promotion; v5 (RO-11 Labs wiring + in-round upgrade-effect readout, 572 → 609 tests) uploaded to Play Console internal track 2026-05-19 — v5 on-device smoke test 2026-05-19 morning surfaced an in-round stat-drift bug bundle (RO-12: lab + card multipliers stripped on every in-round upgrade purchase + DescribeUpgradeEffect drift + HEALTH_REGEN precision); fixes landed on `main` 2026-05-19 (609 → 615 tests); versionCode bumped 5 → 6 in commit `1796b4c` — awaiting v6 `bundleRelease` + re-upload before closed-track promotion)
 - **Architecture:** MVVM + Clean Architecture
 - **UI:** Jetpack Compose (menus/screens) + SurfaceView (battle renderer)
 - **DI:** Hilt (with KSP)
@@ -205,7 +205,7 @@ graph TD
 - [x] **Plan 22: Stats & History Screen** ✓
 - [x] **Plan 23: Notifications & Widget** ✓
 - [x] **Plan 25: Anti-Cheat & Validation** ✓
-- [x] **Plan 26: Monetization & Ads** ✓ (stub implementation — real SDK integration deferred)
+- [x] **Plan 26: Monetization & Ads** ✓ (real Play Billing v8 + AdMob v25 + UMP v4 wired end-to-end via C.5 PR 1–3 + C.6 PR 1–3; on-device verification PASSED 2026-05-18)
 - [x] **Plan 27: Polish & Visual Effects** ✓
 - [x] **Plan 28: Balancing & Tuning** ✓
 - [x] **Plan 29: Testing & QA** ✓
@@ -220,7 +220,7 @@ graph TD
 - Battle extensions: Plans 14/15 (complete)
 - Labs: Plan 16 (complete)
 - Cards: Plan 17 (complete)
-- Monetization: Plan 26 (complete — stub implementation)
+- Monetization: Plan 26 (complete — real Play Billing v8 + AdMob v25 + UMP v4)
 - Polish: Plan 27 (complete)
 - Balancing: Plan 28 (complete)
 - Stats: Plan 22 (ready now — Plan 06 complete)

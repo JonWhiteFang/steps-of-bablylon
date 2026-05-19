@@ -20,7 +20,7 @@ All versions managed in `gradle/libs.versions.toml`. Never hardcode versions in 
 | Compose BOM | 2026.02.00 | Jetpack Compose UI |
 | Hilt | 2.59.2 | Dependency injection |
 | Room | 2.8.4 | Local SQLite database |
-| Google Play Billing | 8.3.0 | IAP via `billing-ktx` (C.5 PR 2 — flag-gated `@Binds` via `BuildConfig.USE_REAL_BILLING`; debug=stub, release=real) |
+| Google Play Billing | 8.3.0 | IAP via `billing-ktx`. `BillingManagerImpl` is the sole `BillingManager` binding for debug + release as of C.5 PR 3 (`StubBillingManager` deleted; `BuildConfig.USE_REAL_BILLING` removed). |
 | Google Mobile Ads SDK | 25.0.0 | Reward ads via `play-services-ads`. `RewardAdManagerImpl` is the sole `RewardAdManager` binding for debug + release as of C.6 PR 3 (`StubRewardAdManager` deleted). `BuildConfig.USE_REAL_ADS` is retained only to gate the `MainActivity` UMP consent prefetch on debug emulators. |
 | User Messaging Platform | 4.0.0 | GDPR/DSA consent via `user-messaging-platform`; paired with AdMob (C.6 PR 1) |
 | Navigation Compose | 2.9.7 | Compose navigation |

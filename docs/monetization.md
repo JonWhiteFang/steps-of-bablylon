@@ -107,10 +107,12 @@ Adapter seams (`data/billing/internal/BillingClientAdapter` + `data/ads/internal
 - Post-round reward ads — real AdMob rewarded ads with UMP consent gating; placement-aware ad-unit routing (`POST_ROUND_GEM` / `POST_ROUND_DOUBLE_PS` / `DAILY_FREE_CARD_PACK`)
 - UMP consent — prefetched on `MainActivity.onResume` in release builds (gated by `BuildConfig.USE_REAL_ADS`) so the first reward-ad tap doesn't pay the ~200–500 ms UMP init latency
 - Cosmetic store — 4 cosmetics with full visual application end-to-end (`zig_jade`, `lapis_lazuli_skin`, `garden_ziggurat_skin`, `sandals_of_gilgamesh`); 7 additional seeds with placeholder visuals pending content
+- Live formatted prices on the Store screen — `BillingManager.getPriceDisplay()` queries `ProductDetails.priceDisplay` per product; `StoreViewModel` populates `StoreUiState.priceDisplays` on Store entry; `StoreScreen` falls back to the static `BillingProduct.priceDisplay` constant when a query returns null (Plan 31 PR B, 2026-05-18)
 
 ### What's Out-of-Scope for v1
 
 - Server-side receipt verification (forbidden by `CONSTRAINTS.md` for v1.0 — no backend).
 - Real-time subscription renewal notifications (would require Real-time Developer Notifications + a backend; Season Pass relies on the reconciliation sweep refreshing expiry on Play Store re-delivery instead).
 - Ad mediation for fill rate optimization (deferred until live AdMob fill data justifies the integration cost).
-- Live formatted-price display from `ProductDetails.priceDisplay` (currently the Store screen uses static `BillingProduct.<X>.priceDisplay` constants that have to be kept in sync with Play Console pricing manually — a v1.x candidate refactor).
+- Live-price refresh on app resume / locale change — prices are queried once on Store entry; the static `BillingProduct.priceDisplay` fallback covers locale changes mid-session (Plan 31 PR B v1.x deferral).
+- Live-price retry on transient network failure — a single null sticks for the whole Store session; the static fallback is a known-good baseline (Plan 31 PR B v1.x deferral).

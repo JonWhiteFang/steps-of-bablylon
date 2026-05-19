@@ -66,13 +66,14 @@ Speed Controls = 1x / 2x / 4x
 
 Hilt with KSP (not kapt). All modules in `di/`.
 
-- `DatabaseModule` — provides Room database and DAOs
+- `DatabaseModule` — provides Room database and DAOs (13 entities, 13 DAOs, schema v9)
 - `RepositoryModule` — binds repository interfaces to Room-backed implementations
 - `StepModule` — provides SensorManager
 - `HealthConnectModule` — Health Connect organizational module
-- `BillingModule` — binds BillingManager interface to stub implementation
-- `AdModule` — binds RewardAdManager interface to stub implementation
-- `TimeModule` — binds TimeProvider interface to SystemTimeProvider (B.1, RO-01: seam for midnight-boundary testability)
+- `BillingModule` — `@Binds BillingManager → BillingManagerImpl` (sole binding post-C.5 PR 3 after `StubBillingManager` deletion). Sibling `BillingInternalModule` `@Binds BillingClientAdapter → RealBillingClientAdapter`.
+- `AdModule` — `@Binds RewardAdManager → RewardAdManagerImpl` (sole binding post-C.6 PR 3 after `StubRewardAdManager` deletion). Sibling `AdInternalModule` `@Binds RewardedAdAdapter → RealRewardedAdAdapter` and `ConsentManager → RealConsentManager`.
+- `TimeModule` — binds `TimeProvider` to `SystemTimeProvider` (B.1 / RO-01: seam for midnight-boundary testability)
+- `CoroutineScopeModule` — provides `@ApplicationScope` CoroutineScope (SupervisorJob + Dispatchers.Default) that outlives ViewModel cancellation (B.3 PR 2 / RO-03: lets fire-and-forget end-of-round work survive mid-nav `onCleared`)
 
 ## Naming Conventions
 

@@ -1,7 +1,7 @@
 # Plan 31 — Play Console & Store Publication
 
-**Status:** Not Started
-**Dependencies:** Plan 30 (Release Prep)
+**Status:** In Progress (Phases A–G landed: developer account verified, AdMob ad units created + wired, privacy policy hosted, upload keystore + Play App Signing enrolled, package registered via Android Developer Verification, store listing populated, content rating + data safety + target audience submitted, real Play Billing v8 + AdMob v25 + UMP v4 wired end-to-end and verified on-device 2026-05-18, internal-track AAB v3 rolled out and smoke-test PASSED 2026-05-18; v5 superseded by v6 awaiting closed-track promotion + ≥14-day closed test ≥12 testers prerequisite for production access)
+**Dependencies:** Plan 30 (Release Prep), Plan R (Tier 1), Plan R2 (Tier 1)
 **Layer:** Store publication
 
 ---
@@ -53,8 +53,8 @@ Upload all assets created in Plan 30:
 
 - Configure IAP products in Play Console (Gem packs, Ad Removal, Season Pass)
 - Test IAPs via licensed test accounts on internal track
-- Integrate real Google Play Billing Library (replace StubBillingManager)
-- Integrate real AdMob SDK (replace StubRewardAdManager)
+- ~~Integrate real Google Play Billing Library (replace StubBillingManager)~~ — done in **C.5 PR 1–3** (real `BillingManagerImpl` on Play Billing v8; `StubBillingManager` deleted post on-device PASS 2026-05-18)
+- ~~Integrate real AdMob SDK (replace StubRewardAdManager)~~ — done in **C.6 PR 1–3** (real `RewardAdManagerImpl` on AdMob v25 + UMP v4; `StubRewardAdManager` deleted)
 - Verify reward ads load and grant rewards
 - Verify purchase flows complete end-to-end
 

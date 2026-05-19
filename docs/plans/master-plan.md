@@ -129,7 +129,7 @@ graph TD
 - [x] Plan 23: Notifications & Widget
 - [ ] Plan 24: Accessibility *(deferred — post-v1.0)*
 - [x] Plan 25: Anti-Cheat & Validation
-- [x] Plan 26: Monetization & Ads (stub implementation — real SDK integration deferred)
+- [x] Plan 26: Monetization & Ads (real Play Billing v8 + AdMob v25 + UMP v4 wired end-to-end via C.5 PR 1–3 + C.6 PR 1–3; on-device verification PASSED 2026-05-18)
 - [x] Plan 27: Polish & Visual Effects
 - [x] Plan 28: Balancing & Tuning
 - [x] Plan 29: Testing & QA

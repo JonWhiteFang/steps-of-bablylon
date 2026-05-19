@@ -4,6 +4,31 @@ All notable changes to Steps of Babylon are documented here.
 
 ## [Unreleased]
 
+### Docs sweep — 12 stale live-docs fixed post-RO-12 + versionCode bump (2026-05-19)
+
+Pure-docs PR. Sweep across every live current-state doc (per agent protocol PR Task-List Convention) found 12 drift items left over from the RO-08 / RO-09 / RO-11 / RO-12 / C.5 PR 3 / C.6 PR 3 / Plan 31 PR B sequence and the `1796b4c` versionCode bump. No source / test / schema impact. Historical artifacts (`devdocs/**`, `smoke_tests/**`, `docs/external-reviews/**`, `plan-R*.md`, prior `RUN_LOG` / `CHANGELOG` entries) deliberately left frozen per `.kiro/steering/11-agent-protocol.md`.
+
+| # | File | Drift fixed |
+|---|---|---|
+| 1 | `README.md` | "33-entry development roadmap" → "34-entry" (Plans 01–31 + 10b + R + R2 = 34). |
+| 2 | `.kiro/steering/lib-room.md` | "AppDatabase.kt in `data/local/` (12 entities, 12 DAOs)" → "(13 entities, 13 DAOs, schema v9)". |
+| 3 | `.kiro/steering/structure.md` | AppDatabase row "(12 entities, 12 DAOs, version 8)" → "(13 entities, 13 DAOs, version 9; `billing_receipt` added in C.5 PR 1)". |
+| 4 | `.kiro/steering/tech.md` | Play Billing row updated post-C.5 PR 3: was "flag-gated `@Binds` via `BuildConfig.USE_REAL_BILLING`; debug=stub, release=real", now "sole `BillingManager` binding for debug + release as of C.5 PR 3 (`StubBillingManager` deleted; `BuildConfig.USE_REAL_BILLING` removed)". |
+| 5 | `docs/architecture.md` | Hilt module list refreshed: `BillingModule` / `AdModule` no longer reference stubs; sibling `BillingInternalModule` / `AdInternalModule` adapter bindings documented; new `CoroutineScopeModule` (B.3 PR 2 / RO-03) row added; `DatabaseModule` row gained "(13 entities, 13 DAOs, schema v9)". |
+| 6 | `docs/monetization.md` | What's-Out-of-Scope lost the stale "live formatted-price display from `ProductDetails.priceDisplay`" bullet (shipped in Plan 31 PR B 2026-05-18); What's-Implemented gained a live-prices line; Out-of-Scope replaced with the two intentional v1.x deferrals from PR B (no refresh on app resume / locale change; no retry on transient network failure). |
+| 7 | `docs/plans/master-plan.md` | Status checklist Plan 26 row "(stub implementation — real SDK integration deferred)" → "(real Play Billing v8 + AdMob v25 + UMP v4 wired end-to-end via C.5 PR 1–3 + C.6 PR 1–3; on-device verification PASSED 2026-05-18)". |
+| 8 | `docs/plans/plan-31-play-console.md` | Status changed from "Not Started" to a comprehensive "In Progress (Phases A–G landed: …)" line; Dependencies updated to include Plan R (Tier 1) + Plan R2 (Tier 1). Task 4 "Integrate real Google Play Billing Library" + "Integrate real AdMob SDK" struck through with C.5 PR 1–3 / C.6 PR 1–3 done-references. |
+| 9 | `docs/battle-formulas.md` | Heaviest edit. Stats Resolution gained the 3rd multiplicative Lab tier (RO-11 #A.1). Damage Calculation gained `DAMAGE_RESEARCH` + `CRITICAL_RESEARCH` outer multipliers. Health & Regen gained `HEALTH_RESEARCH` + `REGEN_RESEARCH` multipliers. Cash Economy gained `cashResearchMultiplier` on both `cashFromKill` and `cashPerWave`. UW Cooldown Scaling gained `uwCooldownMultiplier`. Step Multiplier section rewritten to reflect the live combined `STEP_MULTIPLIER` (Workshop) + `STEP_EFFICIENCY` (Lab) formula under shared +100 % cap, dropping the obsolete "hidden from the Workshop UI (see Remediation R04)" footnote. Two new sections appended: "Lab Research — Wave Skip" (RO-11 #B.1) and "Lab Research — Coming Soon" (RO-11 #B.2). |
+| 10 | `docs/step-tracking.md` | Data-flow box now includes the `STEP_MULTIPLIER` (Workshop) + `STEP_EFFICIENCY` (Lab) bonus stage between `StepVelocityAnalyzer` and the 50 k daily ceiling; added an explanatory note clarifying the bonus is sensor-path only and references battle-formulas.md § Step Multiplier. |
+| 11 | `AGENTS.md` | Version line bumped "versionCode 5" → "versionCode 6" (commit `1796b4c`); status-checklist Plan 26 row + parallelizable-branches Monetization row both updated to "real Play Billing v8 + AdMob v25 + UMP v4 wired end-to-end". |
+| 12 | `docs/agent/STATE.md` | Current objective + Top priorities item #1 + Next actions step #1 all dropped the now-completed "Bump versionCode 5 → 6" sub-step; immediate action is now `bundleRelease` + sign + upload. |
+
+#### Verification
+
+- Re-grep against the original 12 stale strings now matches only frozen historical artifacts (`devdocs/archaeology/**`, `devdocs/foundations/**`, `devdocs/evolution/**`, `smoke_tests/**`, `docs/plans/plan-26-monetization.md`, `docs/external-reviews/**`, prior `RUN_LOG.md` + `CHANGELOG.md` entries) — zero remaining matches in current-state docs.
+- `git diff --stat`: 12 files changed, 90 insertions, 42 deletions.
+- No source / test / schema impact. Test count stays at 615.
+
 ### RO-12 — In-round stat drift bugfix bundle (2026-05-19)
 
 Discovered during v5 internal-track on-device smoke test (Wave 4 screenshot, 06:21 BST 2026-05-19): the `RO-11 #C` "Now → Next" readout rendered correctly on the DEFENSE tab but **the HEALTH "Now" value disagreed with the live ziggurat HP bar by ~5 %** — a drift consistent with `HEALTH_RESEARCH` Lv 1 being included in the readout but stripped from the engine after the player's first in-round purchase.

@@ -86,7 +86,7 @@ class PlayerRepositoryImpl @Inject constructor(
 
 - Entity files: `*Entity.kt` in `data/local/`
 - DAO files: `*Dao.kt` in `data/local/`
-- Database: `AppDatabase.kt` in `data/local/` (12 entities, 12 DAOs)
+- Database: `AppDatabase.kt` in `data/local/` (13 entities, 13 DAOs, schema v9)
 - Room is the single source of truth for all game state
 - Player profile uses single-row pattern (id=1)
 - Prefer `@Upsert` over `@Insert(onConflict = REPLACE)`

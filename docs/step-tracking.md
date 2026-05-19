@@ -132,15 +132,18 @@ Sensor Event
   → Foreground Service (delta calculation, writes heartbeat)
     → StepRateLimiter (200/min cap)
       → StepVelocityAnalyzer (shaker/spoof penalty)
-        → Daily ceiling (50k cap)
-          → Room (DailyStepRecord update) + per-minute tracking
-            → WorkManager (checks heartbeat → skips if service alive)
-              → Gap recovery (Room baseline, not private counter)
-              → HC gap-fill, cross-validation, activity minutes
-                → ActivityMinuteValidator (gaming prevention)
-                  → ActivityMinuteConverter (overlap deduction via per-minute data)
-                    → PlayerProfile.currentStepBalance update
+        → STEP_MULTIPLIER (Workshop) + STEP_EFFICIENCY (Lab) bonus
+          → Daily ceiling (50k cap)
+            → Room (DailyStepRecord update) + per-minute tracking
+              → WorkManager (checks heartbeat → skips if service alive)
+                → Gap recovery (Room baseline, not private counter)
+                → HC gap-fill, cross-validation, activity minutes
+                  → ActivityMinuteValidator (gaming prevention)
+                    → ActivityMinuteConverter (overlap deduction via per-minute data)
+                      → PlayerProfile.currentStepBalance update
 ```
+
+The `STEP_MULTIPLIER` (Workshop) + `STEP_EFFICIENCY` (Lab) bonus stage is sensor-path only — activity-minute step-equivalents are intentionally not multiplied. See `docs/battle-formulas.md` § Step Multiplier for the combined formula and shared +100 % cap. RO-08 wired `STEP_MULTIPLIER`; RO-11 added `STEP_EFFICIENCY` on top.
 
 ## Permissions
 

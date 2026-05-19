@@ -4325,3 +4325,31 @@ After the fix, tests pass on first try and assembleDebug is clean.
 - Memory updated: STATE ✅ / RUN_LOG ✅
 - ADR: not warranted — bug-fix bundle, no architectural decision. Pattern of "extracted helper to eliminate duplicate-by-omission failure mode" is consistent with RO-08's `applyStats` extraction.
 
+## 2026-05-19 mid-morning — docs sweep: 12 stale live-docs fixed post-RO-12 + versionCode bump
+- Goal: full sweep + fix of every live current-state doc that drifted across the RO-08 / RO-09 / RO-11 / RO-12 / C.5 PR 3 / C.6 PR 3 / Plan 31 PR B sequence and the `1796b4c` versionCode bump. Pure docs PR. Per agent protocol § PR Task-List Convention — historical artifacts (`devdocs/**`, `smoke_tests/**`, `docs/external-reviews/**`, `plan-R*.md`, prior RUN_LOG/CHANGELOG entries) deliberately left frozen.
+- Preflight: read `START_HERE`, `STATE`, `CONSTRAINTS`, RUN_LOG tail (RO-12 entry), ADR list (`0001`–`0007`); `git status` clean; `git log -n 15 --oneline` shows HEAD at `1796b4c chore(release): bump versionCode 5 -> 6 for RO-12 internal-track upload`. Source-of-truth confirmed: `app/build.gradle.kts:38` → `versionCode = 6`; `data/local/AppDatabase.kt:23` → `version = 9`; STATE.md → 615 JVM tests.
+- Audit pass: 13 live-doc files spot-grepped + read for stale strings (`12 entities, 12 DAOs`, `version 8`, `stub implementation`, `priceDisplay constants`, `33-entry`, `versionCode 5`, `StubBillingManager`, `StubRewardAdManager`, `USE_REAL_BILLING`). 12 distinct drift items found in 12 separate files; reported to user grouped by drop-the-stub-references vs. RO-08+RO-11 catch-up vs. one-off (README count). User ack: "fix all".
+- Changes made (12 files, 90 insertions, 42 deletions):
+  - `README.md`: 33-entry → 34-entry (one-line table cell).
+  - `.kiro/steering/lib-room.md`: 12 entities, 12 DAOs → 13 entities, 13 DAOs, schema v9.
+  - `.kiro/steering/structure.md`: AppDatabase Key Files row updated (12/12/v8 → 13/13/v9 + billing_receipt mention).
+  - `.kiro/steering/tech.md`: Play Billing version-table row rewritten post-C.5 PR 3 (no more flag, no more stub).
+  - `docs/architecture.md`: Hilt module list rewritten — BillingModule + AdModule bindings now reflect real impls + sibling internal modules + DatabaseModule entity count + new CoroutineScopeModule row.
+  - `docs/monetization.md`: What's-Implemented gained a live-prices bullet citing PR B; Out-of-Scope replaced with PR B's two intentional v1.x deferrals (no refresh / no retry).
+  - `docs/plans/master-plan.md`: Plan 26 status checkbox row updated.
+  - `docs/plans/plan-31-play-console.md`: Status "Not Started" → multi-line "In Progress (Phases A–G landed)" with full breadcrumbs; Dependencies extended; Task 4 stub-replacement bullets struck-through with done-references.
+  - `docs/battle-formulas.md`: 6 in-place formula edits (Stats Resolution + Damage Calc + Health & Regen + Cash Economy + UW Cooldown Scaling + Step Multiplier) layering Lab outer multipliers per RO-11; 2 new sections appended (Wave Skip + Coming Soon). 70-line file diff.
+  - `docs/step-tracking.md`: Data-flow box now includes STEP_MULTIPLIER + STEP_EFFICIENCY stage; explanatory note added.
+  - `AGENTS.md`: Version line bumped to versionCode 6 + commit `1796b4c` reference; status-checklist Plan 26 row + parallelizable-branches Monetization row updated.
+  - `docs/agent/STATE.md`: Current objective + Top priorities #1 + Next actions #1 all stripped the now-completed "Bump versionCode 5 → 6" sub-step.
+  - `CHANGELOG.md`: new "Docs sweep" section inserted at top of `[Unreleased]` above RO-12, with per-file drift table + verification block.
+  - This RUN_LOG entry.
+- Code changes: none.
+- Commands/tests run: `git status` + `git log -n 15` + `git diff --stat` only — no build, no tests. Test count stays at 615 (no source impact).
+- Verification: re-grep of original stale strings now matches only frozen historical artifacts (`devdocs/archaeology/**`, `devdocs/foundations/**`, `devdocs/evolution/**`, `smoke_tests/**`, `docs/plans/plan-26-monetization.md`, prior CHANGELOG/RUN_LOG entries) — zero remaining matches in current-state docs.
+- Open questions: none. The 14 historical-artifact files surfaced by grep are correctly frozen per agent protocol § 11; not part of this PR's scope.
+- Follow-ups created: none new. The next external action remains `./run-gradle.sh bundleRelease` + sign + upload AAB v6 to Play Console internal track (gated on user direction; manual external step).
+- Memory updated: STATE ✅ / RUN_LOG ✅
+- ADR: not warranted — docs-only PR.
+
+
