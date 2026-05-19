@@ -79,7 +79,7 @@ See `.kiro/steering/source-files.md` for the full source file index.
 
 ## Plans & Roadmap
 
-Development follows a master plan with 34 entries (Plans 01–31, 10b, R, and R2). See `docs/plans/master-plan.md` for the full index, dependency graph, and status tracker.
+Development follows a master plan with 35 entries (Plans 01–31, 10b, R, R2, and R3). See `docs/plans/master-plan.md` for the full index, dependency graph, and status tracker.
 
 ### Key Documents
 
@@ -132,6 +132,7 @@ Development follows a master plan with 34 entries (Plans 01–31, 10b, R, and R2
 | 31 | Play Console & Store Publication | Console setup, store listing upload, IAP/ad SDK integration, test tracks, publication. | Plan 30, Plan R (Tier 1), Plan R2 (Tier 1) |
 | R | Remediation | Bug and UX fixes from external code review. 12 sub-plans (R01–R12), 3 priority tiers. | Plan 30 |
 | R2 | Remediation 2 | Bug and UX fixes from second external review. 12 sub-plans (R2-01–R2-12), 3 priority tiers. | Plan R |
+| R3 | Remediation 3 | Bug fixes from v5 internal-track on-device smoke test (2026-05-19). 4 sub-plans (R3-01–R3-04) tracked as GitHub issues #1–#4. Tier 1 blocks closed-track promotion. | Plan R2 |
 
 ### Dependency Graph
 
@@ -169,12 +170,13 @@ graph TD
     P29 --> P30[30: Release Prep]
     P30 --> PR[R: Remediation]
     PR --> PR2[R2: Remediation 2]
-    PR2 --> P31[31: Play Console]
+    PR2 --> PR3[R3: Remediation 3]
+    PR3 --> P31[31: Play Console]
 ```
 
 ### Critical Path
 
-01 → 02 → 03 → 06 → 08 → 09 → 10 → 11 → 12 → 13 → 18 → 27 → 28 → 29 → 30 → R (Tier 1) → R2 (Tier 1) → 31
+01 → 02 → 03 → 06 → 08 → 09 → 10 → 11 → 12 → 13 → 18 → 27 → 28 → 29 → 30 → R (Tier 1) → R2 (Tier 1) → R3 (Tier 1) → 31
 
 ### Current Status
 
@@ -212,6 +214,7 @@ graph TD
 - [x] **Plan 30: Release Prep** ✓
 - [x] **Plan R: Remediation** (R01–R12 complete)
 - [x] **Plan R2: Remediation 2** (R2-01–R2-12) ✓
+- [ ] **Plan R3: Remediation 3** *(in progress — plan written, 4 GitHub issues triaged + labeled + milestoned to `v1.0.0 closed-test gate`. R3-01 (#2 backgrounding state loss, blocker), R3-02 (#4 THORN_DAMAGE wiring + LIFESTEAL visibility, major), R3-03 (#1 COMPLETE_RESEARCH false trigger, major) block closed-track promotion. R3-04 (#3 bottom-bar scroll) needs reporter clarification.)*
 - [ ] **Plan 31: Play Console & Store Publication** *(in progress — Phases A–G landed: developer account verified, AdMob ad units created + wired, privacy policy hosted, upload keystore + Play App Signing enrolled, package registered via Android Developer Verification (debug keystore path, see ADR-0007), main store listing populated, content rating + data safety + target audience submitted, Phase F unblocker `feat(billing): lowercase SKU wire format` landed 2026-05-14, Phase G internal-track AAB v3 (versionCode 3) uploaded + rolled out 2026-05-15, on-device smoke test PASSED 2026-05-18 (real Play Billing test purchase credited the wallet end-to-end across all 5 SKUs). C.5 PR 3 landed 2026-05-18 — `StubBillingManager` deleted, `BillingModule` collapsed to `@Binds BillingManagerImpl`, `BuildConfig.USE_REAL_BILLING` flag removed; test count 527 → 524 (parity test obsoleted). RO-08 (4-fix upgrade-wiring bundle, 535 → 565 tests) + RO-09 (3-fix pre-closed-test bundle, 565 → 572 tests) landed 2026-05-18; AAB v4 (versionCode 4) uploaded to internal track 2026-05-18 then superseded by v5 before closed-track promotion. RO-11 (3-phase Labs wiring + in-round upgrade-effect readout, 572 → 609 tests) landed 2026-05-19; AAB v5 (versionCode 5) uploaded to internal track 2026-05-19 — awaiting on-device smoke test of the 8 RO-11 acceptance checks before closed-track promotion. Next: smoke-test v5, then promote internal v5 → closed; closed-track recruitment (≥12 testers, ≥14 days) before production access can be applied for.)*
 
 ### Parallelizable Branches (after dependencies met)

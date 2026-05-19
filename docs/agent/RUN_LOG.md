@@ -1,5 +1,53 @@
 # Run Log
 
+## 2026-05-19 (early afternoon) — Plan R3 scaffolding: GitHub-issue triage + R3 plan write
+
+- **Goal:** the user asked for the *best* way to handle the GitHub issues recorded after the v5 internal-track smoke test. Web research surfaced industry-standard practice (VSCode triage wiki, GitHub Docs on PR↔issue linking, Rewind best-practices guide). Mapped the consensus onto this repo's existing R / R2 / RO remediation cadence and decided to formalize the 4 open issues as **Plan R3 (Remediation 3)** — the GitHub-issue-driven analog of the external-review-driven R and R2 plans.
+- **Outcome:** done in a single session. All four issues are now triaged, labeled, milestoned, and have a concrete sub-plan in the docs tree. No source / test / schema impact — pure GitHub-side scaffolding + docs.
+
+### GitHub-side scaffolding
+
+- **Label taxonomy created (11 new labels)** on `JonWhiteFang/steps-of-babylon`:
+  - Severity (red/orange/yellow gradient): `severity:blocker`, `severity:major`, `severity:minor`.
+  - Area (blue/green/purple family): `area:battle`, `area:missions`, `area:economy`, `area:billing`, `area:ui`.
+  - Status: `needs-more-info` (purple, mirrors GitHub's question label color), `in-progress` (blue), `regression-guard-needed` (yellow — fix landed but a failing test must be added before close).
+  - The repo previously had only the 9 GitHub default labels.
+- **Milestone `v1.0.0 closed-test gate`** created (#1, open) with description: "Bugs surfaced during the v5 internal-track smoke test (2026-05-19) plus any further closed-track feedback. Must reach zero open before closed→production promotion."
+- **All 4 open issues triaged + labeled + attached to the milestone:**
+  - #1 (Daily mission COMPLETE_RESEARCH triggers on Labs open) → `severity:major` + `area:missions`.
+  - #2 (Backgrounding mid-round resets state + speed/pause UI desync) → `severity:blocker` + `area:battle`.
+  - #3 (Bottom bar can't scroll, needs reporter clarification) → `severity:minor` + `area:battle` + `needs-more-info`. Clarification comment posted asking for: which bottom bar (in-round upgrade menu / UW bar / Overdrive menu), device + Android version, exact failure mode, screen recording. 7-day window to 2026-05-26 per industry triage convention.
+  - #4 (THORN_DAMAGE never reflects + LIFESTEAL imperceptible) → `severity:major` + `area:battle`.
+
+### Plan + doc-sync
+
+- **New plan file `docs/plans/plan-R3-remediation-3.md`** (182 lines) mirroring R2's shape exactly: Sub-Plan Index table → Dependency Graph (mermaid) → per-sub-plan detail block (Severity / GitHub Issue / Files / Problem / Tasks / Acceptance criteria) → Execution Notes → Priority Tiers → Open Questions. Sub-plans numbered in execution order (severity-first), so R3-01 = issue #2 (blocker), R3-02 = issue #4 (major), R3-03 = issue #1 (major), R3-04 = issue #3 (minor, blocked on info). Each sub-plan body explicitly lists the suspected files, the per-fix protocol (failing test first → fix → doc-sweep → PR with `Fixes #N`), and acceptance criteria the next on-device smoke test can verify against.
+- **`docs/plans/master-plan.md`:** new R3 row in Plan Index, R3 node added to mermaid dependency graph between R2 and Plan 31, critical-path string extended with `R3 (Tier 1)`, new Execution Notes line documenting R3's source.
+- **`AGENTS.md`:** master-plan entry count 34 → 35, new R3 row in the Full Plan Index, new R3 node in the Dependency Graph, critical-path string extended, new in-progress checklist line under Current Status.
+- **`docs/agent/STATE.md`:** current-objective flipped from "build v6" to "implement R3 Tier 1"; previous-objective ladder gained two new entries (RO-12 complete + v5 surfaced 4 GitHub-tracked bugs); top priorities renumbered with R3 Tier 1 ahead of v6 build (since v6 should ship with R3 Tier 1 included); next-actions reordered to 11 items with explicit R3 branch names + on-device smoke check ordering; references gained R3 plan link; last-run line refreshed.
+- **`docs/agent/RUN_LOG.md`:** this entry prepended above the prior v5-build entry.
+
+### Why R3 sits between R2 and Plan 31, not after Plan 31
+
+R and R2 were both authored as remediation plans gating the original "production release" milestone. Plan 31 has since been split into Phases A–I, with Phase G2 (closed-track promotion) now the gate that R3's Tier 1 actually blocks. The dependency graph reflects the current reality — R3 sits before Plan 31 in the critical path, but inside Plan 31 it specifically blocks the internal→closed promotion of v6, not the entire 31-phase chain.
+
+### Verification
+
+- `gh label list` → confirms all 11 new labels created with correct colors + descriptions.
+- `gh api repos/JonWhiteFang/steps-of-babylon/milestones --jq '.[]'` → confirms milestone #1 exists, open, attached to all 4 issues.
+- `gh issue view <N> --json milestone,labels` → confirms each of the 4 issues has the expected labels + milestone.
+- `gh issue list --milestone "v1.0.0 closed-test gate"` → returns all 4.
+- New plan file passes a manual structure read against `docs/plans/plan-R2-remediation.md` — same heading hierarchy, same table columns (with "GitHub Issue" replacing R2's "Review Findings").
+- No source / test / schema files touched. Test count remains 615.
+
+### Next session
+
+1. **(Immediate, awaiting user go-ahead)** Start R3-01 (issue #2, blocker) on branch `fix/2-battle-backgrounding-state-loss`. Reproduce → failing `BattleViewModelTest` for pause/resume mid-round → pick remediation strategy from plan § R3-01 (lift engine ownership / snapshot UiState / Room persist) → implement → doc-sweep → PR `Fixes #2`.
+2. **(Parallel-ok after R3-01 PR opens)** R3-02 + R3-03 on their own branches.
+3. **(After R3 Tier 1 merges)** v6 `bundleRelease` + upload + smoke test + closed-track promotion.
+
+---
+
 ## 2026-05-19 (morning) — v5 build + internal-track upload milestone
 
 - **Goal:** package the RO-11 work into a release AAB and ship it to the Play Console internal track so the 8 RO-11 acceptance smoke checks can be run on a real device.

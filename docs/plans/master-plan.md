@@ -44,6 +44,7 @@ See `docs/StepsOfBabylon_GDD.md` for the full game design document.
 | 31 | [Play Console & Store Publication](./plan-31-play-console.md) | Play Console setup, store listing upload, IAP/ad SDK integration, test tracks, pre-launch report, production release. | Plan 30, Plan R (Tier 1), Plan R2 (Tier 1) |
 | R | [Remediation](./plan-R-remediation.md) | Bug and UX fixes from external code review. 12 sub-plans (R01–R12) across 3 priority tiers. Tier 1 blocks release. | Plan 30 |
 | R2 | [Remediation 2](./plan-R2-remediation.md) | Bug and UX fixes from second external review. 12 sub-plans (R2-01–R2-12) across 3 priority tiers. Tier 1 blocks release. | Plan R |
+| R3 | [Remediation 3](./plan-R3-remediation-3.md) | Bug fixes from the v5 internal-track on-device smoke test (2026-05-19). 4 sub-plans (R3-01–R3-04) tracked as GitHub issues #1–#4. Tier 1 (R3-01/02/03) blocks closed-track promotion. | Plan R2 |
 
 ---
 
@@ -83,7 +84,8 @@ graph TD
     P29 --> P30[30: Release Prep]
     P30 --> PR[R: Remediation]
     PR --> PR2[R2: Remediation 2]
-    PR2 --> P31[31: Play Console]
+    PR2 --> PR3[R3: Remediation 3]
+    PR3 --> P31[31: Play Console]
 ```
 
 ---
@@ -92,9 +94,10 @@ graph TD
 
 - Each plan will have its own detailed markdown file (e.g., `plan-01-domain-models.md`) created when that plan is ready to be worked on.
 - Plans can be worked on in parallel where dependencies allow (e.g., Plans 14, 15 can run in parallel since both depend on Plan 12).
-- The critical path runs: 01 → 02 → 03 → 06 → 08 → 09 → 10 → 11 → 12 → 13 → 18 → 27 → 28 → 29 → 30 → R (Tier 1) → R2 (Tier 1) → 31.
+- The critical path runs: 01 → 02 → 03 → 06 → 08 → 09 → 10 → 11 → 12 → 13 → 18 → 27 → 28 → 29 → 30 → R (Tier 1) → R2 (Tier 1) → R3 (Tier 1) → 31.
 - Plan R (Remediation) was added after an external code review. Tier 1 sub-plans (R01–R05) block production release. Tier 2 (R06–R09) should complete before release. Tier 3 (R10–R12) can follow shortly after.
 - Plan R2 (Remediation 2) was added after a second external code review. Tier 1 sub-plans (R2-01, R2-02, R2-06) block production release.
+- Plan R3 (Remediation 3) was added after the v5 internal-track on-device smoke test surfaced 4 closed-test-blocking bugs filed as GitHub issues #1–#4. Tier 1 (R3-01 / R3-02 / R3-03) blocks the internal → closed-track promotion in Plan 31 Phase G2.
 - Plans 04/05, 16/17, 19/20/21, 22, 23 are feature branches that can be parallelized after their dependencies are met.
 
 ---
