@@ -1,5 +1,77 @@
 # Run Log
 
+## 2026-05-19 (mid-afternoon, after R3-01 merge) — R3-02 THORN_DAMAGE wiring + LIFESTEAL visibility
+
+- **Goal:** implement R3-02 (GitHub issue #4, `severity:major` + `area:battle` in the `v1.0.0 closed-test gate` milestone). THORN_DAMAGE never reflects damage on melee hits regardless of upgrade level. LIFESTEAL works mathematically but the heal is invisible at low levels.
+- **Outcome:** done in a single session on branch `fix/4-thorn-damage-lifesteal`. Two commits per the failing-test-first protocol; both `./run-gradle.sh testDebugUnitTest` and `./run-gradle.sh bundleRelease` BUILD SUCCESSFUL; test count 619 → 622.
+
+### Diagnosis
+
+Different shape than the plan assumed ("same shape as RO-08 STEP_MULTIPLIER, RO-09 #1 CHRONO_FIELD dead-stat"). Refined diagnosis:
+
+1. **THORN_DAMAGE is plumbed but its consumers receive `null`.** `applyThorn(rawDamage, attacker)` at `GameEngine.kt:735` correctly reads `stats.thornPercent` and damages `attacker`. But every caller passes `attacker = null`:
+   - Line 252: `WaveSpawner` constructor's `onMeleeHit = { dmg -> applyDamageToZiggurat(dmg, null) }`.
+   - Line 406: ranged-projectile path: `applyDamageToZiggurat(proj.damage, null)`.
+   - Line 800: SCATTER child enemy spawn site `onMeleeHit = { dmg -> applyDamageToZiggurat(dmg, null) }`.
+
+   The chain `EnemyEntity.onMeleeHit: ((Double) -> Unit)?` -> `WaveSpawner.onMeleeHit: (Double) -> Unit` -> `GameEngine` was typed `(Double) -> Unit` and dropped the enemy reference. `applyThorn` early-returns when attacker is null. So THORN_DAMAGE never reflected damage despite being plumbed end-to-end.
+
+2. **LIFESTEAL math is correct but sub-pixel at low levels.** `zig.currentHp += damage * stats.lifestealPercent` is `Double`-typed so sub-1-HP heals are conserved correctly. But at Lv 1 (0.2 % lifesteal) on base damage 10 = 0.02 HP per shot, the HP-bar nudge is invisible. Players reasonably conclude LIFESTEAL doesn't work.
+
+### Strategy chosen
+
+- **THORN:** plumb the attacker reference through. Widen `EnemyEntity.onMeleeHit` and `WaveSpawner.onMeleeHit` callbacks from `(Double) -> Unit` to `(EnemyEntity, Double) -> Unit`. Flip the 2 `GameEngine` call sites at lines 252 + 800 (initial WaveSpawner wiring + SCATTER child) from `{ _, dmg -> applyDamageToZiggurat(dmg, null) }` to `{ atk, dmg -> applyDamageToZiggurat(dmg, atk) }`. Ranged-projectile path stays `null` per GDD wording 'damage reflected to attackers' — a projectile isn't a living attacker, and the firing enemy may be off-screen or already dead by the time the projectile lands.
+- **LIFESTEAL** (per `plan-R3-remediation-3.md` § R3-02 option (b) — picked because it preserves the GDD numerical contract and adds visible feedback rather than changing balance): keep math identical; add `lifestealAccumulator: Double = 0.0` field that accumulates the same fractional amount applied to `zig.currentHp`; spawn a `FloatingText("+X HP", FloatingText.STEP_COLOR)` indicator above the ziggurat each time the accumulator crosses an integer HP threshold. Mirrors the existing RECOVERY_PACKAGES feedback pattern in `tickRecoveryPackages`.
+
+### Commit 1 — `4ba6d70` test(R3-02): failing regression tests + signature-change seams
+
+Production seams (compile-only changes; pre-fix behaviour preserved):
+
+- `EnemyEntity.kt:19`: `onMeleeHit: ((Double) -> Unit)?` widened to `((EnemyEntity, Double) -> Unit)?`; `update()` invokes `onMeleeHit?.invoke(this, damage)`.
+- `WaveSpawner.kt:16`: `onMeleeHit: (Double) -> Unit` widened to `(EnemyEntity, Double) -> Unit`.
+- `GameEngine.kt`: lambda shape updated at 2 call sites from `{ dmg -> ... null }` to `{ _, dmg -> ... null }` (still discards attacker, preserving pre-fix behaviour for the RED test).
+- `GameEngine.kt`: `lifestealAccumulator: Double = 0.0` field declared, reset in `init()`, but not yet read or written anywhere else.
+- `WaveSpawnerTest.kt`: `onMeleeHit` lambda updated to compile against the new 2-arg signature.
+
+New tests in `GameEngineTest.kt` under a new `// ---- R3-02: THORN_DAMAGE reflection on melee + LIFESTEAL visible-heal feedback ----` section:
+
+- `R302 THORN_DAMAGE reflects damage on melee hit via plumbed attacker reference` — RED.
+- `R302 THORN_DAMAGE scales linearly with thornPercent` — RED. (Initial version used a ratio assertion `reflectAt10 * 5.0 == reflectAt50` which trivially passed pre-fix because `0 * 5 == 0`. Hardened to direct value assertions before commit so the test actually failed RED.)
+- `R302 LIFESTEAL emits visible floating text when accumulated heal crosses 1 HP` — RED.
+
+Plus 5 reflective helpers: `freshEngineWithStats(ResolvedStats)` (variant of the existing `freshEngine`), `invokeOnMeleeHit` (reads `WaveSpawner.onMeleeHit` field reflectively and calls it directly), `createDummyAttacker`, `invokeOnProjectileHitEnemy` (reflective invocation of the private `onProjectileHitEnemy(ProjectileEntity, EnemyEntity)`), `readPendingFloatingTextSnippets` (reflective read of `EffectEngine.pendingEffects` returning the text content of any `FloatingText` entries).
+
+Verified via `./run-gradle.sh testDebugUnitTest --tests "...GameEngineTest.R302*"` → "3 tests completed, 3 failed".
+Verified via `./run-gradle.sh testDebugUnitTest` → "622 tests completed, 3 failed" — the seam signature changes did not regress any of the 619 pre-existing tests.
+
+### Commit 2 — `299d867` fix(battle): wire THORN_DAMAGE on melee + emit visible LIFESTEAL feedback (#4)
+
+- `GameEngine.kt:265`: initial WaveSpawner wiring's onMeleeHit changed to `{ atk, dmg -> applyDamageToZiggurat(dmg, atk) }`.
+- `GameEngine.kt:817`: SCATTER child enemy onMeleeHit changed to `{ atk, dmg -> applyDamageToZiggurat(dmg, atk) }`.
+- `GameEngine.kt`: `import kotlin.math.floor` added.
+- `GameEngine.kt`: `applyLifesteal(healAmount: Double)` private helper added next to `applyThorn` — mirrors its shape; does `zig.currentHp += healAmount` (capped at maxHp), `lifestealAccumulator += healAmount`, and emits `FloatingText("+$visibleHp HP", STEP_COLOR)` each time the accumulator crosses an integer HP threshold.
+- `GameEngine.kt`: existing in-place lifesteal heal at `onProjectileHitEnemy` and `onOrbHitEnemy` (2 sites, lines 614 + 705) replaced with `applyLifesteal(damage * stats.lifestealPercent)` / `applyLifesteal(result.amount * stats.lifestealPercent)`. Math is byte-for-byte identical; only the visible feedback is new.
+
+Verified via `./run-gradle.sh testDebugUnitTest --tests "...GameEngineTest.R302*"` → BUILD SUCCESSFUL (3/3 green).
+Verified via `./run-gradle.sh testDebugUnitTest` → BUILD SUCCESSFUL (622 tests total, all green).
+Verified via `./run-gradle.sh bundleRelease` → BUILD SUCCESSFUL (clean R8 + lintVital + sign).
+
+### Doc-sync (this commit)
+
+- `AGENTS.md`: version-status line gets R3-02 entry + `619 → 622 tests` delta; current-coverage line gains the R3-02 paragraph; status-checklist Plan R3 line updated to call out R3-01 as merged + R3-02 as fix-landed-pending-merge.
+- `.kiro/steering/source-files.md`: `GameEngine.kt` entry extended with the R3-02 onMeleeHit lambda flips + `lifestealAccumulator` field + `applyLifesteal` helper; `WaveSpawner.kt` entry extended with the `onMeleeHit` signature change; `EnemyEntity.kt` entry extended likewise; `WaveSpawnerTest.kt` entry extended with the test-side signature update; `GameEngineTest.kt` entry extended with the 3 R3-02 entries + 5 new reflective helpers.
+- `CHANGELOG.md`: new R3-02 section under `[Unreleased]` above the prior R3-01 section.
+- `docs/agent/STATE.md`: current-objective flipped to "R3-02 fix landed on branch, awaiting merge"; previous-objective ladder gained R3-01-merged + R3-scaffolding entries; what-works gained 619 → 622 line + R3-02 summary; top-priorities renumbered with R3-02 PR / merge as #1; last-run line refreshed; previous-run cascade gains the R3-01-merged entry.
+- `docs/agent/RUN_LOG.md`: this entry prepended above the prior R3-01 entry.
+
+### Next session
+
+1. **(Immediate, awaiting user go-ahead)** Push branch + open PR `Fixes #4`. Review + merge to `main`.
+2. **(After merge)** Start R3-03 (issue #1, COMPLETE_RESEARCH false trigger, major) on `fix/1-complete-research-false-trigger`.
+3. **(After R3 Tier 1 fully merges)** v6 `bundleRelease` + upload + smoke test + closed-track promotion.
+
+---
+
 ## 2026-05-19 (early afternoon, after R3 scaffolding) — R3-01 battle backgrounding state preservation
 
 - **Goal:** implement R3-01 (GitHub issue #2, the lone `severity:blocker` in the `v1.0.0 closed-test gate` milestone). Backgrounding the app mid-round destroys all in-progress round state, and the new game-loop thread spun up on resume defaults to `speed = 1f / paused = false` regardless of the UI's selection.

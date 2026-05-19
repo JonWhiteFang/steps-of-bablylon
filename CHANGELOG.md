@@ -4,6 +4,35 @@ All notable changes to Steps of Babylon are documented here.
 
 ## [Unreleased]
 
+### R3-02: THORN_DAMAGE wiring + LIFESTEAL visibility (2026-05-19)
+
+Fixes [GitHub issue #4](https://github.com/JonWhiteFang/steps-of-babylon/issues/4). Two related defects in the THORN_DAMAGE / LIFESTEAL Defense upgrades surfaced during the v5 internal-track on-device smoke test.
+
+**THORN_DAMAGE never reflected damage.** `ResolvedStats.thornPercent` was correctly plumbed by `ResolveStats` (1 % per level) and consumed by `GameEngine.applyThorn` via `attacker.takeDamage(rawDamage * stats.thornPercent * conditions.thornMultiplier)`. But every call site of `applyDamageToZiggurat` passed `attacker = null`. The `EnemyEntity.onMeleeHit -> WaveSpawner.onMeleeHit -> GameEngine` callback chain was typed `(Double) -> Unit` and dropped the enemy reference, so `applyThorn` early-returned for every melee hit. Players saw zero reflected damage regardless of THORN_DAMAGE upgrade level.
+
+**LIFESTEAL heal was imperceptible at low levels.** The math was correct (`zig.currentHp += damage * stats.lifestealPercent`, `Double`-typed so sub-1-HP heals are conserved), but at low levels the heal was sub-pixel: Lv 1 (0.2 % lifesteal) on base damage 10 = 0.02 HP per hit — an invisible HP-bar nudge users could not perceive.
+
+**Fix — THORN:**
+- Changed `EnemyEntity.onMeleeHit: ((Double) -> Unit)?` to `((EnemyEntity, Double) -> Unit)?`; `update()` invokes `onMeleeHit?.invoke(this, damage)` so consumers see the attacker.
+- Changed `WaveSpawner.onMeleeHit: (Double) -> Unit` to `(EnemyEntity, Double) -> Unit`.
+- Flipped 2 `GameEngine` call sites (initial `WaveSpawner` wiring + SCATTER child enemy spawn site) from `{ _, dmg -> applyDamageToZiggurat(dmg, null) }` to `{ atk, dmg -> applyDamageToZiggurat(dmg, atk) }` so `applyThorn` actually fires.
+- Ranged-projectile path stays `null` per GDD wording 'damage reflected to attackers' — the firing enemy isn't the attacker, the projectile is, and projectiles aren't living entities.
+
+**Fix — LIFESTEAL** (per `plan-R3-remediation-3.md` § R3-02 option (b)):
+- Added `private var lifestealAccumulator: Double = 0.0` field on `GameEngine`, reset in `init()`.
+- Extracted the existing in-place heal at `onProjectileHitEnemy` and `onOrbHitEnemy` into a new private `applyLifesteal(healAmount)` helper (mirrors `applyThorn`'s shape) that does math + accumulator + visible-text emit in one place.
+- Each time the accumulator crosses an integer HP threshold a `FloatingText("+$visibleHp HP", STEP_COLOR)` indicator is queued above the ziggurat, mirroring the RECOVERY_PACKAGES feedback pattern.
+- Math is identical to pre-R3-02; only the visible feedback is new. At cap (15 % × base damage 10 = 1.5 HP / hit) every shot emits `+1 HP`; at Lv 1 it takes ~50 hits to accumulate one visible burst, matching the expectation that low-level lifesteal is weak but observable.
+
+3 new tests in `app/src/test/.../GameEngineTest.kt` under a new R3-02 section:
+- `R302 THORN_DAMAGE reflects damage on melee hit via plumbed attacker reference`
+- `R302 THORN_DAMAGE scales linearly with thornPercent` (direct value assertions catch the pre-fix degenerate case where both reflects are zero — 0 × 5 == 0 passes a ratio check trivially)
+- `R302 LIFESTEAL emits visible floating text when accumulated heal crosses 1 HP`
+
+Plus 5 reflective helpers: `freshEngineWithStats`, `invokeOnMeleeHit` (reads `WaveSpawner.onMeleeHit` field), `createDummyAttacker`, `invokeOnProjectileHitEnemy`, `readPendingFloatingTextSnippets`. `WaveSpawnerTest` updated to compile against the new 2-arg `onMeleeHit` signature.
+
+Test count: 619 → 622 (+3). `./run-gradle.sh testDebugUnitTest` and `./run-gradle.sh bundleRelease` both BUILD SUCCESSFUL.
+
 ### R3-01: battle backgrounding state preservation (2026-05-19)
 
 Fixes [GitHub issue #2](https://github.com/JonWhiteFang/steps-of-babylon/issues/2). Backgrounding the app mid-round (Recents, screen lock, incoming notification) previously wiped wave / cash / kills / `elapsedTimeSeconds` because `GameSurfaceView.surfaceCreated` and `surfaceChanged` unconditionally called `engine.init` on every Android lifecycle event, and the new `GameLoopThread` started with default `speedMultiplier = 1f` / `isPaused = false` because `setSpeedMultiplier` / `setPaused` wrote only to `gameThread` which was null between `surfaceDestroyed` and the next `surfaceCreated`.
