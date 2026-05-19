@@ -3,7 +3,6 @@ package com.whitefang.stepsofbabylon.presentation.labs
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.whitefang.stepsofbabylon.data.local.DailyMissionDao
-import com.whitefang.stepsofbabylon.domain.model.DailyMissionType
 import com.whitefang.stepsofbabylon.domain.model.ResearchType
 import com.whitefang.stepsofbabylon.domain.repository.LabRepository
 import com.whitefang.stepsofbabylon.domain.repository.PlayerRepository
@@ -13,6 +12,7 @@ import com.whitefang.stepsofbabylon.domain.usecase.CheckResearchCompletion
 import com.whitefang.stepsofbabylon.domain.usecase.RushResearch
 import com.whitefang.stepsofbabylon.domain.usecase.StartResearch
 import com.whitefang.stepsofbabylon.domain.usecase.UnlockLabSlot
+import com.whitefang.stepsofbabylon.domain.usecase.UpdateCompleteResearchMissionProgress
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,6 +39,7 @@ class LabsViewModel @Inject constructor(
     private val rushResearch = RushResearch(labRepository, playerRepository)
     private val unlockLabSlot = UnlockLabSlot(playerRepository)
     private val checkCompletion = CheckResearchCompletion(labRepository)
+    private val updateMissionProgress = UpdateCompleteResearchMissionProgress(dailyMissionDao)
 
     private val tick = MutableStateFlow(System.currentTimeMillis())
     private val _processing = MutableStateFlow(false)
@@ -47,8 +48,12 @@ class LabsViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             labRepository.ensureResearchExists()
-            checkCompletion()
-            updateResearchMission()
+            val completed = checkCompletion()
+            // R3-03: pass the actual completion count to the use case. The use case is
+            // responsible for gating the mission tick on completedCount >= 1 (commit 2 of
+            // fix/1-complete-research-false-trigger lands the gating; the staging commit
+            // deliberately ignores the count to keep the regression tests RED).
+            updateMissionProgress(completedCount = completed.size)
         }
         viewModelScope.launch {
             while (true) {
@@ -140,7 +145,7 @@ class LabsViewModel @Inject constructor(
                 val activeList = labRepository.observeActiveResearch().first()
                 val active = activeList.find { it.type == type } ?: return@launch
                 val result = rushResearch(type, active, profile.toWallet())
-                if (result is RushResearch.Result.Rushed) updateResearchMission()
+                if (result is RushResearch.Result.Rushed) updateMissionProgress(completedCount = 1)
                 else _userMessage.value = "Not enough Gems"
             } finally {
                 _processing.value = false
@@ -169,7 +174,7 @@ class LabsViewModel @Inject constructor(
                 }
                 labRepository.completeResearch(type)
                 playerRepository.updateFreeLabRushUsed(LocalDate.now().toString())
-                updateResearchMission()
+                updateMissionProgress(completedCount = 1)
             } finally {
                 _processing.value = false
             }
@@ -190,13 +195,4 @@ class LabsViewModel @Inject constructor(
     }
 
     fun clearMessage() { _userMessage.value = null }
-
-    private suspend fun updateResearchMission() {
-        try {
-            val today = LocalDate.now().toString()
-            val missions = dailyMissionDao.getByDateOnce(today)
-            val m = missions.find { it.missionType == DailyMissionType.COMPLETE_RESEARCH.name && !it.claimed && !it.completed }
-            if (m != null) dailyMissionDao.updateProgress(m.id, 1, true)
-        } catch (_: Exception) { }
-    }
 }
