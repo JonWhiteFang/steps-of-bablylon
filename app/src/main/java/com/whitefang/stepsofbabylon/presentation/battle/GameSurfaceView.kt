@@ -16,6 +16,14 @@ class GameSurfaceView(context: Context) : SurfaceView(context), SurfaceHolder.Ca
     private var currentStats: ResolvedStats = ResolvedStats()
     private var currentTier: Int = 1
     private var currentWsLevels: Map<UpgradeType, Int> = emptyMap()
+    /**
+     * Wave number the next [GameEngine.init] call should open on (RO-11 #B.1, WAVE_SKIP).
+     * Updated by [BattleViewModel] via [configure]; default `1` preserves pre-RO-11 behaviour
+     * if [configure] is never called (e.g. surfaceCreated fires before the VM init coroutine
+     * has read [LabRepository]). The fresh-engine `init` re-reads this on every surface
+     * lifecycle event so a `playAgain` mid-session sees the latest WAVE_SKIP level.
+     */
+    private var currentStartWave: Int = 1
     private var surfaceReady = false
     private val isReducedMotion = ReducedMotionCheck.isReducedMotionEnabled(context)
     private val soundManager: SoundManager
@@ -29,20 +37,21 @@ class GameSurfaceView(context: Context) : SurfaceView(context), SurfaceHolder.Ca
         engine.soundManager = soundManager
     }
 
-    fun configure(stats: ResolvedStats, tier: Int, wsLevels: Map<UpgradeType, Int>) {
+    fun configure(stats: ResolvedStats, tier: Int, wsLevels: Map<UpgradeType, Int>, startWave: Int = 1) {
         currentStats = stats; currentTier = tier; currentWsLevels = wsLevels
-        if (surfaceReady) engine.init(width.toFloat(), height.toFloat(), stats, tier, wsLevels, isReducedMotion)
+        currentStartWave = startWave
+        if (surfaceReady) engine.init(width.toFloat(), height.toFloat(), stats, tier, wsLevels, isReducedMotion, startWave)
     }
 
     override fun surfaceCreated(holder: SurfaceHolder) {
         surfaceReady = true
-        engine.init(width.toFloat(), height.toFloat(), currentStats, currentTier, currentWsLevels, isReducedMotion)
+        engine.init(width.toFloat(), height.toFloat(), currentStats, currentTier, currentWsLevels, isReducedMotion, currentStartWave)
         val thread = GameLoopThread(holder, engine)
         thread.isRunning = true; thread.start(); gameThread = thread
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-        engine.init(width.toFloat(), height.toFloat(), currentStats, currentTier, currentWsLevels, isReducedMotion)
+        engine.init(width.toFloat(), height.toFloat(), currentStats, currentTier, currentWsLevels, isReducedMotion, currentStartWave)
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {

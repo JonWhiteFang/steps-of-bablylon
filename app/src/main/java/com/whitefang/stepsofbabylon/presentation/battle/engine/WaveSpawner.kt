@@ -18,8 +18,17 @@ class WaveSpawner(
     private val onWaveComplete: (waveNumber: Int) -> Unit = {},
     private val conditions: BattleConditionEffects = BattleConditionEffects(),
     private val enemyTint: Int = 0,
+    /**
+     * Wave number the spawner starts on (RO-11 #B.1, WAVE_SKIP lab research). Default `1`
+     * preserves the pre-RO-11 "start at wave 1" behaviour for every call site that
+     * doesn't yet thread the value through. [BattleViewModel] passes `1 + WAVE_SKIP_level`
+     * (max L10 → wave 11) via [GameEngine.init]; cooldown→increment lifecycle is unchanged
+     * so subsequent waves climb from the start value normally. Floor of 1 is the caller's
+     * responsibility — the constructor does not clamp.
+     */
+    private val startWave: Int = 1,
 ) {
-    var currentWave: Int = 1; private set
+    var currentWave: Int = startWave; private set
     var phase: WavePhase = WavePhase.SPAWNING; private set
     var enemiesAlive: Int = 0; private set
 

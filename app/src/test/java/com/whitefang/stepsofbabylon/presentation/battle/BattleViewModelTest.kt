@@ -97,6 +97,26 @@ class BattleViewModelTest {
         assertTrue(vm.resolvedStats.damage > ZigguratBaseStats.BASE_DAMAGE)
     }
 
+    // ---- RO-11 #B.1: WAVE_SKIP lab research opens rounds at a higher wave ----
+
+    @Test
+    fun `RO11 init reads WAVE_SKIP and exposes startWave as 1 plus level`() = runTest(dispatcher) {
+        // L0 baseline is implicitly covered by every other test in this file (all of which
+        // leave WAVE_SKIP at 0 and never read `startWave`, but the field defaults to 1).
+        // Here we set L5 → expect startWave = 6, which is what BattleViewModel.playAgain
+        // pushes into surfaceView.configure(…, startWave) and thence into GameEngine.init.
+        labRepo.levels.value = ResearchType.entries.associateWith { 0 } +
+            (ResearchType.WAVE_SKIP to 5)
+        val vm = createVm()
+        backgroundScope.launch { vm.uiState.collect {} }
+        advanceUntilIdle()
+        assertEquals(
+            6,
+            vm.startWave,
+            "WAVE_SKIP L5 must surface as startWave 6 (1 + level) for BattleScreen to push into GameEngine.init",
+        )
+    }
+
     @Test
     fun `biome transition shown for unseen biome`() = runTest(dispatcher) {
         whenever(biomePreferences.hasSeenBiome(any())).thenReturn(false)

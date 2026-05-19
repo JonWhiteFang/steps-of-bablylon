@@ -114,6 +114,15 @@ class BattleViewModel @Inject constructor(
      * during [startPollingEngine].
      */
     var labLevels: Map<ResearchType, Int> = emptyMap(); private set
+    /**
+     * Wave number rounds open on (RO-11 #B.1, WAVE_SKIP lab research). Default `1` matches
+     * pre-RO-11 behaviour. Recomputed in [init] and [playAgain] from the WAVE_SKIP level
+     * via `1 + level` so L0 = wave 1, L10 = wave 11. Lab research can't change mid-round
+     * (it takes real-world hours), so a snapshot at round start is sufficient. Read by
+     * [BattleScreen] when the surface becomes available, and re-pushed to [GameSurfaceView]
+     * via [playAgain] when the player replays the round.
+     */
+    var startWave: Int = 1; private set
     private val inRoundLevels = mutableMapOf<UpgradeType, Int>()
     private var engine: GameEngine? = null
     private var surfaceView: GameSurfaceView? = null
@@ -137,6 +146,7 @@ class BattleViewModel @Inject constructor(
         viewModelScope.launch {
             workshopLevels = workshopRepository.observeAllUpgrades().first()
             labLevels = labRepository.observeAllResearch().first()
+            startWave = waveSkipStartWave()
             val profile = playerRepository.observeProfile().first()
             tier = profile.currentTier
             resolvedStats = resolveStats(workshopLevels, emptyMap(), labLevels)
@@ -417,7 +427,7 @@ class BattleViewModel @Inject constructor(
         cardGemMultiplier = cardResult.gemMultiplier
         _uiState.update { BattleUiState(maxHp = resolvedStats.maxHealth, currentHp = resolvedStats.maxHealth,
             speedMultiplier = it.speedMultiplier, isLoading = false, stepBalance = it.stepBalance, adRemoved = it.adRemoved) }
-        surfaceView?.configure(resolvedStats, tier, workshopLevels)
+        surfaceView?.configure(resolvedStats, tier, workshopLevels, startWave)
         engine?.initUWs(equippedWeapons)
         engine?.secondWindHpPercent = cardSecondWind; engine?.cashBonusPercent = cardCashBonus
         // RO-11 #A.2: refresh lab-research multipliers on every replay. Lab levels are
@@ -523,6 +533,20 @@ class BattleViewModel @Inject constructor(
     private fun uwCooldownMultiplier(): Float {
         val level = labLevels[ResearchType.UW_COOLDOWN] ?: 0
         return (1f - level * 0.03f).coerceAtLeast(0.10f)
+    }
+
+    /**
+     * Computes the WAVE_SKIP starting wave (RO-11 #B.1) from the current [labLevels]
+     * snapshot. L0 → wave 1 (pre-RO-11 behaviour), L1 → wave 2, ..., max L10 → wave 11.
+     * The player still has to *survive* the higher wave — enemy scaling at higher waves is
+     * automatic via [EnemyScaler] — so the milestone-PS reward is earned legitimately.
+     * Defensive `coerceAtLeast(1)` keeps the floor consistent if a future schema migration
+     * surfaces a negative or zero cached level (matches the floor [GameEngine.init]
+     * applies anyway).
+     */
+    private fun waveSkipStartWave(): Int {
+        val level = labLevels[ResearchType.WAVE_SKIP] ?: 0
+        return (1 + level).coerceAtLeast(1)
     }
 
     fun toggleUpgradeMenu() { _uiState.update { it.copy(showUpgradeMenu = !it.showUpgradeMenu, showOverdriveMenu = false) } }

@@ -202,6 +202,15 @@ class GameEngine {
         playerTier: Int = 1,
         wsLevels: Map<UpgradeType, Int> = emptyMap(),
         isReducedMotion: Boolean = false,
+        /**
+         * Wave number the round opens on (RO-11 #B.1, WAVE_SKIP lab research). Default `1`
+         * preserves the pre-RO-11 "start at wave 1" behaviour for every call site that
+         * doesn't yet thread the value through (workshop preview, fresh-engine tests).
+         * [BattleViewModel] passes `1 + WAVE_SKIP_level` so L0 = wave 1 (current behaviour),
+         * L10 = wave 11 (max research level). Floor of 1 is enforced via `coerceAtLeast`
+         * before the value reaches [WaveSpawner] and [triggerWaveAnnouncement].
+         */
+        startWave: Int = 1,
     ) {
         screenWidth = width; screenHeight = height
         entities.clear(); pendingAdd.clear()
@@ -234,6 +243,8 @@ class GameEngine {
 
         spawnOrbs()
 
+        val safeStartWave = startWave.coerceAtLeast(1)
+
         waveSpawner = WaveSpawner(
             onSpawnEnemy = { pendingAdd.add(it) },
             zigguratX = zig.originX, zigguratY = zig.originY,
@@ -245,10 +256,11 @@ class GameEngine {
             onWaveComplete = ::handleWaveComplete,
             conditions = conditions,
             enemyTint = biomeTheme.enemyTint,
+            startWave = safeStartWave,
         )
 
         // Initial wave announcement
-        triggerWaveAnnouncement(1)
+        triggerWaveAnnouncement(safeStartWave)
     }
 
     fun setStats(resolvedStats: ResolvedStats) { applyStats(resolvedStats) }
