@@ -67,8 +67,8 @@
 - ADR-0007 (ADV via debug keystore, Accepted): docs/agent/DECISIONS/ADR-0007-adv-debug-keystore.md
 - Plan 31 walk-through (revised 2026-05-18): docs/release/plan-31-walkthrough.md
 - Privacy policy (canonical, in repo): docs/release/privacy-policy.md
-- Privacy policy (hosted, GitHub Pages): docs/index.md → https://jonwhitefang.github.io/steps-of-bablylon/
-- Delete-data URL: https://jonwhitefang.github.io/steps-of-bablylon/#delete-data
+- Privacy policy (hosted, GitHub Pages): docs/index.md → https://jonwhitefang.github.io/steps-of-babylon/
+- Delete-data URL: https://jonwhitefang.github.io/steps-of-babylon/#delete-data
 - Play Store listing copy: docs/release/play-store-listing.md
 - Master plan: docs/plans/master-plan.md
 - Plan RO-09 (complete, pre-closed-test fix bundle): docs/plans/plan-RO-09-pre-closed-test-fixes.md
