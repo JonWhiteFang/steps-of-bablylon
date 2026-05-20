@@ -1,5 +1,60 @@
 # Run Log
 
+## 2026-05-19 (evening, after R3-03 merge) — R3-04 battle bottom control-bar overflow fix
+
+- **Goal:** implement R3-04 (GitHub issue #3, `severity:minor` + `area:battle` + `area:ui` in the `v1.0.0 closed-test gate` milestone). On Pixel 6 (411dp wide) the 6th button (Overdrive) of the bottom control row in `BattleScreen` is cut off by the right edge of the screen.
+- **Outcome:** done in a single session on branch `fix/3-bottom-bar-overflow`. One fix commit; both `./run-gradle.sh testDebugUnitTest` and `./run-gradle.sh bundleRelease` BUILD SUCCESSFUL; test count unchanged at 627 (pure Compose UI change with no JVM-testable surface).
+
+### Reporter clarification timeline (issue #3)
+
+The `needs-more-info` clarification comment was posted at 13:04 BST. The reporter responded:
+
+- **12:24 BST** — "This issue is referring to A — the row of six control buttons" (Candidate A from the issue body).
+- **13:07 BST** — device is **Pixel 6 / Android 16**, symptom is "The 6th button (overdrive) is cut off, looks poor".
+
+The 13:07 reply ticked option 1 of the *second* comment's three-option list (which contradicts the 12:24 unambiguous answer), but the symptom description ("6th button (overdrive) cut off") only matches the bottom control bar with 6 buttons — the in-round upgrade menu doesn't have an Overdrive button. So the bug is unambiguously **Candidate A**: the fixed `Row` at `BattleScreen.kt:107-141`.
+
+### Diagnosis
+
+The row is a plain `Row` (not `LazyRow`, no `horizontalScroll`), aligned `BottomCenter`, with `padding(bottom = 24.dp)` only. Six buttons inside: 3× speed (1x/2x/4x), Pause, Upgrade, Overdrive. Rough math: 6 × ~56dp + 5 × 8dp gaps + 24dp horizontal padding ≈ 380dp + buffer. On a 411dp Pixel 6 screen with the system gesture inset eating from the right, the right-most button overflows.
+
+### Strategy chosen
+
+Matched the fix sketch in the issue body exactly:
+
+- `Modifier.windowInsetsPadding(WindowInsets.navigationBars)` placed before the bottom 24dp padding so the row is lifted clear of the system gesture inset before any other padding is applied.
+- `Modifier.horizontalScroll(rememberScrollState())` placed before the `background` so the rounded-corner background pill follows the visible scrolling content rather than the full viewport.
+
+Final modifier order: align → windowInsetsPadding(navigationBars) → padding(bottom=24dp) → horizontalScroll(rememberScrollState()) → background → padding(horizontal=12dp, vertical=8dp).
+
+No JVM regression test: this is a pure Compose UI change, and the project test suite is JVM-only (no instrumented Compose UI tests). Verification is build clean + on-device check on v6.
+
+### Commit `a9557e7` fix(battle): scroll bottom control row + clear gesture inset (#3)
+
+- 5 imports added to `BattleScreen.kt`: `horizontalScroll`, `rememberScrollState`, `WindowInsets`, `navigationBars`, `windowInsetsPadding`.
+- The bottom-control Row's modifier chain rewrapped per the order above.
+- 12-line block-comment added to the Row explaining the wiring inline (R3-04 / GitHub #3 reference, the per-modifier rationale, the modifier-order constraint, and the on-device-only verification note).
+
+Verified via `./run-gradle.sh testDebugUnitTest` → BUILD SUCCESSFUL in 23s (627 tests, all green).
+Verified via `./run-gradle.sh bundleRelease` → BUILD SUCCESSFUL in 52s (clean R8 + lintVital + sign).
+
+### Doc-sync (this commit)
+
+- `AGENTS.md`: version-status line gets R3-03-merged + R3-04-fix-landed entries; status-checklist Plan R3 line updated to mark R3-03 as merged via PR #7 + R3-04 as fix-landed-pending-merge.
+- `.kiro/steering/source-files.md`: `presentation/battle/BattleScreen.kt` entry extended with the R3-04 modifier-chain note.
+- `CHANGELOG.md`: new R3-04 section under `[Unreleased]` above the prior R3-03 section.
+- `docs/agent/STATE.md`: current-objective flipped to "R3-04 fix landed on branch, awaiting merge"; previous-objective ladder gained R3-03-merged entry; what-works gained R3-04 summary + R3-03 promoted to merged; top-priorities renumbered with R3-04 PR / merge as #1 + R3-04 reporter-window item dropped (reporter responded); next-actions renumbered (3× R3 → 4× R3 acceptance checks); last-run line refreshed; previous-run cascade gains the R3-03-merged entry.
+- `docs/agent/RUN_LOG.md`: this entry prepended above the prior R3-03 entry.
+- `docs/plans/plan-R3-remediation-3.md`: R3-04 detail block fleshed out with the actual reporter clarification + final fix shape; status table updated.
+
+### Next session
+
+1. **(Immediate, awaiting user go-ahead)** Push branch + open PR `Fixes #3`. Review + merge to `main`.
+2. **(After merge)** R3 fully closes (all 4 GitHub-tracked bugs #1–#4 fixed). Build v6: `./run-gradle.sh bundleRelease` + sign + upload AAB to Play Console internal track.
+3. **(Smoke test)** Install v6 on a physical device. Run 8 RO-11 + 5 RO-12 + 4× R3 per-issue acceptance checks. Then promote internal v6 → closed track for the ≥14-day / ≥12-tester gate.
+
+---
+
 ## 2026-05-19 (mid-afternoon, after R3-02 merge) — R3-03 COMPLETE_RESEARCH mission false-trigger fix
 
 - **Goal:** implement R3-03 (GitHub issue #1, `severity:major` + `area:missions` in the `v1.0.0 closed-test gate` milestone). Opening the Labs screen with no in-flight research falsely advances the daily COMPLETE_RESEARCH mission to progress=1, completed=true.

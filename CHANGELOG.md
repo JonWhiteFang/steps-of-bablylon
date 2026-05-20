@@ -4,6 +4,21 @@ All notable changes to Steps of Babylon are documented here.
 
 ## [Unreleased]
 
+### R3-04: battle bottom control-bar overflow fix (2026-05-19)
+
+Fixes [GitHub issue #3](https://github.com/JonWhiteFang/steps-of-babylon/issues/3). On a Pixel 6 (411dp wide) the 6th button (Overdrive) of the bottom control row in `BattleScreen` was cut off by the right edge of the screen.
+
+**Bug shape.** The bottom control row was a plain `Row` with no horizontal-scroll fallback, so on devices narrower than the row's intrinsic width (~380dp + 24dp horizontal padding + button spacing) the right-most button overflowed and clipped against the screen edge. The row also only had `padding(bottom = 24.dp)` so on devices with a tall gesture handle inset it sat partially under the swipe-up area.
+
+**Fix.** Two `Modifier` additions on the existing `Row` in `presentation/battle/BattleScreen.kt`:
+
+- `Modifier.windowInsetsPadding(WindowInsets.navigationBars)` (placed before the bottom 24dp padding) lifts the entire row clear of the system gesture inset before any other padding is applied.
+- `Modifier.horizontalScroll(rememberScrollState())` (placed before the `background`) lets the row scroll horizontally on screens too narrow to show all 6 buttons. Order matters here: the rounded-corner background pill is now drawn on the inner scrolling content so it follows the visible buttons rather than filling the full viewport.
+
+No behaviour change to any individual button. 5 imports added (`horizontalScroll`, `rememberScrollState`, `WindowInsets`, `navigationBars`, `windowInsetsPadding`).
+
+**No JVM regression test.** This is a pure Compose UI change. The project test suite is JVM-only — there are no instrumented Compose UI tests — so verification is build clean (`testDebugUnitTest` + `bundleRelease` both BUILD SUCCESSFUL) plus on-device check on the next AAB. Test count stays at **627**.
+
 ### R3-03: COMPLETE_RESEARCH mission false-trigger fix (2026-05-19)
 
 Fixes [GitHub issue #1](https://github.com/JonWhiteFang/steps-of-babylon/issues/1). Opening the Labs screen with no in-flight research previously advanced the daily COMPLETE_RESEARCH mission to progress=1, completed=true regardless of whether anything actually completed.

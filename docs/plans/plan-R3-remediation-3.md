@@ -15,7 +15,7 @@ Each sub-plan is a self-contained fix targeting one issue. Sub-plans are ordered
 | R3-01 | Battle Backgrounding State Preservation | Mid-round backgrounding must not reset wave/cash/kills; speed/pause UI must stay in sync with the game thread on resume | Blocker | — | [#2](https://github.com/JonWhiteFang/steps-of-babylon/issues/2) |
 | R3-02 | THORN_DAMAGE Wiring + LIFESTEAL Visibility | THORN_DAMAGE upgrade does not reflect any damage to attackers; LIFESTEAL works mathematically but produces no visible heal at low levels | Major | — | [#4](https://github.com/JonWhiteFang/steps-of-babylon/issues/4) |
 | R3-03 | COMPLETE_RESEARCH Mission Trigger Fix | Daily mission ticks "research complete" the moment the Labs screen is opened, regardless of whether anything actually completed | Major | — | [#1](https://github.com/JonWhiteFang/steps-of-babylon/issues/1) |
-| R3-04 | Battle Bottom-Bar Scrolling | Bottom bar reportedly cannot be scrolled during a round — exact surface (in-round upgrade menu vs. UW bar vs. Overdrive menu) unconfirmed | Minor | Reporter clarification | [#3](https://github.com/JonWhiteFang/steps-of-babylon/issues/3) |
+| R3-04 | Battle Bottom Control-Bar Overflow | The 6th button (Overdrive) of the bottom control row is cut off the right edge on narrow phones (Pixel 6, 411dp); fix adds horizontalScroll + windowInsetsPadding | Minor | — | [#3](https://github.com/JonWhiteFang/steps-of-babylon/issues/3) |
 
 ---
 
@@ -30,7 +30,7 @@ graph TD
     INFO[reporter clarification on issue #3] --> R304
 ```
 
-R3-01 / R3-02 / R3-03 are independent and can be worked on in any order; the recommended sequence is severity-first. R3-04 is blocked until the reporter responds (or 7 days elapse and we close the issue per the `needs-more-info` policy).
+R3-01 / R3-02 / R3-03 / R3-04 are independent and can be worked on in any order; the recommended sequence is severity-first.
 
 ---
 
@@ -124,25 +124,27 @@ Note that `CheckResearchCompletion` was added precisely to handle the auto-compl
 
 ---
 
-### R3-04 — Battle Bottom-Bar Scrolling
+### R3-04 — Battle Bottom Control-Bar Overflow
 
-**Severity:** Minor (provisional pending reporter response)
-**GitHub Issue:** [#3](https://github.com/JonWhiteFang/steps-of-babylon/issues/3) — currently labeled `needs-more-info`
-**Files (TBD):** Depends on which surface the reporter meant — `presentation/battle/ui/InRoundUpgradeMenu.kt`, `presentation/battle/ui/UltimateWeaponBar.kt`, or `presentation/battle/ui/OverdriveMenu.kt`.
+**Severity:** Minor
+**GitHub Issue:** [#3](https://github.com/JonWhiteFang/steps-of-babylon/issues/3)
+**Files:** `presentation/battle/BattleScreen.kt` (lines 107-141)
 
-**Problem:** Reporter says "bottom bar can't scroll during a round." Three candidate surfaces during a round have a horizontally or vertically scrollable bottom area:
-1. The in-round upgrade menu's three category tabs (Attack / Defense / Utility) and the `LazyColumn` of upgrade rows within each tab.
-2. The Ultimate Weapon bar at the bottom of the screen (when ≥1 UW is equipped).
-3. The Overdrive menu (when triggered).
+**Reporter clarification:** The `needs-more-info` clarification posted at 13:04 BST was answered the same day. The reporter confirmed (12:24 BST) this is **Candidate A** from the issue body — the bottom row of six control buttons (1x / 2x / 4x / Pause / Upgrade / Overdrive). Device is **Pixel 6 / Android 16**; symptom is "the 6th button (overdrive) is cut off, looks poor" (13:07 BST).
 
-Without a reproduction on a known device + a clear description of which surface, fix attempts will be guesswork.
+**Problem:** The bottom control row in `BattleScreen.kt` is a plain `Row` (not `LazyRow`, no `horizontalScroll`), aligned `BottomCenter`, with `padding(bottom = 24.dp)` only. Six buttons (3× speed + Pause + Upgrade + Overdrive) total roughly `6 × ~56dp + 5 × 8dp + 24dp = ~380dp + buffer`. On a 411dp Pixel 6 screen with the system gesture handle inset eating from the right, the right-most button (Overdrive) overflows the screen edge. Compounding factor: `enableEdgeToEdge` is on but the Battle route hides the Scaffold `bottomBar`, so the Row's `padding(bottom = 24.dp)` is the only spacing between it and the gesture area.
 
 **Tasks:**
-1. **Wait for reporter response.** A `needs-more-info` comment was posted on issue #3 asking for: which bottom bar, device + Android version, exact failure mode, screen recording. Per the project triage policy (industry standard 7-day window), if no reply by 2026-05-26 the issue closes automatically and we revisit only if the reporter follows up.
-2. **If reply received:** scope a focused sub-plan body in this file under R3-04 with the exact surface, repro steps, and fix. If the bug is a Compose nested-scroll conflict it is most likely a `Modifier.nestedScroll` or a `LazyColumn` inside a `Column` with `scrollable` issue and the fix is small.
-3. **If no reply by 2026-05-26:** close the issue with the canned `needs-more-info-stale` message and remove R3-04 from the milestone.
+1. Add 5 imports to `BattleScreen.kt`: `horizontalScroll`, `rememberScrollState`, `WindowInsets`, `navigationBars`, `windowInsetsPadding`.
+2. Rewrap the existing bottom-control `Row`'s modifier chain to: `align(BottomCenter)` → `windowInsetsPadding(WindowInsets.navigationBars)` → `padding(bottom = 24.dp)` → `horizontalScroll(rememberScrollState())` → `background(...)` → `padding(horizontal = 12.dp, vertical = 8.dp)`.
+3. Add an inline block-comment explaining the modifier order (windowInsetsPadding lifts first; horizontalScroll wraps the visible content so the rounded-corner background pill follows the buttons rather than the viewport).
+4. No JVM regression test — this is a pure Compose UI change and the project test suite is JVM-only (no instrumented Compose UI tests). Verification is build clean (`testDebugUnitTest` + `bundleRelease`) plus on-device check on the v6 AAB.
 
-**Acceptance criteria:** TBD based on reporter response.
+**Acceptance criteria:**
+- All 6 control buttons are reachable on a Pixel 6 (411dp wide) running Android 16, either visible in their entirety by default or by horizontal scroll.
+- The row sits clear of the system gesture-handle inset; no button is partially under the swipe-up area.
+- Existing 627 JVM tests still pass; no test count change (Compose UI surface).
+- No behaviour change to any individual button.
 
 ---
 
@@ -169,9 +171,7 @@ Without a reproduction on a known device + a clear description of which surface,
 - R3-01: Battle Backgrounding State Preservation
 - R3-02: THORN_DAMAGE Wiring + LIFESTEAL Visibility
 - R3-03: COMPLETE_RESEARCH Mission Trigger Fix
-
-**Tier 2 — Conditional, fix only if reporter clarifies in time:**
-- R3-04: Battle Bottom-Bar Scrolling
+- R3-04: Battle Bottom Control-Bar Overflow (promoted from Tier 2 once reporter clarified the symptom)
 
 ---
 
