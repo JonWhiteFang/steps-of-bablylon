@@ -1,12 +1,17 @@
 package com.whitefang.stepsofbabylon.presentation.battle
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -115,8 +120,23 @@ fun BattleScreen(
 
         // Bottom controls
         if (roundActive) {
+            // R3-04 / GitHub #3: 6 buttons (3× speed + Pause + Upgrade + Overdrive) overflowed
+            // the right edge of narrow phones (e.g. Pixel 6, 411dp wide), cutting off the
+            // Overdrive button. The plain `Row` had no horizontal scroll fallback. Fix:
+            //   - `windowInsetsPadding(navigationBars)` lifts the row above the system
+            //     gesture handle so it isn't competing with the swipe-up area.
+            //   - `horizontalScroll(rememberScrollState())` on the inner content lets the
+            //     row scroll horizontally on screens too narrow to show all 6 buttons.
+            //   - The background+rounded corners stay on the inner Row so the pill follows
+            //     the buttons (and only the buttons), not the full viewport.
+            // Pure layout change — no behaviour change to any individual button. Verified
+            // on-device on the next AAB; no JVM regression test (Compose UI surface).
             Row(
-                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp)
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .padding(bottom = 24.dp)
+                    .horizontalScroll(rememberScrollState())
                     .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
